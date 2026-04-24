@@ -76,19 +76,21 @@ async function submit() {
 <style scoped>
 .mempool-view { display: flex; flex-direction: column; gap: 1.5rem; }
 .panel {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
   padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 .tx-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .count {
-  background: #3b82f6;
-  color: #fff;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-size: 0.8rem;
   padding: 0.1rem 0.5rem;
   border-radius: 10px;
   margin-left: 0.5rem;
   vertical-align: middle;
+  border: 1px solid rgba(180, 169, 230, 0.32);
 }
 </style>

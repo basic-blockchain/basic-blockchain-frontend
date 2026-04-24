@@ -59,15 +59,16 @@ async function resolve() {
 <style scoped>
 .node-panel { display: flex; flex-direction: column; gap: 1rem; }
 .count {
-  background: #3b82f6;
-  color: #fff;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-size: 0.7rem;
   padding: 0.1rem 0.5rem;
   border-radius: 10px;
   margin-left: 0.4rem;
+  border: 1px solid rgba(180, 169, 230, 0.32);
 }
 .peers { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.empty { color: #94a3b8; }
+.empty { color: var(--text-muted); }
 .form { display: flex; gap: 0.5rem; }
 .form :deep(input) { flex: 1; }
 </style>

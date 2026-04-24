@@ -28,7 +28,7 @@ defineProps<{ blocks: Block[]; compact?: boolean }>()
   overflow-y: auto;
 }
 .list-inner { display: flex; flex-direction: column; gap: 0.5rem; }
-.empty { color: #94a3b8; text-align: center; padding: 2rem; }
+.empty { color: var(--text-muted); text-align: center; padding: 2rem; }
 .block-slide-enter-active { transition: all 0.3s ease; }
 .block-slide-enter-from { opacity: 0; transform: translateY(-12px); }
 </style>

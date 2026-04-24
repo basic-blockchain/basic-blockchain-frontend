@@ -41,12 +41,13 @@ onMounted(() => store.fetchAll())
 .health-view { display: flex; flex-direction: column; gap: 1.5rem; }
 .header { display: flex; justify-content: space-between; align-items: center; }
 .panel {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
   padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 dl { display: grid; grid-template-columns: 160px 1fr; gap: 0.5rem 1rem; }
-dt { font-weight: 600; color: #475569; }
+dt { font-weight: 600; color: var(--text-body); }
 dd { margin: 0; }
 </style>

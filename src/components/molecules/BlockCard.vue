@@ -26,14 +26,14 @@ function formatTs(ts: string) {
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--surface-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface-soft);
 }
 .block-index {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #3b82f6;
+  color: var(--primary-alt);
   min-width: 2.5rem;
 }
 .block-meta {
@@ -42,6 +42,6 @@ function formatTs(ts: string) {
   gap: 0.2rem;
   font-size: 0.85rem;
 }
-.block-ts { color: #64748b; }
+.block-ts { color: var(--text-body); }
 .compact .block-meta { gap: 0; }
 </style>

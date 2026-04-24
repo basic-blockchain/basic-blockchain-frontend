@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+
+:root {
+  --bg-base: #0d0e1a;
+  --bg-soft: #121324;
+  --surface: #1a1b2e;
+  --surface-soft: #202237;
+  --surface-border: #2d2f4a;
+
+  --sidebar-start: #121324;
+  --sidebar-end: #111a31;
+  --sidebar-border: #2d2f4a;
+  --sidebar-title: #fdfdfd;
+  --sidebar-text: #a0a8c0;
+  --sidebar-link: #a0a8c0;
+  --sidebar-link-active-bg: rgba(125, 86, 254, 0.22);
+  --sidebar-link-active-border: rgba(180, 169, 230, 0.36);
+  --sidebar-link-active-text: #ffffff;
+
+  --text-strong: #fdfdfd;
+  --text-body: #a0a8c0;
+  --text-muted: #6d7382;
+
+  --primary: #7d56fe;
+  --primary-hover: #8e6afe;
+  --primary-soft: rgba(125, 86, 254, 0.2);
+  --primary-alt: #4198ff;
+  --primary-glow: rgba(180, 169, 230, 0.24);
+  --secondary: #6d7382;
+  --accent-ok: #22c55e;
+  --accent-warning: #eab308;
+  --accent-error: #ef4444;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-soft: 0 10px 28px rgba(4, 7, 19, 0.5);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-body);
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100%;
+}
+
+h1 {
+  font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  font-size: 1.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  letter-spacing: -0.01em;
+}
+
+/* Panel — reusable dark card */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Count badge attached to headings */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  border: 1px solid rgba(180, 169, 230, 0.32);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-soft); }
+::-webkit-scrollbar-thumb { background: #3b3f66; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555b8b; }
+
+/* PrimeVue global overrides */
+.p-button {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+.p-button:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+.p-button.p-button-secondary {
+  background: var(--surface-soft) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-body) !important;
+}
+.p-button.p-button-secondary:hover {
+  background: #2a2d49 !important;
+  color: var(--text-strong) !important;
+}
+.p-inputtext {
+  background: var(--surface-soft) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-strong) !important;
+}
+.p-inputtext::placeholder { color: var(--text-muted) !important; }
+.p-inputtext:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px var(--primary-glow) !important;
+}
+.p-inputnumber-input {
+  background: var(--surface-soft) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-strong) !important;
+}
+
+.p-datatable {
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.p-datatable .p-datatable-header,
+.p-datatable .p-datatable-thead > tr > th {
+  background: #202237 !important;
+  color: var(--text-strong) !important;
+  border-color: var(--surface-border) !important;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  background: #1a1b2e !important;
+  color: var(--text-body) !important;
+}
+
+.p-datatable .p-datatable-tbody > tr:nth-child(even) {
+  background: #1d1f33 !important;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  border-color: var(--surface-border) !important;
+}
