@@ -69,6 +69,21 @@ Define the real execution flow from current feature delivery to release promotio
    - scripts/devsecops_promotion_chain.sh
 4. Verify branch protections are still correct after branch changes:
    - scripts/bootstrap_github_rules.sh
+5. Validate branch content alignment:
+    - scripts/devsecops_check_content_sync.sh
+
+## 3.1 GitFlow controls now present in frontend
+
+- Automated promotion PR chain:
+   - .github/workflows/branch-promotion-prs.yml
+- Merge source policy guard:
+   - .github/workflows/merge-policy.yml
+- Scheduled/manual branch content sync check:
+   - .github/workflows/branch-content-sync-check.yml
+- PR checklist template:
+   - .github/pull_request_template.md
+- Local push safety hook:
+   - .githooks/pre-push
 
 ## 4. Next implementation phases (product)
 

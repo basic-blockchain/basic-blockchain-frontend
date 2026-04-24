@@ -43,3 +43,25 @@ feature/* → develop → release/* → production → main
 ```
 
 CI runs on every push and pull request. See `.github/workflows/` for details.
+
+## GitFlow Automation
+
+The frontend now includes the same GitFlow safety and promotion tooling used in backend:
+
+- `.github/workflows/branch-promotion-prs.yml`
+- `.github/workflows/merge-policy.yml`
+- `.github/workflows/branch-content-sync-check.yml`
+- `.github/pull_request_template.md`
+- `scripts/devsecops_release_and_promote.sh`
+- `scripts/devsecops_promotion_chain.sh`
+- `scripts/devsecops_check_content_sync.sh`
+- `scripts/bootstrap_github_rules.sh`
+- `scripts/gh_auth_setup.sh`
+
+### Local hook (recommended)
+
+Enable the repository hook to block direct pushes to protected branches:
+
+```bash
+git config core.hooksPath .githooks
+```
