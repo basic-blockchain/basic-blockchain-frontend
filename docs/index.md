@@ -15,6 +15,7 @@ Stack: Vue 3 + Vite 6 + TypeScript 5 + Pinia + VueUse + PrimeVue 4 + Chart.js.
 | [Component Catalog](components.md) | Every atom, molecule, organism and view — props, emits, usage examples. |
 | [User Guide](user-guide.md) | End-to-end navigation guide for operators: dashboard, chain, mempool, nodes, validation, health. |
 | [UX and Validation Requirements](ux-validation-requirements.md) | Visual improvement backlog, color strategy, accessibility and new validation capabilities roadmap. |
+| [Phase Flow Plan](phase-flow-plan.md) | Real execution flow from feature delivery to release promotion, with phase gates and runbook. |
 | [ADR-001 — Vue over React](decisions/ADR-001-vue-over-react.md) | Framework selection for the dashboard. |
 | [ADR-002 — Pinia for state](decisions/ADR-002-pinia-state.md) | State-management choice (Pinia vs Vuex / TanStack Query / plain composables). |
 | [ADR-003 — Atomic Design](decisions/ADR-003-atomic-design.md) | Component organisation (atoms -> molecules -> organisms -> views). |
