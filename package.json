@@ -2,11 +2,47 @@
   "name": "basic-blockchain-frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "lint": "echo TODO",
-    "test": "echo TODO",
-    "build": "echo TODO",
-    "typecheck": "echo TODO"
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint src tests --ext .ts,.vue --max-warnings 0",
+    "lint:fix": "eslint src tests --ext .ts,.vue --fix",
+    "format": "prettier --write \"src/**/*.{ts,vue}\" \"tests/**/*.ts\"",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "chart.js": "^4.4.0",
+    "pinia": "^2.2.0",
+    "primevue": "^4.2.0",
+    "@primevue/themes": "^4.2.0",
+    "primeicons": "^7.0.0",
+    "vue": "^3.5.0",
+    "vue-chartjs": "^5.3.0",
+    "vue-router": "^4.4.0",
+    "@vueuse/core": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/ui": "^2.1.0",
+    "@vue/test-utils": "^2.4.0",
+    "@vue/tsconfig": "^0.5.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint-plugin-vue": "^9.28.0",
+    "jsdom": "^25.0.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vue-tsc": "^2.1.0"
   },
   "engines": {
     "node": ">=20"
