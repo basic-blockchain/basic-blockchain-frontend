@@ -10,12 +10,23 @@ function formatTs(ts: string) {
 </script>
 
 <template>
-  <div class="block-card" :class="{ compact }">
-    <div class="block-index">#{{ block.index }}</div>
+  <div
+    class="block-card"
+    :class="{ compact }"
+  >
+    <div class="block-index">
+      #{{ block.index }}
+    </div>
     <div class="block-meta">
-      <div class="block-ts">{{ formatTs(block.timestamp) }}</div>
-      <div class="block-hash"><HashChip :hash="block.previousHash" /></div>
-      <div class="block-proof">Proof: <strong>{{ block.proof }}</strong></div>
+      <div class="block-ts">
+        {{ formatTs(block.timestamp) }}
+      </div>
+      <div class="block-hash">
+        <HashChip :hash="block.previousHash" />
+      </div>
+      <div class="block-proof">
+        Proof: <strong>{{ block.proof }}</strong>
+      </div>
     </div>
   </div>
 </template>

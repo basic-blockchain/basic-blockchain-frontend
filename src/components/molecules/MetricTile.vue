@@ -5,9 +5,14 @@ defineProps<{ label: string; value: string | number | null; unit?: string }>()
 <template>
   <div class="metric-tile">
     <div class="value">
-      {{ value ?? '—' }}<span v-if="unit" class="unit">{{ unit }}</span>
+      {{ value ?? '—' }}<span
+        v-if="unit"
+        class="unit"
+      >{{ unit }}</span>
     </div>
-    <div class="label">{{ label }}</div>
+    <div class="label">
+      {{ label }}
+    </div>
   </div>
 </template>
 

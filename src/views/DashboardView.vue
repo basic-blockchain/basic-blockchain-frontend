@@ -27,11 +27,17 @@ onMounted(async () => {
       <h1>Dashboard</h1>
       <MineButton />
     </div>
-    <MetricsBar :metrics="metricsStore.metrics" :health="metricsStore.health" />
+    <MetricsBar
+      :metrics="metricsStore.metrics"
+      :health="metricsStore.health"
+    />
     <div class="dashboard-grid">
       <section class="panel">
         <h2>Recent Blocks</h2>
-        <ChainList :blocks="chainStore.recentBlocks" compact />
+        <ChainList
+          :blocks="chainStore.recentBlocks"
+          compact
+        />
       </section>
       <section class="panel">
         <h2>Mempool <span class="badge">{{ mempoolStore.count }}</span></h2>

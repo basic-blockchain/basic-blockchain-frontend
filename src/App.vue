@@ -20,7 +20,10 @@ const navItems = [
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <span class="pi pi-bitcoin" style="font-size: 1.5rem" />
+        <span
+          class="pi pi-bitcoin"
+          style="font-size: 1.5rem"
+        />
         <span class="sidebar-title">Blockchain</span>
       </div>
       <nav>
@@ -35,7 +38,10 @@ const navItems = [
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
-      <div class="ws-status" :class="wsStatus">
+      <div
+        class="ws-status"
+        :class="wsStatus"
+      >
         <span class="dot" />
         <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Connecting…' }}</span>
       </div>

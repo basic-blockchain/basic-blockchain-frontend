@@ -3,7 +3,10 @@ defineProps<{ status: 'ok' | 'degraded' | 'error' | 'n/a' }>()
 </script>
 
 <template>
-  <span class="badge" :class="status">
+  <span
+    class="badge"
+    :class="status"
+  >
     <span class="dot" />
     {{ status }}
   </span>

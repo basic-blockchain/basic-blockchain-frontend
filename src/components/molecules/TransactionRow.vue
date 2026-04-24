@@ -11,7 +11,10 @@ defineProps<{ transaction: Transaction; status?: 'pending' | 'confirmed' }>()
     <span class="arrow pi pi-arrow-right" />
     <span class="party">{{ transaction.receiver }}</span>
     <AmountDisplay :amount="transaction.amount" />
-    <span class="status" :class="status ?? 'pending'">{{ status ?? 'pending' }}</span>
+    <span
+      class="status"
+      :class="status ?? 'pending'"
+    >{{ status ?? 'pending' }}</span>
   </div>
 </template>
 

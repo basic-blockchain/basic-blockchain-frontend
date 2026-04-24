@@ -54,16 +54,30 @@ async function submit() {
     <h1>Mempool <span class="count">{{ store.count }}</span></h1>
     <section class="panel">
       <h2>Add Transaction</h2>
-      <form class="tx-form" @submit.prevent="submit">
-        <InputText v-model="form.sender" placeholder="Sender" />
-        <InputText v-model="form.receiver" placeholder="Receiver" />
+      <form
+        class="tx-form"
+        @submit.prevent="submit"
+      >
+        <InputText
+          v-model="form.sender"
+          placeholder="Sender"
+        />
+        <InputText
+          v-model="form.receiver"
+          placeholder="Receiver"
+        />
         <InputNumber
           v-model="form.amount"
           placeholder="Amount"
           :min-fraction-digits="0"
           :max-fraction-digits="8"
         />
-        <Button type="submit" label="Submit" :loading="submitting" icon="pi pi-send" />
+        <Button
+          type="submit"
+          label="Submit"
+          :loading="submitting"
+          icon="pi pi-send"
+        />
       </form>
     </section>
     <section class="panel">

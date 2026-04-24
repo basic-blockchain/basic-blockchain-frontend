@@ -22,8 +22,14 @@ onMounted(() => store.fetchAll())
         @click="store.fetchAll()"
       />
     </div>
-    <MetricsBar :metrics="store.metrics" :health="store.health" />
-    <section v-if="store.health" class="panel">
+    <MetricsBar
+      :metrics="store.metrics"
+      :health="store.health"
+    />
+    <section
+      v-if="store.health"
+      class="panel"
+    >
       <h2>Node Details</h2>
       <dl>
         <dt>Status</dt>

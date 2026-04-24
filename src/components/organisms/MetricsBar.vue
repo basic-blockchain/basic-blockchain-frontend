@@ -8,8 +8,14 @@ defineProps<{ metrics: Metrics | null; health: Health | null }>()
 
 <template>
   <div class="metrics-bar">
-    <MetricTile label="Chain Height" :value="metrics?.chainHeight ?? null" />
-    <MetricTile label="Pending Txs" :value="metrics?.pendingTransactions ?? null" />
+    <MetricTile
+      label="Chain Height"
+      :value="metrics?.chainHeight ?? null"
+    />
+    <MetricTile
+      label="Pending Txs"
+      :value="metrics?.pendingTransactions ?? null"
+    />
     <MetricTile
       label="Avg Mine Time"
       :value="metrics?.avgMineTimeSeconds !== null && metrics?.avgMineTimeSeconds !== undefined
@@ -18,14 +24,30 @@ defineProps<{ metrics: Metrics | null; health: Health | null }>()
       unit="s"
     />
     <div class="metric status-metric">
-      <StatusBadge v-if="health" :status="health.status" />
-      <span v-else class="dash">—</span>
-      <div class="label">Node Status</div>
+      <StatusBadge
+        v-if="health"
+        :status="health.status"
+      />
+      <span
+        v-else
+        class="dash"
+      >—</span>
+      <div class="label">
+        Node Status
+      </div>
     </div>
     <div class="metric status-metric">
-      <StatusBadge v-if="health" :status="health.db" />
-      <span v-else class="dash">—</span>
-      <div class="label">Database</div>
+      <StatusBadge
+        v-if="health"
+        :status="health.db"
+      />
+      <span
+        v-else
+        class="dash"
+      >—</span>
+      <div class="label">
+        Database
+      </div>
     </div>
   </div>
 </template>

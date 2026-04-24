@@ -49,7 +49,10 @@ const chartOptions = {
 
 <template>
   <div class="chart-wrapper">
-    <Line :data="chartData" :options="chartOptions" />
+    <Line
+      :data="chartData"
+      :options="chartOptions"
+    />
   </div>
 </template>
 

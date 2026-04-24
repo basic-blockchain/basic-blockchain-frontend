@@ -7,8 +7,17 @@ defineProps<{ blocks: Block[]; compact?: boolean }>()
 
 <template>
   <div class="chain-list">
-    <div v-if="blocks.length === 0" class="empty">No blocks yet.</div>
-    <TransitionGroup name="block-slide" tag="div" class="list-inner">
+    <div
+      v-if="blocks.length === 0"
+      class="empty"
+    >
+      No blocks yet.
+    </div>
+    <TransitionGroup
+      name="block-slide"
+      tag="div"
+      class="list-inner"
+    >
       <BlockCard
         v-for="block in blocks"
         :key="block.index"

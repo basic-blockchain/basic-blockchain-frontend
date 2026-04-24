@@ -119,7 +119,10 @@ onMounted(async () => {
       <p class="muted">
         Backend endpoint: <strong>/valid</strong>
       </p>
-      <div class="result" :class="chainValidation?.valid ? 'ok' : 'neutral'">
+      <div
+        class="result"
+        :class="chainValidation?.valid ? 'ok' : 'neutral'"
+      >
         <span v-if="chainValidation">{{ chainValidation.message }}</span>
         <span v-else>Run validation to verify chain integrity.</span>
       </div>
@@ -129,36 +132,75 @@ onMounted(async () => {
       <section class="panel">
         <h2>Block Validation</h2>
         <div class="form-row">
-          <InputNumber v-model="blockForm.index" placeholder="Block index" :min="1" />
+          <InputNumber
+            v-model="blockForm.index"
+            placeholder="Block index"
+            :min="1"
+          />
         </div>
-        <div v-if="selectedBlock" class="result-list">
-          <div v-for="check in blockChecks" :key="check.label" class="result-item" :class="check.ok ? 'ok' : 'error'">
+        <div
+          v-if="selectedBlock"
+          class="result-list"
+        >
+          <div
+            v-for="check in blockChecks"
+            :key="check.label"
+            class="result-item"
+            :class="check.ok ? 'ok' : 'error'"
+          >
             <i :class="check.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
             <span>{{ check.label }}</span>
           </div>
         </div>
-        <p v-else class="muted">Select an existing block index to validate.</p>
+        <p
+          v-else
+          class="muted"
+        >
+          Select an existing block index to validate.
+        </p>
       </section>
 
       <section class="panel">
         <h2>Node Validation</h2>
         <div class="form-row">
-          <InputText v-model="nodeForm.url" placeholder="http://peer:5000" />
+          <InputText
+            v-model="nodeForm.url"
+            placeholder="http://peer:5000"
+          />
         </div>
-        <div v-if="nodeChecks.length > 0" class="result-list">
-          <div v-for="check in nodeChecks" :key="check.label" class="result-item" :class="check.ok ? 'ok' : 'error'">
+        <div
+          v-if="nodeChecks.length > 0"
+          class="result-list"
+        >
+          <div
+            v-for="check in nodeChecks"
+            :key="check.label"
+            class="result-item"
+            :class="check.ok ? 'ok' : 'error'"
+          >
             <i :class="check.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
             <span>{{ check.label }}</span>
           </div>
         </div>
-        <p v-else class="muted">Type a node URL to evaluate format and registration state.</p>
+        <p
+          v-else
+          class="muted"
+        >
+          Type a node URL to evaluate format and registration state.
+        </p>
       </section>
 
       <section class="panel tx-panel">
         <h2>Transaction Validation</h2>
         <div class="form-grid">
-          <InputText v-model="txForm.sender" placeholder="Sender" />
-          <InputText v-model="txForm.receiver" placeholder="Receiver" />
+          <InputText
+            v-model="txForm.sender"
+            placeholder="Sender"
+          />
+          <InputText
+            v-model="txForm.receiver"
+            placeholder="Receiver"
+          />
           <InputNumber
             v-model="txForm.amount"
             placeholder="Amount"
@@ -167,7 +209,12 @@ onMounted(async () => {
           />
         </div>
         <div class="result-list">
-          <div v-for="check in txChecks" :key="check.label" class="result-item" :class="check.ok ? 'ok' : 'error'">
+          <div
+            v-for="check in txChecks"
+            :key="check.label"
+            class="result-item"
+            :class="check.ok ? 'ok' : 'error'"
+          >
             <i :class="check.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
             <span>{{ check.label }}</span>
           </div>

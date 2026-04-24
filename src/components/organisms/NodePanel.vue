@@ -39,12 +39,33 @@ async function resolve() {
   <div class="node-panel">
     <h2>Peers <span class="count">{{ store.total }}</span></h2>
     <div class="peers">
-      <NodeBadge v-for="peer in store.peers" :key="peer" :url="peer" online />
-      <div v-if="store.peers.length === 0" class="empty">No peers registered.</div>
+      <NodeBadge
+        v-for="peer in store.peers"
+        :key="peer"
+        :url="peer"
+        online
+      />
+      <div
+        v-if="store.peers.length === 0"
+        class="empty"
+      >
+        No peers registered.
+      </div>
     </div>
-    <form class="form" @submit.prevent="register">
-      <InputText v-model="newUrl" placeholder="http://peer:5000" />
-      <Button type="submit" label="Register" :loading="submitting" icon="pi pi-plus" />
+    <form
+      class="form"
+      @submit.prevent="register"
+    >
+      <InputText
+        v-model="newUrl"
+        placeholder="http://peer:5000"
+      />
+      <Button
+        type="submit"
+        label="Register"
+        :loading="submitting"
+        icon="pi pi-plus"
+      />
     </form>
     <Button
       label="Resolve Consensus"

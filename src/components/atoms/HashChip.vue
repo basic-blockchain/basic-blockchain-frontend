@@ -13,7 +13,11 @@ async function copy() {
 </script>
 
 <template>
-  <span class="chip" :title="hash" @click="copy">
+  <span
+    class="chip"
+    :title="hash"
+    @click="copy"
+  >
     <code>{{ display }}</code>
     <span class="pi pi-copy copy-icon" />
   </span>
