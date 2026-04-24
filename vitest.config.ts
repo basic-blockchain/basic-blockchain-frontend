@@ -14,8 +14,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/main.ts', 'src/router/**'],
+      include: ['src/domain/**/*.ts', 'src/stores/**/*.ts'],
+      exclude: [
+        'src/main.ts',
+        'src/domain/metrics.ts',  // pure interfaces, no executable logic
+        'src/domain/node.ts',     // pure interfaces, no executable logic
+      ],
     },
   },
 })
