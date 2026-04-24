@@ -1,0 +1,42 @@
+# Documentation Index — Basic Blockchain Frontend
+
+Real-time dashboard for the
+[Basic Blockchain Simulator](../../basic-blockchain-simulator/) backend.
+
+Stack: Vue 3 + Vite 6 + TypeScript 5 + Pinia + VueUse + PrimeVue 4 + Chart.js.
+
+---
+
+## Documents
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](architecture.md) | Layered design, component tree, data flows, Pinia stores, WebSocket lifecycle, CI/CD, environment config. |
+| [Component Catalog](components.md) | Every atom, molecule, organism and view — props, emits, usage examples. |
+| [ADR-001 — Vue over React](decisions/ADR-001-vue-over-react.md) | Framework selection for the dashboard. |
+| [ADR-002 — Pinia for state](decisions/ADR-002-pinia-state.md) | State-management choice (Pinia vs Vuex / TanStack Query / plain composables). |
+| [ADR-003 — Atomic Design](decisions/ADR-003-atomic-design.md) | Component organisation (atoms -> molecules -> organisms -> views). |
+
+---
+
+## Related Backend Documentation
+
+| Document | Link |
+|----------|------|
+| Backend Architecture  | [../../basic-blockchain-simulator/docs/architecture.md](../../basic-blockchain-simulator/docs/architecture.md) |
+| Backend API Reference | [../../basic-blockchain-simulator/docs/api-reference.md](../../basic-blockchain-simulator/docs/api-reference.md) |
+| Business Rules        | [../../basic-blockchain-simulator/docs/business-rules.md](../../basic-blockchain-simulator/docs/business-rules.md) |
+| Data Model            | [../../basic-blockchain-simulator/docs/data-model.md](../../basic-blockchain-simulator/docs/data-model.md) |
+| Flow Diagrams         | [../../basic-blockchain-simulator/docs/flows.md](../../basic-blockchain-simulator/docs/flows.md) |
+| Use Cases             | [../../basic-blockchain-simulator/docs/use-cases.md](../../basic-blockchain-simulator/docs/use-cases.md) |
+
+---
+
+## Conventions
+
+- **Diagrams:** Mermaid in fenced code blocks.
+- **Status tags:** each document starts with `Status:` + `Last updated:`.
+- **ADR numbering:** `ADR-NNN-short-kebab-title.md`, monotonically increasing,
+  never renumbered.
+- **Links:** relative paths only, so docs render correctly in GitHub and in
+  local Markdown previews.
