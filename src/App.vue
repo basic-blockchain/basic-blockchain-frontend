@@ -18,23 +18,35 @@ const navItems = [
 
 <template>
   <div class="layout">
-    <aside class="sidebar">
+    <a
+      href="#main-content"
+      class="skip-link"
+    >Skip to main content</a>
+    <aside
+      class="sidebar"
+      aria-label="Main navigation"
+    >
       <div class="sidebar-header">
         <span
           class="pi pi-bitcoin"
+          aria-hidden="true"
           style="font-size: 1.5rem"
         />
         <span class="sidebar-title">Blockchain</span>
       </div>
-      <nav>
+      <nav aria-label="Site sections">
         <RouterLink
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           class="nav-item"
           :class="{ active: route.path.startsWith(item.to) }"
+          :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
         >
-          <span :class="item.icon" />
+          <span
+            :class="item.icon"
+            aria-hidden="true"
+          />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
@@ -46,7 +58,11 @@ const navItems = [
         <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Connecting…' }}</span>
       </div>
     </aside>
-    <main class="main-content">
+    <main
+      id="main-content"
+      class="main-content"
+      tabindex="-1"
+    >
       <RouterView />
     </main>
     <Toast position="bottom-right" />
