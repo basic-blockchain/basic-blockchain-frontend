@@ -8,8 +8,14 @@ export interface BlockMinedEvent {
   block: ApiBlock
 }
 
+function resolveWsUrl(): string {
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL as string
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${scheme}://${window.location.host}/api/v1/ws`
+}
+
 export function useBlockchainWebSocket(onBlockMined: (block: Block) => void) {
-  const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:5000/api/v1/ws'
+  const WS_URL = resolveWsUrl()
   const lastError = ref<string | null>(null)
 
   const { status, data } = useWebSocket(WS_URL, {
