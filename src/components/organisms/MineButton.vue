@@ -42,7 +42,9 @@ async function mine() {
 <template>
   <Button
     :loading="loading"
-    label="Mine Block"
+    :label="loading ? 'Mining…' : 'Mine Block'"
+    :aria-label="loading ? 'Mining in progress, please wait' : 'Mine a new block'"
+    :aria-busy="loading"
     icon="pi pi-hammer"
     severity="primary"
     @click="mine"
