@@ -29,11 +29,18 @@ async function copy() {
   align-items: center;
   gap: 0.3rem;
   font-size: 0.8rem;
-  background: #f1f5f9;
+  background: var(--surface-soft);
+  border: 1px solid var(--surface-border);
   border-radius: 4px;
   padding: 0.15rem 0.5rem;
   cursor: pointer;
+  color: var(--text-body);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.chip:hover { background: #e2e8f0; }
-.copy-icon { font-size: 0.7rem; opacity: 0.5; }
+.chip:hover {
+  background: #262844;
+  border-color: var(--primary);
+  color: var(--text-strong);
+}
+.copy-icon { font-size: 0.7rem; color: var(--text-muted); }
 </style>
