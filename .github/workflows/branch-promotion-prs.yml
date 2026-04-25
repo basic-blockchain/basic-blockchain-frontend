@@ -160,12 +160,15 @@ jobs:
     steps:
       - name: Create manual promotion PR
         uses: actions/github-script@v7
+        env:
+          INPUT_SOURCE: ${{ github.event.inputs.source }}
+          INPUT_TARGET: ${{ github.event.inputs.target }}
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const head = '${{ github.event.inputs.source }}';
-            const base = '${{ github.event.inputs.target }}';
+            const head = process.env.INPUT_SOURCE;
+            const base = process.env.INPUT_TARGET;
             const title = `Promote ${head} into ${base}`;
             const body = `Manual promotion PR from ${head} to ${base}.`;
 
