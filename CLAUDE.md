@@ -111,8 +111,9 @@ GH_BIN="/c/Program Files/GitHub CLI/gh.exe" \
 
 ## Backend API
 
-The frontend connects to the simulator backend at `http://localhost:8000` by default.
-Set `VITE_API_BASE_URL` (or the framework-equivalent env var) to override.
+The frontend connects to the simulator backend at `http://localhost:5000` by default
+(proxied via Vite's `/api` and `/ws` targets; see `vite.config.ts`).
+Set `VITE_API_BASE_URL` to override the HTTP base and `VITE_WS_URL` to override the WebSocket URL.
 
 Key endpoints (see backend `docs/api-reference.md`):
 - `GET  /chain`         — full chain snapshot
