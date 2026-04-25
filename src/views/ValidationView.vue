@@ -7,10 +7,12 @@ import { useChainStore } from '@/stores/chain'
 import { useNodesStore } from '@/stores/nodes'
 import { validateTransaction } from '@/domain/transaction'
 import { useToast } from '@/composables/useToast'
+import { useValidationHistoryStore } from '@/stores/validationHistory'
 
 const chainStore = useChainStore()
 const nodesStore = useNodesStore()
 const toast = useToast()
+const historyStore = useValidationHistoryStore()
 
 const loadingChainValidation = ref(false)
 const chainValidation = ref<{ valid: boolean; message: string } | null>(null)
@@ -93,6 +95,7 @@ async function validateCurrentChain() {
   try {
     const result = await chainStore.fetchValidation()
     chainValidation.value = result
+    historyStore.record('chain', result.valid ? 'valid' : 'invalid', 'full chain', result.message)
     if (result.valid) {
       toast.success('Chain validation', result.message)
     } else {
@@ -100,10 +103,21 @@ async function validateCurrentChain() {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Validation failed'
+    historyStore.record('chain', 'error', 'full chain', msg)
     toast.error('Chain validation failed', msg)
   } finally {
     loadingChainValidation.value = false
   }
+}
+
+function downloadHistory() {
+  const blob = new Blob([historyStore.exportJson()], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `validation-history-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 onMounted(async () => {
@@ -115,12 +129,21 @@ onMounted(async () => {
   <div class="validation-view">
     <div class="header-row">
       <h1>Validation Center</h1>
-      <Button
-        label="Validate Chain"
-        icon="pi pi-check-circle"
-        :loading="loadingChainValidation"
-        @click="validateCurrentChain"
-      />
+      <div class="header-actions">
+        <Button
+          label="Validate Chain"
+          icon="pi pi-check-circle"
+          :loading="loadingChainValidation"
+          @click="validateCurrentChain"
+        />
+        <Button
+          v-if="historyStore.total > 0"
+          label="Export History"
+          icon="pi pi-download"
+          severity="secondary"
+          @click="downloadHistory"
+        />
+      </div>
     </div>
 
     <section class="panel chain-panel">
@@ -246,6 +269,38 @@ onMounted(async () => {
         </p>
       </section>
     </div>
+
+    <section
+      v-if="historyStore.total > 0"
+      class="panel history-panel"
+    >
+      <div class="history-header">
+        <h2>Validation History <span class="count">{{ historyStore.total }}</span></h2>
+      </div>
+      <div class="history-list">
+        <div
+          v-for="ev in [...historyStore.events].reverse()"
+          :key="ev.id"
+          class="history-item"
+          :class="ev.status"
+        >
+          <i
+            class="pi history-icon"
+            :class="{
+              'pi-check-circle': ev.status === 'valid',
+              'pi-times-circle': ev.status === 'invalid',
+              'pi-exclamation-triangle': ev.status === 'error',
+            }"
+          />
+          <div class="history-body">
+            <span class="history-type">{{ ev.type }}</span>
+            <span class="history-target">{{ ev.target }}</span>
+            <span class="history-message">{{ ev.message }}</span>
+          </div>
+          <span class="history-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -260,6 +315,11 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .validation-grid {
@@ -344,6 +404,76 @@ onMounted(async () => {
   font-size: 0.9rem;
 }
 
+.history-panel { margin-top: 0; }
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface-border);
+  background: var(--surface-soft);
+}
+
+.history-item.valid { border-color: rgba(34, 197, 94, 0.3); }
+.history-item.invalid { border-color: rgba(239, 68, 68, 0.3); }
+.history-item.error { border-color: rgba(250, 204, 21, 0.3); }
+
+.history-icon { font-size: 0.95rem; flex-shrink: 0; }
+.history-item.valid .history-icon { color: #86efac; }
+.history-item.invalid .history-icon { color: #fca5a5; }
+.history-item.error .history-icon { color: #fde68a; }
+
+.history-body {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.history-type {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid rgba(180, 169, 230, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.history-target { color: var(--text-muted); }
+.history-message { color: var(--text-body); }
+.history-time { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; flex-shrink: 0; }
+
+.count {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.8rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  margin-left: 0.4rem;
+  border: 1px solid rgba(180, 169, 230, 0.32);
+}
+
 @media (max-width: 960px) {
   .validation-grid {
     grid-template-columns: 1fr;
@@ -357,6 +487,10 @@ onMounted(async () => {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
   }
 }
 </style>
