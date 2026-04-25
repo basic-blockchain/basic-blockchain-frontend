@@ -7,7 +7,13 @@ defineProps<{ metrics: Metrics | null; health: Health | null }>()
 </script>
 
 <template>
-  <div class="metrics-bar">
+  <div
+    class="metrics-bar"
+    role="region"
+    aria-label="Blockchain metrics"
+    aria-live="polite"
+    aria-atomic="false"
+  >
     <MetricTile
       label="Chain Height"
       :value="metrics?.chainHeight ?? null"

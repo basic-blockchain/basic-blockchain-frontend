@@ -53,8 +53,14 @@ const navItems = [
       <div
         class="ws-status"
         :class="wsStatus"
+        role="status"
+        aria-live="polite"
+        :aria-label="`WebSocket: ${wsStatus === 'OPEN' ? 'connected' : 'connecting'}`"
       >
-        <span class="dot" />
+        <span
+          class="dot"
+          aria-hidden="true"
+        />
         <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Connecting…' }}</span>
       </div>
     </aside>
