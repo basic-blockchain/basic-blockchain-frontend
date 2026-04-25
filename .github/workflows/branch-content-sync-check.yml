@@ -31,10 +31,14 @@ jobs:
       - name: Resolve check parameters
         id: params
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_REFERENCE: ${{ inputs.reference_branch }}
+          INPUT_TARGETS: ${{ inputs.target_branches }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "reference=${{ inputs.reference_branch }}" >> "$GITHUB_OUTPUT"
-            echo "targets=${{ inputs.target_branches }}" >> "$GITHUB_OUTPUT"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "reference=$INPUT_REFERENCE" >> "$GITHUB_OUTPUT"
+            echo "targets=$INPUT_TARGETS" >> "$GITHUB_OUTPUT"
           else
             echo "reference=main" >> "$GITHUB_OUTPUT"
             echo "targets=production staging qa develop" >> "$GITHUB_OUTPUT"
