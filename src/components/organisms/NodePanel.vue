@@ -83,15 +83,34 @@ async function resolve() {
     <h2>Peers <span class="count">{{ store.total }}</span></h2>
 
     <div class="peers">
-      <NodeBadge v-for="peer in store.peers" :key="peer" :url="peer" online />
-      <div v-if="store.peers.length === 0" class="empty">
+      <NodeBadge
+        v-for="peer in store.peers"
+        :key="peer"
+        :url="peer"
+        online
+      />
+      <div
+        v-if="store.peers.length === 0"
+        class="empty"
+      >
         No peers registered. Add a running blockchain node below.
       </div>
     </div>
 
-    <form class="form" @submit.prevent="register">
-      <InputText v-model="newUrl" placeholder="http://localhost:5001" />
-      <Button type="submit" label="Register" :loading="submitting" icon="pi pi-plus" />
+    <form
+      class="form"
+      @submit.prevent="register"
+    >
+      <InputText
+        v-model="newUrl"
+        placeholder="http://localhost:5001"
+      />
+      <Button
+        type="submit"
+        label="Register"
+        :loading="submitting"
+        icon="pi pi-plus"
+      />
     </form>
 
     <div class="resolve-row">
@@ -103,10 +122,16 @@ async function resolve() {
         :disabled="store.peers.length === 0"
         @click="resolve"
       />
-      <span v-if="resolving" class="resolve-hint">Contacting peers…</span>
+      <span
+        v-if="resolving"
+        class="resolve-hint"
+      >Contacting peers…</span>
     </div>
 
-    <p v-if="store.peers.length > 0" class="info-hint">
+    <p
+      v-if="store.peers.length > 0"
+      class="info-hint"
+    >
       Peers must be running blockchain nodes.
       Use <strong>http://localhost:PORT</strong> for local instances.
     </p>
