@@ -69,5 +69,6 @@ onMounted(async () => {
 }
 @media (max-width: 900px) {
   .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
 }
 </style>

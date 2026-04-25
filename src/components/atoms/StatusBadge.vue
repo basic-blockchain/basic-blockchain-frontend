@@ -6,8 +6,13 @@ defineProps<{ status: 'ok' | 'degraded' | 'error' | 'n/a' }>()
   <span
     class="badge"
     :class="status"
+    role="status"
+    :aria-label="`Status: ${status}`"
   >
-    <span class="dot" />
+    <span
+      class="dot"
+      aria-hidden="true"
+    />
     {{ status }}
   </span>
 </template>
