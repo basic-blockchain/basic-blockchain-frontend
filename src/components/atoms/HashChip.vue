@@ -10,16 +10,30 @@ async function copy() {
     await navigator.clipboard.writeText(props.hash)
   }
 }
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    void copy()
+  }
+}
 </script>
 
 <template>
   <span
     class="chip"
     :title="hash"
+    role="button"
+    tabindex="0"
+    :aria-label="`Copy hash ${hash}`"
     @click="copy"
+    @keydown="onKeydown"
   >
     <code>{{ display }}</code>
-    <span class="pi pi-copy copy-icon" />
+    <span
+      class="pi pi-copy copy-icon"
+      aria-hidden="true"
+    />
   </span>
 </template>
 
