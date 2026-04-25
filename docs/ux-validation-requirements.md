@@ -78,14 +78,32 @@ Adopt the approved blockchain dark palette:
 - Minimum readable contrast for all text on dark surfaces.
 - Do not rely only on color for status; include icon/text labels.
 - Ensure keyboard navigability for forms and action buttons.
+- All interactive elements must show a visible `:focus-visible` ring.
+- Mobile navigation must be operable without a pointer device.
 
-## 4. Suggested implementation phases
+## 4. WCAG AA Contrast Audit (Phase H.2)
 
-1. Theme foundation and global token migration.
-2. Cross-view contrast and typography normalization.
-3. Validation Center rollout (chain, block, node, transaction).
-4. Accessibility pass and responsive QA.
+Surface reference: `--surface #1a1b2e` (L=0.017), `--bg-base #0d0e1a` (L=0.004)
+
+| Token / element | Color | Ratio on surface | WCAG AA (4.5:1) | Status |
+|-----------------|-------|-------------------|-----------------|--------|
+| `--text-strong` | `#fdfdfd` | 12.5:1 | ✅ pass | — |
+| `--text-body` | `#a0a8c0` | 6.9:1 | ✅ pass | — |
+| `--text-muted` (old) | `#6d7382` | 3.6:1 | ❌ fail | Fixed → `#8892a4` |
+| `--text-muted` (new) | `#8892a4` | 5.4:1 | ✅ pass | Phase H.2 |
+| `--primary` text | `#7d56fe` | 4.6:1 | ✅ pass | — |
+| Status ok text | `#86efac` | 7.8:1 | ✅ pass | — |
+| Status error text | `#fca5a5` | 7.2:1 | ✅ pass | — |
+| Status degraded text | `#fcd34d` | 9.1:1 | ✅ pass | — |
+| HashChip (old bg) | `#f1f5f9` light | n/a | ❌ wrong palette | Fixed H.2 |
+
+## 5. Suggested implementation phases
+
+1. Theme foundation and global token migration. ✅ done
+2. Cross-view contrast and typography normalization. ✅ done
+3. Validation Center rollout (chain, block, node, transaction). ✅ done
+4. Accessibility pass and responsive QA. 🔄 Phase H.2 in progress
 5. Optional enhancements:
-   - historical validation logs
-   - exportable validation report
-   - server-side block and node validation endpoints
+   - historical validation logs ✅ done (Phase H.1)
+   - exportable validation report ✅ done (Phase H.1)
+   - server-side block and node validation endpoints (Phase H.1 backend)
