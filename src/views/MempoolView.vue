@@ -109,7 +109,11 @@ async function submit() {
   padding: 1.25rem;
   box-shadow: var(--shadow-soft);
 }
-.tx-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.tx-form { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end; }
+@media (max-width: 640px) {
+  .tx-form { flex-direction: column; }
+  .tx-form > * { width: 100%; }
+}
 .count {
   background: var(--primary-soft);
   color: var(--primary);
