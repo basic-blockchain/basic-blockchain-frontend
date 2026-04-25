@@ -15,7 +15,7 @@ const mockBlock: ApiBlock = {
   previous_hash: 'abc123',
 }
 
-function makeUseWebSocketMock(triggerMessage?: (raw: string) => void) {
+function makeUseWebSocketMock(triggerMessage?: (send: (raw: string) => void) => void) {
   let capturedHandler: ((ws: unknown, event: MessageEvent) => void) | undefined
 
   ;(useWebSocket as ReturnType<typeof vi.fn>).mockImplementation(

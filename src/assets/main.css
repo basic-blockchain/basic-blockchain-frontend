@@ -19,7 +19,10 @@
 
   --text-strong: #fdfdfd;
   --text-body: #a0a8c0;
-  --text-muted: #6d7382;
+  --text-muted: #8892a4;   /* upgraded from #6d7382 → 5.4:1 on surface (WCAG AA) */
+
+  --focus-ring: 0 0 0 3px rgba(125, 86, 254, 0.55);
+  --focus-ring-offset: 0 0 0 1px var(--bg-base), 0 0 0 4px rgba(125, 86, 254, 0.55);
 
   --primary: #7d56fe;
   --primary-hover: #8e6afe;
@@ -97,6 +100,42 @@ h2 {
   margin-left: 0.5rem;
   vertical-align: middle;
   border: 1px solid rgba(180, 169, 230, 0.32);
+}
+
+/* ── Focus visibility (WCAG 2.4.7 / 2.4.11) ─────────────────────────── */
+:focus { outline: none; }
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Skip-to-main link — visible only on keyboard focus */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: top 0.1s;
+}
+.skip-link:focus-visible { top: 0.75rem; }
+
+/* PrimeVue focus override — use our ring instead of default */
+.p-button:focus-visible {
+  box-shadow: var(--focus-ring) !important;
+  outline: none !important;
+}
+.p-inputtext:focus-visible,
+.p-inputnumber-input:focus-visible {
+  box-shadow: var(--focus-ring) !important;
+  outline: none !important;
 }
 
 /* Scrollbar */
