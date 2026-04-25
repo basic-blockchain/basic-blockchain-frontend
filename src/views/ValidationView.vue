@@ -24,6 +24,10 @@ const selectedBlock = computed(() => {
   return chainStore.blocks.find((b) => b.index === blockForm.index) ?? null
 })
 
+const blockNotFound = computed(
+  () => blockForm.index !== null && selectedBlock.value === null,
+)
+
 const blockChecks = computed(() => {
   if (!selectedBlock.value) return []
   const checks: Array<{ label: string; ok: boolean }> = []
@@ -61,7 +65,12 @@ const nodeChecks = computed(() => {
   return checks
 })
 
+const txHasInput = computed(
+  () => txForm.sender.trim() !== '' || txForm.receiver.trim() !== '' || txForm.amount !== null,
+)
+
 const txChecks = computed(() => {
+  if (!txHasInput.value) return []
   const errors = validateTransaction({
     sender: txForm.sender,
     receiver: txForm.receiver,
@@ -152,11 +161,18 @@ onMounted(async () => {
             <span>{{ check.label }}</span>
           </div>
         </div>
+        <div
+          v-else-if="blockNotFound"
+          class="result error-banner"
+        >
+          <i class="pi pi-exclamation-triangle" />
+          Block #{{ blockForm.index }} does not exist in the current chain (height: {{ chainStore.length }}).
+        </div>
         <p
           v-else
           class="muted"
         >
-          Select an existing block index to validate.
+          Enter a block index (1–{{ chainStore.length || '?' }}) to inspect its integrity.
         </p>
       </section>
 
@@ -208,7 +224,10 @@ onMounted(async () => {
             :max-fraction-digits="8"
           />
         </div>
-        <div class="result-list">
+        <div
+          v-if="txHasInput"
+          class="result-list"
+        >
           <div
             v-for="check in txChecks"
             :key="check.label"
@@ -219,6 +238,12 @@ onMounted(async () => {
             <span>{{ check.label }}</span>
           </div>
         </div>
+        <p
+          v-else
+          class="muted"
+        >
+          Fill sender, receiver and amount to dry-run transaction rules.
+        </p>
       </section>
     </div>
   </div>
@@ -275,6 +300,15 @@ onMounted(async () => {
   border-color: rgba(34, 197, 94, 0.4);
   background: rgba(34, 197, 94, 0.12);
   color: #86efac;
+}
+
+.result.error-banner {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .result-list {
