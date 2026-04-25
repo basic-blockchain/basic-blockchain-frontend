@@ -8,10 +8,10 @@ export function useBlockchainWs() {
   const mempoolStore = useMempoolStore()
   const metricsStore = useMetricsStore()
 
-  const { status } = useBlockchainWebSocket(async (block) => {
+  const { status, lastError } = useBlockchainWebSocket(async (block) => {
     chainStore.appendBlock(block)
     await Promise.all([mempoolStore.fetchPending(), metricsStore.fetchAll()])
   })
 
-  return { wsStatus: status }
+  return { wsStatus: status, wsError: lastError }
 }

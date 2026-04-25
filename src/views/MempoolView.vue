@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useMempoolStore } from '@/stores/mempool'
+import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import MempoolTable from '@/components/organisms/MempoolTable.vue'
+import ConfirmedTransactionsTable from '@/components/organisms/ConfirmedTransactionsTable.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
@@ -9,6 +11,7 @@ import { validateTransaction } from '@/domain/transaction'
 import { useToast } from '@/composables/useToast'
 
 const store = useMempoolStore()
+const confirmedStore = useConfirmedTransactionsStore()
 const toast = useToast()
 const submitting = ref(false)
 
@@ -83,6 +86,16 @@ async function submit() {
     <section class="panel">
       <h2>Pending Transactions</h2>
       <MempoolTable :transactions="store.transactions" />
+    </section>
+    <section class="panel">
+      <h2>
+        Transaction History
+        <span
+          v-if="confirmedStore.total > 0"
+          class="count"
+        >{{ confirmedStore.total }}</span>
+      </h2>
+      <ConfirmedTransactionsTable :transactions="confirmedStore.records" />
     </section>
   </div>
 </template>

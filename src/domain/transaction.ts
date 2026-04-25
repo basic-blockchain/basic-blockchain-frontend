@@ -4,6 +4,11 @@ export interface Transaction {
   amount: number
 }
 
+export interface ConfirmedTransaction extends Transaction {
+  blockIndex: number
+  blockTimestamp: string
+}
+
 export interface TransactionValidationError {
   field: 'sender' | 'receiver' | 'amount'
   message: string
