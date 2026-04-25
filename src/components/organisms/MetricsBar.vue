@@ -60,14 +60,14 @@ defineProps<{ metrics: Metrics | null; health: Health | null }>()
 
 <style scoped>
 .metrics-bar {
-  display: flex;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 1rem 1.5rem;
   background: var(--surface);
   border: 1px solid var(--surface-border);
   border-radius: var(--radius);
   padding: 1rem 1.5rem;
   box-shadow: var(--shadow-soft);
-  flex-wrap: wrap;
 }
 .metric {
   display: flex;
