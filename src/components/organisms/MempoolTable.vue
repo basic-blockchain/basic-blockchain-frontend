@@ -7,12 +7,29 @@ defineProps<{ transactions: Transaction[] }>()
 </script>
 
 <template>
-  <DataTable :value="transactions" size="small" striped-rows>
-    <Column field="sender" header="Sender" />
-    <Column field="receiver" header="Receiver" />
-    <Column field="amount" header="Amount">
-      <template #body="{ data }">{{ Number(data.amount).toFixed(4) }}</template>
+  <DataTable
+    :value="transactions"
+    size="small"
+    striped-rows
+  >
+    <Column
+      field="sender"
+      header="Sender"
+    />
+    <Column
+      field="receiver"
+      header="Receiver"
+    />
+    <Column
+      field="amount"
+      header="Amount"
+    >
+      <template #body="{ data }">
+        {{ Number(data.amount).toFixed(4) }}
+      </template>
     </Column>
-    <template #empty>Mempool is empty.</template>
+    <template #empty>
+      Mempool is empty.
+    </template>
   </DataTable>
 </template>

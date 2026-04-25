@@ -9,7 +9,7 @@ interface MineResponse extends ApiBlock {
 }
 
 export async function mineBlock(): Promise<{ block: Block; transactions: Transaction[] }> {
-  const { data } = await client.post<MineResponse>('/mine_block')
+  const { data } = await client.post<MineResponse>('/mine_block', {}, { timeout: 120_000 })
   return {
     block: blockFromApi(data),
     transactions: data.transactions,

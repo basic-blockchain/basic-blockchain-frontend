@@ -12,6 +12,11 @@ const router = createRouter({
     { path: '/chain', name: 'chain', component: () => import('@/views/ChainView.vue') },
     { path: '/mempool', name: 'mempool', component: () => import('@/views/MempoolView.vue') },
     { path: '/nodes', name: 'nodes', component: () => import('@/views/NodesView.vue') },
+    {
+      path: '/validation',
+      name: 'validation',
+      component: () => import('@/views/ValidationView.vue'),
+    },
     { path: '/health', name: 'health', component: () => import('@/views/HealthView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],

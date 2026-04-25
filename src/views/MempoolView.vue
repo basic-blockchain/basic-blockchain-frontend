@@ -54,16 +54,30 @@ async function submit() {
     <h1>Mempool <span class="count">{{ store.count }}</span></h1>
     <section class="panel">
       <h2>Add Transaction</h2>
-      <form class="tx-form" @submit.prevent="submit">
-        <InputText v-model="form.sender" placeholder="Sender" />
-        <InputText v-model="form.receiver" placeholder="Receiver" />
+      <form
+        class="tx-form"
+        @submit.prevent="submit"
+      >
+        <InputText
+          v-model="form.sender"
+          placeholder="Sender"
+        />
+        <InputText
+          v-model="form.receiver"
+          placeholder="Receiver"
+        />
         <InputNumber
           v-model="form.amount"
           placeholder="Amount"
           :min-fraction-digits="0"
           :max-fraction-digits="8"
         />
-        <Button type="submit" label="Submit" :loading="submitting" icon="pi pi-send" />
+        <Button
+          type="submit"
+          label="Submit"
+          :loading="submitting"
+          icon="pi pi-send"
+        />
       </form>
     </section>
     <section class="panel">
@@ -76,19 +90,21 @@ async function submit() {
 <style scoped>
 .mempool-view { display: flex; flex-direction: column; gap: 1.5rem; }
 .panel {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
   padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 .tx-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .count {
-  background: #3b82f6;
-  color: #fff;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-size: 0.8rem;
   padding: 0.1rem 0.5rem;
   border-radius: 10px;
   margin-left: 0.5rem;
   vertical-align: middle;
+  border: 1px solid rgba(180, 169, 230, 0.32);
 }
 </style>

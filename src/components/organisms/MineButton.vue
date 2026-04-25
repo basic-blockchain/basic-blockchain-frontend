@@ -17,10 +17,14 @@ async function mine() {
   if (loading.value) return
   loading.value = true
   try {
-    const { block } = await mineBlock()
+    const { block, transactions } = await mineBlock()
     chainStore.appendBlock(block)
     await Promise.all([mempoolStore.fetchPending(), metricsStore.fetchAll()])
-    toast.success(`Block #${block.index} mined`)
+    const detail =
+      transactions.length > 0
+        ? `${transactions.length} transaction(s) included and removed from mempool`
+        : 'Empty block (no pending transactions)'
+    toast.success(`Block #${block.index} mined`, detail)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Mining failed'
     toast.error('Mining failed', msg)

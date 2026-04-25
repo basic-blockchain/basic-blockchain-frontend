@@ -27,11 +27,17 @@ onMounted(async () => {
       <h1>Dashboard</h1>
       <MineButton />
     </div>
-    <MetricsBar :metrics="metricsStore.metrics" :health="metricsStore.health" />
+    <MetricsBar
+      :metrics="metricsStore.metrics"
+      :health="metricsStore.health"
+    />
     <div class="dashboard-grid">
       <section class="panel">
         <h2>Recent Blocks</h2>
-        <ChainList :blocks="chainStore.recentBlocks" compact />
+        <ChainList
+          :blocks="chainStore.recentBlocks"
+          compact
+        />
       </section>
       <section class="panel">
         <h2>Mempool <span class="badge">{{ mempoolStore.count }}</span></h2>
@@ -46,18 +52,20 @@ onMounted(async () => {
 .dashboard-header { display: flex; justify-content: space-between; align-items: center; }
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .panel {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
   padding: 1.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 .badge {
-  background: #3b82f6;
-  color: #fff;
+  background: var(--primary-soft);
+  color: var(--primary);
   font-size: 0.75rem;
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   margin-left: 0.4rem;
+  border: 1px solid rgba(180, 169, 230, 0.32);
 }
 @media (max-width: 900px) {
   .dashboard-grid { grid-template-columns: 1fr; }

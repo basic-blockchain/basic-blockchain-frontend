@@ -12,7 +12,10 @@ const formatted = computed(() => props.amount.toFixed(props.precision))
 <template>
   <span class="amount">
     <span class="value">{{ formatted }}</span>
-    <span v-if="unit" class="unit">{{ unit }}</span>
+    <span
+      v-if="unit"
+      class="unit"
+    >{{ unit }}</span>
   </span>
 </template>
 

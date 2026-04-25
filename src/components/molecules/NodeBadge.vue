@@ -4,7 +4,10 @@ defineProps<{ url: string; online?: boolean }>()
 
 <template>
   <div class="node-badge">
-    <span class="dot" :class="{ online }" />
+    <span
+      class="dot"
+      :class="{ online }"
+    />
     <code class="url">{{ url }}</code>
   </div>
 </template>

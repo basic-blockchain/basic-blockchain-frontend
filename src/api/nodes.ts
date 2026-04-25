@@ -20,7 +20,8 @@ export async function resolveConsensus(): Promise<{
   message: string
 }> {
   const { data } = await client.get<{ replaced: boolean; chain: ApiBlock[]; message: string }>(
-    '/nodes/resolve'
+    '/nodes/resolve',
+    { timeout: 60_000 }
   )
   return { replaced: data.replaced, chain: data.chain.map(blockFromApi), message: data.message }
 }
