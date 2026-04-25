@@ -6,12 +6,14 @@ import { useToast } from '@/composables/useToast'
 import { useChainStore } from '@/stores/chain'
 import { useMempoolStore } from '@/stores/mempool'
 import { useMetricsStore } from '@/stores/metrics'
+import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 
 const loading = ref(false)
 const toast = useToast()
 const chainStore = useChainStore()
 const mempoolStore = useMempoolStore()
 const metricsStore = useMetricsStore()
+const confirmedStore = useConfirmedTransactionsStore()
 
 async function mine() {
   if (loading.value) return
@@ -19,6 +21,9 @@ async function mine() {
   try {
     const { block, transactions } = await mineBlock()
     chainStore.appendBlock(block)
+    if (transactions.length > 0) {
+      confirmedStore.addFromBlock(block.index, block.timestamp, transactions)
+    }
     await Promise.all([mempoolStore.fetchPending(), metricsStore.fetchAll()])
     const detail =
       transactions.length > 0
