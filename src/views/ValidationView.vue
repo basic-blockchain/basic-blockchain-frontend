@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
@@ -90,7 +91,7 @@ const txChecks = computed(() => {
   ]
 })
 
-async function validateCurrentChain() {
+async function _validateCurrentChain() {
   loadingChainValidation.value = true
   try {
     const result = await chainStore.fetchValidation()
@@ -109,6 +110,8 @@ async function validateCurrentChain() {
     loadingChainValidation.value = false
   }
 }
+
+const validateCurrentChain = useDebounceFn(_validateCurrentChain, 1000)
 
 function downloadHistory() {
   const blob = new Blob([historyStore.exportJson()], { type: 'application/json' })
