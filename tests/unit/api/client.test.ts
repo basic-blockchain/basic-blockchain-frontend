@@ -1,55 +1,98 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import axios from 'axios'
+import MockAdapter from 'axios-mock-adapter'
+import client from '@/api/client'
+import { BlockchainApiError } from '@/api/errors'
 
-vi.mock('axios', () => {
-  const use = vi.fn()
-  const interceptors = { request: { use }, response: { use: vi.fn() } }
-  return { default: { create: vi.fn(() => ({ interceptors })) } }
-})
+const mock = new MockAdapter(client)
 
-describe('API client', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.resetModules()
+beforeEach(() => mock.reset())
+
+describe('Axios response interceptor', () => {
+  it('passes through 2xx responses unchanged', async () => {
+    mock.onGet('/chain').reply(200, { chain: [], length: 0 })
+    const res = await client.get('/chain')
+    expect(res.status).toBe(200)
+    expect(res.data.length).toBe(0)
   })
 
-  it('creates axios instance with baseURL /api/v1', async () => {
-    const axios = (await import('axios')).default
-    await import('@/api/client')
-    expect(axios.create).toHaveBeenCalledWith(
-      expect.objectContaining({ baseURL: expect.stringMatching(/\/api\/v1/) }),
-    )
+  it('throws BlockchainApiError with RATE_LIMITED on 429', async () => {
+    mock.onPost('/mine_block').reply(429, {
+      error: 'Too many requests — mining rate limit exceeded',
+      code: 'RATE_LIMITED',
+      retry_after_seconds: 42,
+    })
+
+    await expect(client.post('/mine_block')).rejects.toSatisfy((e: unknown) => {
+      const err = e as BlockchainApiError
+      return (
+        err instanceof BlockchainApiError &&
+        err.isRateLimited &&
+        err.code === 'RATE_LIMITED' &&
+        err.retryAfterSeconds === 42 &&
+        err.httpStatus === 429
+      )
+    })
   })
 
-  it('creates axios instance with timeout 10_000', async () => {
-    const axios = (await import('axios')).default
-    await import('@/api/client')
-    expect(axios.create).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 10_000 }),
-    )
+  it('throws BlockchainApiError with BAD_REQUEST on 400', async () => {
+    mock.onPost('/transactions').reply(400, {
+      error: "Missing required fields: receiver",
+      code: 'VALIDATION_ERROR',
+    })
+
+    await expect(client.post('/transactions', {})).rejects.toSatisfy((e: unknown) => {
+      const err = e as BlockchainApiError
+      return err instanceof BlockchainApiError && err.code === 'BAD_REQUEST' && err.httpStatus === 400
+    })
   })
 
-  it('registers exactly one request interceptor', async () => {
-    const axios = (await import('axios')).default
-    await import('@/api/client')
-    const instance = (axios.create as ReturnType<typeof vi.fn>).mock.results[0].value as {
-      interceptors: { request: { use: ReturnType<typeof vi.fn> } }
-    }
-    expect(instance.interceptors.request.use).toHaveBeenCalledOnce()
+  it('throws BlockchainApiError with INTERNAL_ERROR on 500', async () => {
+    mock.onGet('/chain').reply(500, { error: 'Internal server error', code: 'INTERNAL_ERROR' })
+
+    await expect(client.get('/chain')).rejects.toSatisfy((e: unknown) => {
+      const err = e as BlockchainApiError
+      return err instanceof BlockchainApiError && err.code === 'INTERNAL_ERROR' && err.httpStatus === 500
+    })
   })
 
-  it('interceptor injects X-Request-ID as a valid UUID v4', async () => {
-    const axios = (await import('axios')).default
-    await import('@/api/client')
-    const instance = (axios.create as ReturnType<typeof vi.fn>).mock.results[0].value as {
-      interceptors: { request: { use: ReturnType<typeof vi.fn> } }
-    }
-    const interceptorFn = instance.interceptors.request.use.mock.calls[0][0] as (
-      config: { headers: Record<string, string> },
-    ) => { headers: Record<string, string> }
+  it('throws BlockchainApiError with NOT_FOUND on 404', async () => {
+    mock.onGet('/nope').reply(404, { error: 'Resource not found', code: 'NOT_FOUND' })
 
-    const config = { headers: {} as Record<string, string> }
-    const result = interceptorFn(config)
-    expect(result.headers['X-Request-ID']).toMatch(
+    await expect(client.get('/nope')).rejects.toSatisfy((e: unknown) => {
+      const err = e as BlockchainApiError
+      return err instanceof BlockchainApiError && err.code === 'NOT_FOUND' && err.httpStatus === 404
+    })
+  })
+
+  it('throws BlockchainApiError with NETWORK_ERROR when no response', async () => {
+    mock.onGet('/chain').networkError()
+
+    await expect(client.get('/chain')).rejects.toSatisfy((e: unknown) => {
+      const err = e as BlockchainApiError
+      return err instanceof BlockchainApiError && err.isNetworkError && err.code === 'NETWORK_ERROR'
+    })
+  })
+
+  it('throws BlockchainApiError with TIMEOUT on request timeout', async () => {
+    mock.onGet('/chain').timeout()
+
+    await expect(client.get('/chain')).rejects.toSatisfy((e: unknown) => {
+      const err = e as BlockchainApiError
+      return err instanceof BlockchainApiError && err.code === 'TIMEOUT' && err.isNetworkError
+    })
+  })
+
+  it('attaches X-Request-ID header to every request', async () => {
+    let capturedHeader: string | undefined
+
+    mock.onGet('/chain').reply((config) => {
+      capturedHeader = config.headers?.['X-Request-ID'] as string
+      return [200, { chain: [], length: 0 }]
+    })
+
+    await client.get('/chain')
+    expect(capturedHeader).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     )
   })
