@@ -64,10 +64,12 @@ async function submit() {
         <InputText
           v-model="form.sender"
           placeholder="Sender"
+          :maxlength="255"
         />
         <InputText
           v-model="form.receiver"
           placeholder="Receiver"
+          :maxlength="255"
         />
         <InputNumber
           v-model="form.amount"
