@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr *)",
+      "Bash(bash scripts/devsecops_promotion_chain.sh basic-blockchain basic-blockchain-frontend)"
+    ]
+  }
+}
