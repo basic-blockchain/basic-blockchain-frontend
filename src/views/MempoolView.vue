@@ -21,7 +21,10 @@ const form = reactive<{ sender: string; receiver: string; amount: number | null 
   amount: null,
 })
 
-onMounted(() => store.fetchPending())
+onMounted(() => {
+  store.fetchPending()
+  confirmedStore.fetchConfirmed()
+})
 
 async function submit() {
   const errors = validateTransaction({
