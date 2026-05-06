@@ -20,8 +20,8 @@ function buildMocks(peers: string[] = []) {
     resolve: vi.fn().mockResolvedValue({ replaced: false, message: 'Chain is authoritative' }),
   }
   const toast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }
-  ;(useNodesStore as ReturnType<typeof vi.fn>).mockReturnValue(store)
-  ;(useToast as ReturnType<typeof vi.fn>).mockReturnValue(toast)
+  ;(useNodesStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(store)
+  ;(useToast as unknown as ReturnType<typeof vi.fn>).mockReturnValue(toast)
   return { store, toast }
 }
 
