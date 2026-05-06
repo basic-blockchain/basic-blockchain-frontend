@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
+import * as mempoolApi from '@/api/mempool'
 import type { Transaction } from '@/domain/transaction'
 
 const txA: Transaction = { sender: 'alice', receiver: 'bob', amount: 10 }
@@ -40,5 +41,31 @@ describe('useConfirmedTransactionsStore', () => {
     store.clear()
     expect(store.total).toBe(0)
     expect(store.records).toHaveLength(0)
+  })
+
+  it('fetchConfirmed loads records from the API and replaces local state', async () => {
+    vi.spyOn(mempoolApi, 'getConfirmed').mockResolvedValue({
+      count: 2,
+      transactions: [
+        { ...txA, blockIndex: 1, blockTimestamp: '2026-01-01T00:00:00' },
+        { ...txB, blockIndex: 2, blockTimestamp: '2026-01-02T00:00:00' },
+      ],
+    })
+
+    const store = useConfirmedTransactionsStore()
+    store.addFromBlock(99, '2026-01-99T00:00:00', [txA])
+    await store.fetchConfirmed()
+
+    expect(store.total).toBe(2)
+    expect(store.records[0]).toMatchObject({ sender: 'alice', blockIndex: 1 })
+    expect(store.records[1]).toMatchObject({ sender: 'carol', blockIndex: 2 })
+    expect(store.error).toBeNull()
+  })
+
+  it('fetchConfirmed records error message on failure', async () => {
+    vi.spyOn(mempoolApi, 'getConfirmed').mockRejectedValue(new Error('network down'))
+    const store = useConfirmedTransactionsStore()
+    await store.fetchConfirmed()
+    expect(store.error).toBe('network down')
   })
 })
