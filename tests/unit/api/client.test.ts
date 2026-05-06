@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import axios from 'axios'
+import { describe, it, expect, beforeEach } from 'vitest'
 import MockAdapter from 'axios-mock-adapter'
 import client from '@/api/client'
 import { BlockchainApiError } from '@/api/errors'
