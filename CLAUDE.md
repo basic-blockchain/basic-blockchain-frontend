@@ -4,10 +4,16 @@
 
 `basic-blockchain-frontend` is the companion UI for the
 [basic-blockchain-simulator](https://github.com/basic-blockchain/basic-blockchain-simulator) Python/Quart backend.
-It provides a real-time dashboard for chain state and mempool visualisation.
+It provides a real-time dashboard for chain state, mempool visualisation,
+confirmed-transaction history, peer-node management, validation history,
+and node-health monitoring.
 
-The frontend framework (React vs Vue) is **not yet decided**.
-All scaffold code must remain framework-agnostic until `docs/frontend-comparison.md` documents the final choice.
+**Stack** (decided): Vue 3.5 (Composition API + `<script setup>`),
+Vite 6, TypeScript 5 strict, Pinia, PrimeVue 4 with a custom dark theme,
+Chart.js, VueUse, Axios, native `WebSocket`, Vitest. Architecture follows
+Atomic Design — see [docs/decisions/ADR-001-vue-over-react.md](docs/decisions/ADR-001-vue-over-react.md),
+[ADR-002](docs/decisions/ADR-002-pinia-state.md), and
+[ADR-003](docs/decisions/ADR-003-atomic-design.md) for the rationale.
 
 ---
 
