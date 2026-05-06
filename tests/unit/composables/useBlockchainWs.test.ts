@@ -27,7 +27,6 @@ const mockBlock: Block = {
   timestamp: '2026-01-03T00:00:00',
   proof: 99,
   previousHash: 'deadbeef',
-  transactions: [],
 }
 
 function setupStoreMocks() {
@@ -35,9 +34,9 @@ function setupStoreMocks() {
   const mempoolStore = { fetchPending: vi.fn().mockResolvedValue(undefined) }
   const metricsStore = { fetchAll: vi.fn().mockResolvedValue(undefined) }
 
-  ;(useChainStore as ReturnType<typeof vi.fn>).mockReturnValue(chainStore)
-  ;(useMempoolStore as ReturnType<typeof vi.fn>).mockReturnValue(mempoolStore)
-  ;(useMetricsStore as ReturnType<typeof vi.fn>).mockReturnValue(metricsStore)
+  ;(useChainStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(chainStore)
+  ;(useMempoolStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mempoolStore)
+  ;(useMetricsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(metricsStore)
 
   return { chainStore, mempoolStore, metricsStore }
 }
@@ -54,7 +53,7 @@ describe('useBlockchainWs', () => {
 
     const status = ref<string>('OPEN')
     const lastError = ref<string | null>(null)
-    ;(useBlockchainWebSocket as ReturnType<typeof vi.fn>).mockReturnValue({ status, lastError })
+    ;(useBlockchainWebSocket as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ status, lastError })
 
     const { wsStatus } = useBlockchainWs()
     expect(wsStatus.value).toBe('OPEN')
@@ -67,7 +66,7 @@ describe('useBlockchainWs', () => {
 
     const status = ref<string>('OPEN')
     const lastError = ref<string | null>('parse error')
-    ;(useBlockchainWebSocket as ReturnType<typeof vi.fn>).mockReturnValue({ status, lastError })
+    ;(useBlockchainWebSocket as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ status, lastError })
 
     const { wsError } = useBlockchainWs()
     expect(wsError.value).toBe('parse error')
@@ -80,7 +79,7 @@ describe('useBlockchainWs', () => {
 
     let capturedCallback: ((block: Block) => Promise<void>) | undefined
 
-    ;(useBlockchainWebSocket as ReturnType<typeof vi.fn>).mockImplementation(
+    ;(useBlockchainWebSocket as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       (cb: (block: Block) => Promise<void>) => {
         capturedCallback = cb
         return { status: ref('OPEN'), lastError: ref(null) }
@@ -106,7 +105,7 @@ describe('useBlockchainWs', () => {
     metricsStore.fetchAll.mockImplementation(async () => { order.push('metrics') })
 
     let capturedCallback: ((block: Block) => Promise<void>) | undefined
-    ;(useBlockchainWebSocket as ReturnType<typeof vi.fn>).mockImplementation(
+    ;(useBlockchainWebSocket as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       (cb: (block: Block) => Promise<void>) => {
         capturedCallback = cb
         return { status: ref('OPEN'), lastError: ref(null) }
