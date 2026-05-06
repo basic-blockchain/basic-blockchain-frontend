@@ -26,7 +26,6 @@ const minedBlock: Block = {
   timestamp: '2026-01-05T00:00:00',
   proof: 77,
   previousHash: 'prev',
-  transactions: [],
 }
 
 function buildStoreMocks() {
@@ -36,11 +35,11 @@ function buildStoreMocks() {
   const confirmedStore = { addFromBlock: vi.fn() }
   const toast = { success: vi.fn(), error: vi.fn() }
 
-  ;(useChainStore as ReturnType<typeof vi.fn>).mockReturnValue(chainStore)
-  ;(useMempoolStore as ReturnType<typeof vi.fn>).mockReturnValue(mempoolStore)
-  ;(useMetricsStore as ReturnType<typeof vi.fn>).mockReturnValue(metricsStore)
-  ;(useConfirmedTransactionsStore as ReturnType<typeof vi.fn>).mockReturnValue(confirmedStore)
-  ;(useToast as ReturnType<typeof vi.fn>).mockReturnValue(toast)
+  ;(useChainStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(chainStore)
+  ;(useMempoolStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mempoolStore)
+  ;(useMetricsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(metricsStore)
+  ;(useConfirmedTransactionsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(confirmedStore)
+  ;(useToast as unknown as ReturnType<typeof vi.fn>).mockReturnValue(toast)
 
   return { chainStore, mempoolStore, metricsStore, confirmedStore, toast }
 }
@@ -53,14 +52,14 @@ describe('MineButton', () => {
 
   it('renders "Mine Block" label initially', () => {
     buildStoreMocks()
-    ;(mineBlock as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: [] })
+    ;(mineBlock as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: [] })
     const wrapper = mount(MineButton, { global: globalConfig })
     expect(wrapper.text()).toContain('Mine Block')
   })
 
   it('calls mineBlock and appendBlock on click', async () => {
     const { chainStore } = buildStoreMocks()
-    ;(mineBlock as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: [] })
+    ;(mineBlock as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: [] })
 
     const wrapper = mount(MineButton, { global: globalConfig })
     await wrapper.find('button').trigger('click')
@@ -73,7 +72,7 @@ describe('MineButton', () => {
   it('calls addFromBlock when transactions are included', async () => {
     const txs = [{ sender: 'A', receiver: 'B', amount: 1 }]
     const { confirmedStore } = buildStoreMocks()
-    ;(mineBlock as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: txs })
+    ;(mineBlock as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: txs })
 
     const wrapper = mount(MineButton, { global: globalConfig })
     await wrapper.find('button').trigger('click')
@@ -88,7 +87,7 @@ describe('MineButton', () => {
 
   it('does NOT call addFromBlock for empty block', async () => {
     const { confirmedStore } = buildStoreMocks()
-    ;(mineBlock as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: [] })
+    ;(mineBlock as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ block: minedBlock, transactions: [] })
 
     const wrapper = mount(MineButton, { global: globalConfig })
     await wrapper.find('button').trigger('click')
@@ -99,7 +98,7 @@ describe('MineButton', () => {
 
   it('shows error toast when mineBlock rejects', async () => {
     const { toast } = buildStoreMocks()
-    ;(mineBlock as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('network error'))
+    ;(mineBlock as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('network error'))
 
     const wrapper = mount(MineButton, { global: globalConfig })
     await wrapper.find('button').trigger('click')
@@ -111,7 +110,7 @@ describe('MineButton', () => {
   it('is guarded against double-click while loading', async () => {
     buildStoreMocks()
     let resolve!: () => void
-    ;(mineBlock as ReturnType<typeof vi.fn>).mockReturnValue(
+    ;(mineBlock as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
       new Promise<{ block: Block; transactions: [] }>((r) => { resolve = () => r({ block: minedBlock, transactions: [] }) }),
     )
 
