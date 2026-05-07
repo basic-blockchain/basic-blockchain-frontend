@@ -28,6 +28,9 @@ Stack: Vue 3 + Vite 6 + TypeScript 5 + Pinia + VueUse + PrimeVue 4 + Chart.js.
 |---------|-------|
 | v0.6.0 | [docs/releases/v0.6.0.md](releases/v0.6.0.md) — Phase H+ (paired with simulator v0.10.0): Block carries merkleRoot + transactions; Merkle/tx-count badge on block card |
 | v0.5.0 | [docs/releases/v0.5.0.md](releases/v0.5.0.md) — confirmed-transaction history hydration, lint cleanup, README/CLAUDE refresh |
+| v0.4.0 | [docs/releases/v0.4.0.md](releases/v0.4.0.md) — Phase H1: typed BlockchainApiError envelope, debounced validation, 255-char input cap, runtime WS URL, Sprint 2+3 unit tests *(retroactive notes)* |
+| v0.3.0 | [docs/releases/v0.3.0.md](releases/v0.3.0.md) — Accessibility batch: mobile drawer, aria-live, focus rings, WCAG AA contrast tokens *(retroactive notes)* |
+| v0.2.0 | [docs/releases/v0.2.0.md](releases/v0.2.0.md) — Validation Center, confirmed-tx history list, WS parse-error visibility *(retroactive notes)* |
 
 ---
 
