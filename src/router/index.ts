@@ -1,9 +1,39 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', redirect: '/dashboard' },
+
+    // ── Public auth routes ────────────────────────────────────────────────
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/RegisterView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/activate',
+      name: 'activate',
+      component: () => import('@/views/ActivateView.vue'),
+      meta: { public: true },
+    },
+
+    // ── Authenticated routes ──────────────────────────────────────────────
+    { path: '/wallet', name: 'wallet', component: () => import('@/views/WalletView.vue') },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/AdminView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
     {
       path: '/dashboard',
       name: 'dashboard',
@@ -20,6 +50,27 @@ const router = createRouter({
     { path: '/health', name: 'health', component: () => import('@/views/HealthView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
+})
+
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  const isPublic = to.meta.public === true
+
+  // Unauthenticated user hitting a protected route → /login.
+  if (!isPublic && !auth.isAuthenticated) {
+    return { name: 'login' }
+  }
+
+  // Role check (e.g. /admin requires ADMIN).
+  const requiredRole = to.meta.requireRole as string | undefined
+  if (requiredRole && !auth.hasRole(requiredRole)) {
+    return { name: 'wallet' }
+  }
+
+  // Authenticated user hitting /login or /register → /wallet.
+  if (isPublic && auth.isAuthenticated && to.name !== 'activate') {
+    return { name: 'wallet' }
+  }
 })
 
 export default router
