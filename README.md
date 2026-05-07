@@ -1,13 +1,13 @@
 # basic-blockchain-frontend
 
-![version](https://img.shields.io/badge/version-v0.5.0-blue)
+![version](https://img.shields.io/badge/version-v0.6.0-blue)
 ![framework](https://img.shields.io/badge/Vue-3.5-42b883)
 ![tooling](https://img.shields.io/badge/Vite-6-646cff)
 ![types](https://img.shields.io/badge/TypeScript-5-3178c6)
-![tests](https://img.shields.io/badge/tests-86%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-88%20passed-brightgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D20-green)
 
-**Latest stable release:** v0.5.0
+**Latest stable release:** v0.6.0
 
 Real-time dashboard for the
 [basic-blockchain-simulator](https://github.com/basic-blockchain/basic-blockchain-simulator)
@@ -60,6 +60,7 @@ linked from the [Documentation Index](docs/index.md).
 | `/` | `DashboardView` | At-a-glance metrics: chain height, pending tx count, last block, mining time chart |
 | `/chain` | `ChainView` | Browse the full chain with paginated block list and detail panel |
 | `/mempool` | `MempoolView` | Submit a transaction, watch pending entries, **and the full confirmed history** (loaded from `GET /api/v1/transactions` on mount, augmented in real time via WebSocket) |
+| `/chain` cards | `BlockCard` | Each block now also surfaces its `merkleRoot` (chip with click-to-copy) and the count of confirmed transactions it contains *(v0.6.0, Phase H+)* |
 | `/nodes` | `NodesView` | Register peer node URLs, list registered peers, run consensus resolve |
 | `/validation` | `ValidationView` | Trigger and review chain-validity checks with persisted history |
 | `/health` | `HealthView` | Backend status, DB connectivity, current chain height |
