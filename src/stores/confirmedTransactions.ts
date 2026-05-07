@@ -3,6 +3,13 @@ import { ref, computed } from 'vue'
 import { getConfirmed } from '@/api/mempool'
 import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
 
+// Phase H+ note: backend v0.10.0 also exposes confirmed transactions nested
+// under `block.transactions` on every chain entry, so this store and the
+// chain store now hold redundant copies of the same data. The flat
+// `/api/v1/transactions` endpoint is kept (it predates v0.10.0 and the
+// frontend already paginates / sorts on this denormalised list), but the
+// chain itself remains the source of truth — derive from `useChainStore`
+// when the redundancy becomes a problem.
 export const useConfirmedTransactionsStore = defineStore('confirmedTransactions', () => {
   const records = ref<ConfirmedTransaction[]>([])
   const loading = ref(false)
