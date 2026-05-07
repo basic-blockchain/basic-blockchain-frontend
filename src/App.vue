@@ -1,27 +1,57 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { RouterView, RouterLink, useRoute } from 'vue-router'
+import { ref, watch, computed } from 'vue'
+import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
 import { useBlockchainWs } from '@/composables/useBlockchainWs'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 const { wsStatus } = useBlockchainWs()
+const auth = useAuthStore()
 const navOpen = ref(false)
 
 watch(route, () => { navOpen.value = false })
 
-const navItems = [
+const allNavItems = [
+  { to: '/wallet', label: 'Wallet', icon: 'pi pi-wallet', requireAuth: true },
   { to: '/dashboard', label: 'Dashboard', icon: 'pi pi-home' },
   { to: '/chain', label: 'Chain', icon: 'pi pi-link' },
   { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
   { to: '/nodes', label: 'Nodes', icon: 'pi pi-sitemap' },
   { to: '/validation', label: 'Validation', icon: 'pi pi-verified' },
   { to: '/health', label: 'Health', icon: 'pi pi-heart' },
+  { to: '/admin', label: 'Admin', icon: 'pi pi-shield', requireRole: 'ADMIN' },
 ]
+
+const navItems = computed(() =>
+  allNavItems.filter((item) => {
+    if (item.requireRole) return auth.hasRole(item.requireRole)
+    if (item.requireAuth) return auth.isAuthenticated
+    return true
+  }),
+)
+
+// Auth views render full-screen without the sidebar layout.
+const isAuthRoute = computed(() => ['/login', '/register', '/activate'].includes(route.path))
+
+async function logout() {
+  auth.logout()
+  await router.push('/login')
+}
 </script>
 
 <template>
-  <div class="layout">
+  <!-- Auth views render full-screen without the sidebar. -->
+  <div v-if="isAuthRoute">
+    <RouterView />
+    <Toast position="bottom-right" />
+  </div>
+
+  <div
+    v-else
+    class="layout"
+  >
     <a
       href="#main-content"
       class="skip-link"
@@ -87,6 +117,32 @@ const navItems = [
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
+
+      <!-- User chip -->
+      <div
+        v-if="auth.isAuthenticated && auth.user"
+        class="user-chip"
+      >
+        <div class="user-chip-info">
+          <span class="user-avatar">{{ auth.user.display_name.charAt(0).toUpperCase() }}</span>
+          <div class="user-chip-text">
+            <span class="user-display">{{ auth.user.display_name }}</span>
+            <span class="user-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
+          </div>
+        </div>
+        <button
+          class="logout-btn"
+          aria-label="Sign out"
+          title="Sign out"
+          @click="logout"
+        >
+          <span
+            class="pi pi-sign-out"
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+
       <div
         class="ws-status"
         :class="wsStatus"
@@ -157,8 +213,61 @@ const navItems = [
   color: var(--sidebar-link-active-text);
   border-color: var(--sidebar-link-active-border);
 }
-.ws-status {
+
+/* User chip */
+.user-chip {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-border);
+}
+.user-chip-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.user-chip-text { display: flex; flex-direction: column; min-width: 0; }
+.user-display {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sidebar-link-active-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-role {
+  font-size: 0.68rem;
+  color: var(--sidebar-link);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.logout-btn {
+  background: none;
+  border: none;
+  color: var(--sidebar-link);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.logout-btn:hover { color: var(--sidebar-link-active-text); background: rgba(255,255,255,0.08); }
+
+.ws-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
