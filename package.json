@@ -1,6 +1,6 @@
 {
   "name": "basic-blockchain-frontend",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,9 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@noble/curves": "^2.2.0",
     "@primevue/themes": "^4.2.0",
+    "@scure/bip39": "^2.2.0",
     "@vueuse/core": "^11.0.0",
     "axios": "^1.7.0",
     "chart.js": "^4.4.0",
