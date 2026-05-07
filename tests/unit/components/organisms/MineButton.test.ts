@@ -26,6 +26,8 @@ const minedBlock: Block = {
   timestamp: '2026-01-05T00:00:00',
   proof: 77,
   previousHash: 'prev',
+  merkleRoot: 'e3b0c44298fc1c14',
+  transactions: [],
 }
 
 function buildStoreMocks() {
