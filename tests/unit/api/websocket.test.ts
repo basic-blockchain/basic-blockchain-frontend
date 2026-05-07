@@ -13,6 +13,8 @@ const mockBlock: ApiBlock = {
   timestamp: '2026-01-02T00:00:00',
   proof: 42,
   previous_hash: 'abc123',
+  merkle_root: 'e3b0c44298fc1c14',
+  transactions: [],
 }
 
 function makeUseWebSocketMock(triggerMessage?: (send: (raw: string) => void) => void) {

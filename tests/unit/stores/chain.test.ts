@@ -4,7 +4,14 @@ import { useChainStore } from '@/stores/chain'
 import * as chainApi from '@/api/chain'
 import type { Block } from '@/domain/block'
 
-const mockBlock: Block = { index: 1, timestamp: '2026-01-01', proof: 1, previousHash: '0' }
+const mockBlock: Block = {
+  index: 1,
+  timestamp: '2026-01-01',
+  proof: 1,
+  previousHash: '0',
+  merkleRoot: 'e3b0c44298fc1c14',
+  transactions: [],
+}
 
 describe('useChainStore', () => {
   beforeEach(() => setActivePinia(createPinia()))
