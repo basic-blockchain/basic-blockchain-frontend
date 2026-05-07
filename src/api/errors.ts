@@ -7,6 +7,8 @@ export type ApiErrorCode =
   | 'NETWORK_ERROR'
   | 'TIMEOUT'
   | 'BAD_REQUEST'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
   | 'UNKNOWN'
 
 export interface ApiError {
