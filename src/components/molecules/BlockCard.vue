@@ -22,7 +22,18 @@ function formatTs(ts: string) {
         {{ formatTs(block.timestamp) }}
       </div>
       <div class="block-hash">
+        <span class="label">prev</span>
         <HashChip :hash="block.previousHash" />
+      </div>
+      <div
+        v-if="block.merkleRoot"
+        class="block-hash"
+      >
+        <span class="label">merkle</span>
+        <HashChip :hash="block.merkleRoot" />
+        <span class="tx-count">
+          {{ block.transactions.length }} tx{{ block.transactions.length === 1 ? '' : 's' }}
+        </span>
       </div>
       <div class="block-proof">
         Proof: <strong>{{ block.proof }}</strong>
@@ -54,5 +65,17 @@ function formatTs(ts: string) {
   font-size: 0.85rem;
 }
 .block-ts { color: var(--text-body); }
+.block-hash { display: flex; align-items: center; gap: 0.4rem; }
+.label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.tx-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-left: 0.25rem;
+}
 .compact .block-meta { gap: 0; }
 </style>

@@ -27,6 +27,8 @@ const mockBlock: Block = {
   timestamp: '2026-01-03T00:00:00',
   proof: 99,
   previousHash: 'deadbeef',
+  merkleRoot: 'e3b0c44298fc1c14',
+  transactions: [],
 }
 
 function setupStoreMocks() {

@@ -26,6 +26,7 @@ Stack: Vue 3 + Vite 6 + TypeScript 5 + Pinia + VueUse + PrimeVue 4 + Chart.js.
 
 | Version | Notes |
 |---------|-------|
+| v0.6.0 | [docs/releases/v0.6.0.md](releases/v0.6.0.md) — Phase H+ (paired with simulator v0.10.0): Block carries merkleRoot + transactions; Merkle/tx-count badge on block card |
 | v0.5.0 | [docs/releases/v0.5.0.md](releases/v0.5.0.md) — confirmed-transaction history hydration, lint cleanup, README/CLAUDE refresh |
 
 ---
