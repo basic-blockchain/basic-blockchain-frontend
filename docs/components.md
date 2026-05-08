@@ -1,7 +1,7 @@
 # Component Catalog
 
 Status: Accepted
-Last updated: 2026-04-24
+Last updated: 2026-05-08
 Scope: All reusable UI components under `src/components/` and `src/views/`.
 
 Components are organised under the **Atomic Design** methodology:
@@ -24,18 +24,28 @@ may call `useXxxStore()`**.
   - TransactionRow
   - NodeBadge
   - MetricTile
+  - SeedPhraseModal
 - Organisms
   - ChainList
   - MempoolTable
+  - ConfirmedTransactionsTable
   - NodePanel
   - MetricsBar
   - MineButton
   - MiningChart
 - Views
+  - LoginView
+  - RegisterView
+  - ActivateView
+  - WalletView
+  - AdminView
+  - AdminUsersView
+  - AdminWalletsView
   - DashboardView
   - ChainView
   - MempoolView
   - NodesView
+  - ValidationView
   - HealthView
 
 ---
@@ -54,9 +64,7 @@ no side effects, and rely only on props and emits.
 
 ```ts
 interface StatusBadgeProps {
-  status: 'ok' | 'warn' | 'error' | 'pending' | 'unknown'
-  label?: string
-  size?: 'sm' | 'md'
+  status: 'ok' | 'degraded' | 'error' | 'n/a'
 }
 ```
 
@@ -65,8 +73,8 @@ interface StatusBadgeProps {
 **Usage:**
 
 ```vue
-<StatusBadge status="ok" label="Connected" />
-<StatusBadge status="pending" />
+<StatusBadge status="ok" />
+<StatusBadge status="degraded" />
 ```
 
 ---
@@ -80,19 +88,16 @@ interface StatusBadgeProps {
 ```ts
 interface HashChipProps {
   hash: string
-  length?: number
-  copyable?: boolean
+  full?: boolean
 }
 ```
 
-**Emits:**
-
-- `copied: (hash: string) => void` — fired when user clicks and copy succeeds.
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<HashChip :hash="block.hash" :length="8" @copied="onCopied" />
+<HashChip :hash="block.hash" />
 ```
 
 ---
@@ -106,10 +111,9 @@ thousands separators and the currency symbol.
 
 ```ts
 interface AmountDisplayProps {
-  amount: string
-  currency?: string
+  amount: number
   precision?: number
-  colorize?: boolean
+  unit?: string
 }
 ```
 
@@ -118,7 +122,7 @@ interface AmountDisplayProps {
 **Usage:**
 
 ```vue
-<AmountDisplay :amount="tx.amount" currency="BTC" colorize />
+<AmountDisplay :amount="tx.amount" unit="BTC" />
 ```
 
 ---
@@ -129,55 +133,47 @@ Molecules compose atoms and simple PrimeVue primitives. Still no store access.
 
 ### BlockCard
 
-**Purpose:** summary card for a single block (index, hash, tx-count, timestamp,
-nonce, miner).
+**Purpose:** summary card for a single block (index, timestamp, previous hash,
+merkle root, tx count, proof).
 
 **Props:**
 
 ```ts
 interface BlockCardProps {
   block: Block
-  highlighted?: boolean
+  compact?: boolean
 }
 ```
 
-**Emits:**
-
-- `select: (block: Block) => void` — click on the card.
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<BlockCard :block="block" :highlighted="block.index === chain.height"
-           @select="openDetails" />
+<BlockCard :block="block" :compact="true" />
 ```
 
 ---
 
 ### TransactionRow
 
-**Purpose:** single row in a transaction table (sender, recipient, amount, fee,
-status).
+**Purpose:** compact row for a transaction (sender, receiver, amount, status).
 
 **Props:**
 
 ```ts
 interface TransactionRowProps {
-  tx: Transaction
-  showFee?: boolean
-  confirmations?: number
+  transaction: Transaction
+  status?: 'pending' | 'confirmed'
 }
 ```
 
-**Emits:**
-
-- `inspect: (tx: Transaction) => void`
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<TransactionRow v-for="tx in pending" :key="tx.id" :tx="tx"
-                @inspect="showDialog" />
+<TransactionRow v-for="tx in pending" :key="tx.id" :transaction="tx" status="pending" />
 ```
 
 ---
@@ -191,20 +187,17 @@ seen).
 
 ```ts
 interface NodeBadgeProps {
-  node: Node
-  compact?: boolean
+  url: string
+  online?: boolean
 }
 ```
 
-**Emits:**
-
-- `ping: (node: Node) => void`
-- `remove: (node: Node) => void`
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<NodeBadge :node="peer" @ping="onPing" @remove="onRemove" />
+<NodeBadge :url="peer" online />
 ```
 
 ---
@@ -218,10 +211,8 @@ interface NodeBadgeProps {
 ```ts
 interface MetricTileProps {
   label: string
-  value: number | string
+  value: number | string | null
   unit?: string
-  trend?: 'up' | 'down' | 'flat'
-  icon?: string
 }
 ```
 
@@ -230,8 +221,33 @@ interface MetricTileProps {
 **Usage:**
 
 ```vue
-<MetricTile label="Mempool depth" :value="depth" unit="tx" trend="up"
-            icon="pi pi-inbox" />
+<MetricTile label="Mempool depth" :value="depth" unit="tx" />
+```
+
+---
+
+### SeedPhraseModal
+
+**Purpose:** modal that reveals the 12-word recovery phrase once and forces a
+user confirmation before continuing.
+
+**Props:**
+
+```ts
+interface SeedPhraseModalProps {
+  mnemonic: string
+  visible: boolean
+}
+```
+
+**Emits:**
+
+- `confirm: () => void`
+
+**Usage:**
+
+```vue
+<SeedPhraseModal :mnemonic="wallet.mnemonic" :visible="showSeed" @confirm="ackSeedPhrase" />
 ```
 
 ---
@@ -242,52 +258,69 @@ Organisms orchestrate molecules, consume Pinia stores, and handle side effects.
 
 ### ChainList
 
-**Purpose:** vertically scrolling list of `BlockCard`s; subscribes to
-`useChainStore` and auto-scrolls to newly mined blocks.
+**Purpose:** vertically scrolling list of `BlockCard`s with entry animation.
 
 **Props:**
 
 ```ts
 interface ChainListProps {
-  limit?: number
-  autoscroll?: boolean
+  blocks: Block[]
+  compact?: boolean
 }
 ```
 
-**Emits:**
-
-- `block-selected: (block: Block) => void`
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<ChainList :limit="100" @block-selected="openDrawer" />
+<ChainList :blocks="store.blocks" compact />
 ```
 
 ---
 
 ### MempoolTable
 
-**Purpose:** PrimeVue DataTable bound to `useMempoolStore.pending`, with
-filters and per-row actions.
+**Purpose:** PrimeVue DataTable for pending transactions (sender, receiver,
+amount) sourced from `useMempoolStore`.
 
 **Props:**
 
 ```ts
 interface MempoolTableProps {
-  pageSize?: number
-  filterable?: boolean
+  transactions: Transaction[]
 }
 ```
 
-**Emits:**
-
-- `inspect: (tx: Transaction) => void`
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<MempoolTable :page-size="25" @inspect="showTxDialog" />
+<MempoolTable :transactions="store.transactions" />
+```
+
+---
+
+### ConfirmedTransactionsTable
+
+**Purpose:** paginated table of confirmed transactions loaded from
+`useConfirmedTransactionsStore`.
+
+**Props:**
+
+```ts
+interface ConfirmedTransactionsTableProps {
+  transactions: ConfirmedTransaction[]
+}
+```
+
+**Emits:** none.
+
+**Usage:**
+
+```vue
+<ConfirmedTransactionsTable :transactions="confirmedStore.records" />
 ```
 
 ---
@@ -299,28 +332,27 @@ consensus resolve.
 
 **Props:** none.
 
-**Emits:**
-
-- `resolved: (payload: { replaced: boolean }) => void`
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<NodePanel @resolved="onResolve" />
+<NodePanel />
 ```
 
 ---
 
 ### MetricsBar
 
-**Purpose:** horizontal strip of `MetricTile`s (height, mempool depth, mining
-rate, latency). Polls `useMetricsStore` every 5 s via `useIntervalFn`.
+**Purpose:** horizontal strip of `MetricTile`s and status badges (chain height,
+pending count, avg mine time, node/database status).
 
 **Props:**
 
 ```ts
 interface MetricsBarProps {
-  compact?: boolean
+  metrics: Metrics | null
+  health: Health | null
 }
 ```
 
@@ -329,34 +361,24 @@ interface MetricsBarProps {
 **Usage:**
 
 ```vue
-<MetricsBar />
+<MetricsBar :metrics="metricsStore.metrics" :health="metricsStore.health" />
 ```
 
 ---
 
 ### MineButton
 
-**Purpose:** triggers `POST /api/mine`; handles HTTP 429 by parsing
-`Retry-After` and disabling itself for the remaining interval.
+**Purpose:** triggers `POST /api/v1/mine_block` and updates chain, mempool,
+metrics, and confirmed transactions with a success toast.
 
-**Props:**
+**Props:** none.
 
-```ts
-interface MineButtonProps {
-  label?: string
-  severity?: 'primary' | 'secondary'
-}
-```
-
-**Emits:**
-
-- `mined: (block: Block) => void`
-- `rate-limited: (retryAfterSec: number) => void`
+**Emits:** none.
 
 **Usage:**
 
 ```vue
-<MineButton @mined="onMined" @rate-limited="flashCooldown" />
+<MineButton />
 ```
 
 ---
@@ -364,13 +386,13 @@ interface MineButtonProps {
 ### MiningChart
 
 **Purpose:** Chart.js line chart showing blocks mined per minute over the last
-N minutes; bound to `useMetricsStore.miningRate` history.
+20 blocks; uses block timestamps to compute mine-time deltas.
 
 **Props:**
 
 ```ts
 interface MiningChartProps {
-  windowMinutes?: number
+  blocks: Block[]
 }
 ```
 
@@ -379,7 +401,7 @@ interface MiningChartProps {
 **Usage:**
 
 ```vue
-<MiningChart :window-minutes="30" />
+<MiningChart :blocks="store.blocks" />
 ```
 
 ---
@@ -388,32 +410,96 @@ interface MiningChartProps {
 
 Views are route targets. They compose organisms and handle route params.
 
+### LoginView
+
+**Route:** `/login`
+**Purpose:** JWT login form; redirects authenticated users to `/wallet`.
+
+**Props:** none.
+
+---
+
+### RegisterView
+
+**Route:** `/register`
+**Purpose:** create a new account and receive an activation code.
+
+**Props:** none.
+
+---
+
+### ActivateView
+
+**Route:** `/activate`
+**Purpose:** set the initial password using an activation code.
+
+**Props:** none.
+
+---
+
+### WalletView
+
+**Route:** `/wallet`
+**Purpose:** create wallets, view balances, and submit signed transfers; opens
+`SeedPhraseModal` after wallet creation.
+
+**Props:** none.
+
+---
+
+### AdminView
+
+**Route:** `/admin`
+**Purpose:** mint tokens and perform quick admin actions (ADMIN only).
+
+**Props:** none.
+
+---
+
+### AdminUsersView
+
+**Route:** `/admin/users`
+**Purpose:** admin user management (edit, ban, soft delete, restore, roles).
+
+**Props:** none.
+
+---
+
+### AdminWalletsView
+
+**Route:** `/admin/wallets`
+**Purpose:** list all wallets and freeze/unfreeze (ADMIN only).
+
+**Props:** none.
+
+---
+
 ### DashboardView
 
-**Route:** `/`
-**Purpose:** landing page with `MetricsBar`, `MineButton`, `MiningChart`.
+**Route:** `/dashboard`
+**Purpose:** landing page with `MetricsBar`, `MineButton`, recent blocks, and
+pending mempool.
 
 **Props:** none (route-level).
 
-**Usage:** registered in `router/index.ts` as the default route.
+**Usage:** `/` redirects here.
 
 ---
 
 ### ChainView
 
 **Route:** `/chain`
-**Purpose:** full-height `ChainList` with a detail drawer on block click.
+**Purpose:** mining time chart plus full chain list.
 
-**Props:** none; reads `?block=<hash>` query param to open a drawer directly.
+**Props:** none.
 
 ---
 
 ### MempoolView
 
 **Route:** `/mempool`
-**Purpose:** `MempoolTable` plus a transaction-submission form (sender,
-recipient, amount, fee). Performs client-side validation via
-`domain/transaction.ts -> validateTransaction`.
+**Purpose:** pending mempool table plus confirmed history (loaded from
+`GET /api/v1/transactions`).
 
 **Props:** none.
 
@@ -422,7 +508,17 @@ recipient, amount, fee). Performs client-side validation via
 ### NodesView
 
 **Route:** `/nodes`
-**Purpose:** `NodePanel` plus a sequence-style log of consensus events.
+**Purpose:** `NodePanel` for peer registration and consensus resolve.
+
+**Props:** none.
+
+---
+
+### ValidationView
+
+**Route:** `/validation`
+**Purpose:** chain validation plus local block/node/transaction checks with
+exportable history.
 
 **Props:** none.
 
@@ -431,8 +527,7 @@ recipient, amount, fee). Performs client-side validation via
 ### HealthView
 
 **Route:** `/health`
-**Purpose:** grid of `MetricTile`s showing liveness, readiness, backend latency
-percentiles (p50, p95, p99) and error rate.
+**Purpose:** metrics overview plus node/db status badges and refresh action.
 
 **Props:** none.
 
