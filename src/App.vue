@@ -22,6 +22,8 @@ const allNavItems = [
   { to: '/validation', label: 'Validation', icon: 'pi pi-verified' },
   { to: '/health', label: 'Health', icon: 'pi pi-heart' },
   { to: '/admin', label: 'Admin', icon: 'pi pi-shield', requireRole: 'ADMIN' },
+  { to: '/admin/users', label: 'Users', icon: 'pi pi-users', requireRole: 'ADMIN' },
+  { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet', requireRole: 'ADMIN' },
 ]
 
 const navItems = computed(() =>
@@ -107,8 +109,8 @@ async function logout() {
           :key="item.to"
           :to="item.to"
           class="nav-item"
-          :class="{ active: route.path.startsWith(item.to) }"
-          :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
+          :class="{ active: (item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to)) }"
+          :aria-current="(item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to)) ? 'page' : undefined"
         >
           <span
             :class="item.icon"
