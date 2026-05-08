@@ -35,6 +35,18 @@ const router = createRouter({
       meta: { requireRole: 'ADMIN' },
     },
     {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('@/views/AdminUsersView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/wallets',
+      name: 'admin-wallets',
+      component: () => import('@/views/AdminWalletsView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),
