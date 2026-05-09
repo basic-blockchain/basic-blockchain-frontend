@@ -6,6 +6,8 @@ import {
   unfreezeWallet,
   type WalletAdminRecord,
 } from '@/api/admin'
+import HashChip from '@/components/atoms/HashChip.vue'
+import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
 
 const wallets = ref<WalletAdminRecord[]>([])
 const loading = ref(false)
@@ -48,11 +50,9 @@ async function toggleFreeze(w: WalletAdminRecord) {
   await load()
 }
 
-function shortKey(pk: string) {
-  return pk.slice(0, 12) + '…'
-}
-function shortId(id: string) {
-  return id.slice(0, 14) + '…'
+function parseBalance(balance: string): number {
+  const value = Number(balance)
+  return Number.isFinite(value) ? value : 0
 }
 </script>
 
@@ -126,17 +126,29 @@ function shortId(id: string) {
           :class="{ 'row-frozen': w.frozen }"
         >
           <td class="mono">
-            {{ shortId(w.wallet_id) }}
+            <HashChip
+              :hash="w.wallet_id"
+              :length="16"
+              label="wallet id"
+            />
           </td>
           <td>
             <span class="display-name">{{ w.display_name }}</span>
             <span class="username"> @{{ w.username }}</span>
           </td>
           <td class="mono">
-            {{ w.balance }} {{ w.currency }}
+            <AmountDisplay
+              :amount="parseBalance(w.balance)"
+              :precision="8"
+              :unit="w.currency"
+            />
           </td>
           <td class="mono text-muted">
-            {{ shortKey(w.public_key) }}
+            <HashChip
+              :hash="w.public_key"
+              :length="14"
+              label="public key"
+            />
           </td>
           <td>
             <span
