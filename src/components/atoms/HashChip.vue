@@ -2,8 +2,14 @@
 import { computed } from 'vue'
 import { formatHash } from '@/domain/block'
 
-const props = defineProps<{ hash: string; full?: boolean }>()
-const display = computed(() => (props.full ? props.hash : formatHash(props.hash)))
+const props = withDefaults(
+  defineProps<{ hash: string; full?: boolean; length?: number; label?: string }>(),
+  {
+    length: 12,
+    label: 'hash',
+  }
+)
+const display = computed(() => (props.full ? props.hash : formatHash(props.hash, props.length)))
 
 async function copy() {
   if (navigator.clipboard) {
@@ -25,15 +31,12 @@ function onKeydown(e: KeyboardEvent) {
     :title="hash"
     role="button"
     tabindex="0"
-    :aria-label="`Copy hash ${hash}`"
+    :aria-label="`Copy ${label} ${hash}`"
     @click="copy"
     @keydown="onKeydown"
   >
     <code>{{ display }}</code>
-    <span
-      class="pi pi-copy copy-icon"
-      aria-hidden="true"
-    />
+    <span class="pi pi-copy copy-icon" aria-hidden="true" />
   </span>
 </template>
 
@@ -49,12 +52,17 @@ function onKeydown(e: KeyboardEvent) {
   padding: 0.15rem 0.5rem;
   cursor: pointer;
   color: var(--text-body);
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 .chip:hover {
   background: #262844;
   border-color: var(--primary);
   color: var(--text-strong);
 }
-.copy-icon { font-size: 0.7rem; color: var(--text-muted); }
+.copy-icon {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
 </style>
