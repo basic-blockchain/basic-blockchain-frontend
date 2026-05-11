@@ -63,14 +63,14 @@ export interface UpdateUserPayload {
 
 export async function updateUser(
   userId: string,
-  payload: UpdateUserPayload,
+  payload: UpdateUserPayload
 ): Promise<UserAdminRecord> {
   const { data } = await client.patch<UserAdminRecord>(`/admin/users/${userId}`, payload)
   return data
 }
 
 export async function softDeleteUser(
-  userId: string,
+  userId: string
 ): Promise<{ user_id: string; deleted: boolean; frozen_wallets: string[] }> {
   const { data } = await client.delete(`/admin/users/${userId}`)
   return data
@@ -78,7 +78,7 @@ export async function softDeleteUser(
 
 export async function restoreUser(
   userId: string,
-  unfreezeWallets = true,
+  unfreezeWallets = true
 ): Promise<{ user_id: string; restored: boolean; unfrozen_wallets: string[] }> {
   const { data } = await client.post(`/admin/users/${userId}/restore`, {
     unfreeze_wallets: unfreezeWallets,
@@ -105,14 +105,14 @@ export async function listAllWallets(): Promise<{ wallets: WalletAdminRecord[]; 
 }
 
 export async function freezeWallet(
-  walletId: string,
+  walletId: string
 ): Promise<{ wallet_id: string; frozen: boolean }> {
   const { data } = await client.post(`/admin/wallets/${walletId}/freeze`)
   return data
 }
 
 export async function unfreezeWallet(
-  walletId: string,
+  walletId: string
 ): Promise<{ wallet_id: string; frozen: boolean }> {
   const { data } = await client.post(`/admin/wallets/${walletId}/unfreeze`)
   return data

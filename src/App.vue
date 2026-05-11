@@ -11,7 +11,9 @@ const { wsStatus } = useBlockchainWs()
 const auth = useAuthStore()
 const navOpen = ref(false)
 
-watch(route, () => { navOpen.value = false })
+watch(route, () => {
+  navOpen.value = false
+})
 
 const allNavItems = [
   { to: '/wallet', label: 'Wallet', icon: 'pi pi-wallet', requireAuth: true },
@@ -31,7 +33,7 @@ const navItems = computed(() =>
     if (item.requireRole) return auth.hasRole(item.requireRole)
     if (item.requireAuth) return auth.isAuthenticated
     return true
-  }),
+  })
 )
 
 // Auth views render full-screen without the sidebar layout.
@@ -50,21 +52,12 @@ async function logout() {
     <Toast position="bottom-right" />
   </div>
 
-  <div
-    v-else
-    class="layout"
-  >
-    <a
-      href="#main-content"
-      class="skip-link"
-    >Skip to main content</a>
+  <div v-else class="layout">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <!-- Mobile top bar -->
     <header class="mobile-bar">
-      <span
-        class="pi pi-bitcoin mobile-logo"
-        aria-hidden="true"
-      />
+      <span class="pi pi-bitcoin mobile-logo" aria-hidden="true" />
       <span class="mobile-title">Blockchain</span>
       <button
         class="hamburger"
@@ -73,34 +66,16 @@ async function logout() {
         aria-label="Toggle navigation"
         @click="navOpen = !navOpen"
       >
-        <span
-          class="pi"
-          :class="navOpen ? 'pi-times' : 'pi-bars'"
-          aria-hidden="true"
-        />
+        <span class="pi" :class="navOpen ? 'pi-times' : 'pi-bars'" aria-hidden="true" />
       </button>
     </header>
 
     <!-- Overlay -->
-    <div
-      v-if="navOpen"
-      class="nav-overlay"
-      aria-hidden="true"
-      @click="navOpen = false"
-    />
+    <div v-if="navOpen" class="nav-overlay" aria-hidden="true" @click="navOpen = false" />
 
-    <aside
-      id="sidebar-nav"
-      class="sidebar"
-      :class="{ open: navOpen }"
-      aria-label="Main navigation"
-    >
+    <aside id="sidebar-nav" class="sidebar" :class="{ open: navOpen }" aria-label="Main navigation">
       <div class="sidebar-header">
-        <span
-          class="pi pi-bitcoin"
-          aria-hidden="true"
-          style="font-size: 1.5rem"
-        />
+        <span class="pi pi-bitcoin" aria-hidden="true" style="font-size: 1.5rem" />
         <span class="sidebar-title">Blockchain</span>
       </div>
       <nav aria-label="Site sections">
@@ -109,22 +84,22 @@ async function logout() {
           :key="item.to"
           :to="item.to"
           class="nav-item"
-          :class="{ active: (item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to)) }"
-          :aria-current="(item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to)) ? 'page' : undefined"
+          :class="{
+            active: item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to),
+          }"
+          :aria-current="
+            (item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to))
+              ? 'page'
+              : undefined
+          "
         >
-          <span
-            :class="item.icon"
-            aria-hidden="true"
-          />
+          <span :class="item.icon" aria-hidden="true" />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
 
       <!-- User chip -->
-      <div
-        v-if="auth.isAuthenticated && auth.user"
-        class="user-chip"
-      >
+      <div v-if="auth.isAuthenticated && auth.user" class="user-chip">
         <div class="user-chip-info">
           <span class="user-avatar">{{ auth.user.display_name.charAt(0).toUpperCase() }}</span>
           <div class="user-chip-text">
@@ -132,16 +107,8 @@ async function logout() {
             <span class="user-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
           </div>
         </div>
-        <button
-          class="logout-btn"
-          aria-label="Sign out"
-          title="Sign out"
-          @click="logout"
-        >
-          <span
-            class="pi pi-sign-out"
-            aria-hidden="true"
-          />
+        <button class="logout-btn" aria-label="Sign out" title="Sign out" @click="logout">
+          <span class="pi pi-sign-out" aria-hidden="true" />
         </button>
       </div>
 
@@ -152,19 +119,12 @@ async function logout() {
         aria-live="polite"
         :aria-label="`WebSocket: ${wsStatus === 'OPEN' ? 'connected' : 'connecting'}`"
       >
-        <span
-          class="dot"
-          aria-hidden="true"
-        />
+        <span class="dot" aria-hidden="true" />
         <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Connecting…' }}</span>
       </div>
     </aside>
 
-    <main
-      id="main-content"
-      class="main-content"
-      tabindex="-1"
-    >
+    <main id="main-content" class="main-content" tabindex="-1">
       <RouterView />
     </main>
     <Toast position="bottom-right" />
@@ -172,7 +132,11 @@ async function logout() {
 </template>
 
 <style scoped>
-.layout { display: flex; min-height: 100vh; background: var(--bg-base); }
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-base);
+}
 
 /* ── Desktop sidebar ─────────────────────────────────────────────────── */
 .sidebar {
@@ -228,7 +192,12 @@ async function logout() {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--sidebar-border);
 }
-.user-chip-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.user-chip-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
 .user-avatar {
   width: 28px;
   height: 28px;
@@ -242,7 +211,11 @@ async function logout() {
   font-weight: 700;
   flex-shrink: 0;
 }
-.user-chip-text { display: flex; flex-direction: column; min-width: 0; }
+.user-chip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .user-display {
   font-size: 0.82rem;
   font-weight: 600;
@@ -264,10 +237,15 @@ async function logout() {
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
   flex-shrink: 0;
 }
-.logout-btn:hover { color: var(--sidebar-link-active-text); background: rgba(255,255,255,0.08); }
+.logout-btn:hover {
+  color: var(--sidebar-link-active-text);
+  background: rgba(255, 255, 255, 0.08);
+}
 
 .ws-status {
   display: flex;
@@ -277,8 +255,16 @@ async function logout() {
   padding: 0.6rem 0.5rem;
   color: var(--sidebar-link);
 }
-.ws-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #95a4c2; }
-.ws-status.OPEN .dot { background: #34d399; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12); }
+.ws-status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #95a4c2;
+}
+.ws-status.OPEN .dot {
+  background: #34d399;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+}
 
 .main-content {
   margin-left: 240px;
@@ -286,8 +272,7 @@ async function logout() {
   padding: 1.6rem;
   background:
     radial-gradient(circle at 92% 8%, rgba(61, 118, 221, 0.08), transparent 24%),
-    radial-gradient(circle at 15% 94%, rgba(38, 180, 136, 0.08), transparent 20%),
-    var(--bg-base);
+    radial-gradient(circle at 15% 94%, rgba(38, 180, 136, 0.08), transparent 20%), var(--bg-base);
   min-height: 100vh;
 }
 
@@ -317,7 +302,10 @@ async function logout() {
     border-bottom: 1px solid var(--sidebar-border);
     z-index: 300;
   }
-  .mobile-logo { font-size: 1.3rem; color: var(--sidebar-title); }
+  .mobile-logo {
+    font-size: 1.3rem;
+    color: var(--sidebar-title);
+  }
   .mobile-title {
     font-weight: 700;
     font-size: 1rem;
@@ -337,7 +325,9 @@ async function logout() {
     cursor: pointer;
     transition: background 0.15s;
   }
-  .hamburger:hover { background: var(--surface-soft); }
+  .hamburger:hover {
+    background: var(--surface-soft);
+  }
 
   .nav-overlay {
     display: block;
@@ -357,7 +347,9 @@ async function logout() {
     transition: left 0.22s ease;
     border-right: 1px solid var(--sidebar-border);
   }
-  .sidebar.open { left: 0; }
+  .sidebar.open {
+    left: 0;
+  }
 
   .main-content {
     margin-left: 0;
@@ -365,6 +357,8 @@ async function logout() {
     padding-top: calc(52px + 1rem);
   }
 
-  .layout { flex-direction: column; }
+  .layout {
+    flex-direction: column;
+  }
 }
 </style>

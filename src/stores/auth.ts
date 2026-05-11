@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { login as apiLogin, me as apiMe, type LoginResponse, type MeResponse } from '@/api/auth'
+import { login as apiLogin, me as apiMe, type MeResponse } from '@/api/auth'
 
 const STORAGE_KEY = 'bb_auth'
 
@@ -57,12 +57,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string): Promise<void> {
     const resp = await apiLogin(username, password)
     token.value = resp.access_token
-    // Seed user from the login response (backend already returns user_id, username, roles).
-    // Persist immediately so the token reaches the Axios interceptor before any follow-up call.
-    _setUserFromLogin(resp)
+    // Fetch user profile immediately after login.
+    const profile = await apiMe()
+    _setUser(profile)
     _persist()
-    // Refresh display_name (not returned by /auth/login) in the background.
-    apiMe().then(_setUser).catch(() => { /* non-critical */ })
   }
 
   function logout() {
@@ -80,15 +78,6 @@ export const useAuthStore = defineStore('auth', () => {
       _persist()
     } catch {
       logout()
-    }
-  }
-
-  function _setUserFromLogin(resp: LoginResponse) {
-    user.value = {
-      user_id: resp.user_id,
-      username: resp.username,
-      display_name: resp.username, // display_name refreshed below via apiMe()
-      roles: resp.roles,
     }
   }
 
