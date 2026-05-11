@@ -57,7 +57,8 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string): Promise<void> {
     const resp = await apiLogin(username, password)
     token.value = resp.access_token
-    // Fetch user profile immediately after login.
+    // Persist token before fetching profile so HTTP client has it available.
+    _persist()
     const profile = await apiMe()
     _setUser(profile)
     _persist()
