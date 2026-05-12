@@ -26,6 +26,14 @@ const allNavItems = [
   { to: '/admin', label: 'Admin', icon: 'pi pi-shield', requireRole: 'ADMIN' },
   { to: '/admin/users', label: 'Users', icon: 'pi pi-users', requireRole: 'ADMIN' },
   { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet', requireRole: 'ADMIN' },
+  { to: '/admin/currencies', label: 'Currencies', icon: 'pi pi-globe', requireRole: 'ADMIN' },
+  { to: '/admin/treasury', label: 'Treasury', icon: 'pi pi-building', requireRole: 'ADMIN' },
+  {
+    to: '/admin/exchange-rates',
+    label: 'Exchange Rates',
+    icon: 'pi pi-sort-alt',
+    requireRole: 'ADMIN',
+  },
 ]
 
 const navItems = computed(() =>

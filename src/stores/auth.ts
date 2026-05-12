@@ -6,7 +6,7 @@ const STORAGE_KEY = 'bb_auth'
 
 interface StoredAuth {
   token: string
-  user: AuthUser
+  user?: AuthUser
 }
 
 export interface AuthUser {
@@ -23,8 +23,11 @@ export const useAuthStore = defineStore('auth', () => {
   // ── Persistence ────────────────────────────────────────────────────────────
 
   function _persist() {
-    if (token.value && user.value) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: token.value, user: user.value }))
+    if (token.value) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ token: token.value, user: user.value ?? undefined })
+      )
     } else {
       localStorage.removeItem(STORAGE_KEY)
     }
@@ -36,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const parsed = JSON.parse(raw) as StoredAuth
       token.value = parsed.token
-      user.value = parsed.user
+      user.value = parsed.user ?? null
     } catch {
       localStorage.removeItem(STORAGE_KEY)
     }
@@ -57,7 +60,8 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string): Promise<void> {
     const resp = await apiLogin(username, password)
     token.value = resp.access_token
-    // Fetch user profile immediately after login.
+    // Persist token before fetching profile so HTTP client has it available.
+    _persist()
     const profile = await apiMe()
     _setUser(profile)
     _persist()
