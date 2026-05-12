@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useWalletStore } from '@/stores/wallet'
-import { createWallet, listCurrencies, type CurrencyRecord } from '@/api/wallets'
+import { confirmWallet, listCurrencies, previewWallet, type CurrencyRecord } from '@/api/wallets'
 import { isValidMnemonic } from '@/lib/crypto'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
 import HashChip from '@/components/atoms/HashChip.vue'
@@ -16,13 +16,15 @@ const toast = useToast()
 const pendingMnemonic = ref('')
 const showSeedModal = ref(false)
 const creatingWallet = ref(false)
+const pendingDraftId = ref('')
 const currencies = ref<CurrencyRecord[]>([])
 const selectedCurrency = ref('NATIVE')
 
 async function handleCreateWallet() {
   creatingWallet.value = true
   try {
-    const resp = await createWallet(selectedCurrency.value)
+    const resp = await previewWallet(selectedCurrency.value)
+    pendingDraftId.value = resp.draft_id
     pendingMnemonic.value = resp.mnemonic
     showSeedModal.value = true
   } catch (e) {
@@ -38,15 +40,33 @@ async function handleCreateWallet() {
 }
 
 async function onSeedConfirmed() {
+  try {
+    await confirmWallet(pendingDraftId.value)
+    await walletStore.fetchMine()
+    toast.add({
+      severity: 'success',
+      summary: 'Wallet created',
+      detail: 'Your new wallet is ready',
+      life: 3000,
+    })
+  } catch (e) {
+    toast.add({
+      severity: 'error',
+      summary: 'Wallet confirmation failed',
+      detail: e instanceof Error ? e.message : 'Unexpected error',
+      life: 4000,
+    })
+  } finally {
+    showSeedModal.value = false
+    pendingMnemonic.value = ''
+    pendingDraftId.value = ''
+  }
+}
+
+function onSeedClosed() {
   showSeedModal.value = false
   pendingMnemonic.value = ''
-  await walletStore.fetchMine()
-  toast.add({
-    severity: 'success',
-    summary: 'Wallet created',
-    detail: 'Your new wallet is ready',
-    life: 3000,
-  })
+  pendingDraftId.value = ''
 }
 
 // ── Transfer form ──────────────────────────────────────────────────────────
@@ -155,6 +175,7 @@ onMounted(async () => {
       :mnemonic="pendingMnemonic"
       :visible="showSeedModal"
       @confirm="onSeedConfirmed"
+      @close="onSeedClosed"
     />
 
     <!-- Header -->

@@ -8,6 +8,14 @@ export interface CreatedWallet {
   message: string
 }
 
+export interface WalletDraft {
+  draft_id: string
+  currency: string
+  public_key: string
+  mnemonic: string
+  warning: string
+}
+
 export type WalletType = 'USER' | 'TREASURY' | 'FEE'
 
 export interface Wallet {
@@ -49,6 +57,17 @@ export interface MintResponse {
 export async function createWallet(currency?: string): Promise<CreatedWallet> {
   const payload = currency ? { currency } : undefined
   const { data } = await client.post<CreatedWallet>('/wallets', payload)
+  return data
+}
+
+export async function previewWallet(currency?: string): Promise<WalletDraft> {
+  const payload = currency ? { currency } : undefined
+  const { data } = await client.post<WalletDraft>('/wallets/preview', payload)
+  return data
+}
+
+export async function confirmWallet(draftId: string): Promise<CreatedWallet> {
+  const { data } = await client.post<CreatedWallet>('/wallets/confirm', { draft_id: draftId })
   return data
 }
 
