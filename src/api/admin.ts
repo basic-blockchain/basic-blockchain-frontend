@@ -26,6 +26,7 @@ export interface ExchangeRateRecord {
   to_currency: string
   rate: string
   fee_rate: string
+  source: string
   updated_at: string
 }
 
@@ -189,5 +190,13 @@ export async function setExchangeRate(
   payload: { rate: number; fee_rate?: number }
 ): Promise<ExchangeRateRecord> {
   const { data } = await client.put(`/admin/exchange-rates/${fromCurrency}/${toCurrency}`, payload)
+  return data
+}
+
+export async function syncExchangeRates(payload: {
+  provider: string
+  pairs: string[]
+}): Promise<{ rates: ExchangeRateRecord[]; count: number; provider: string }> {
+  const { data } = await client.post('/admin/exchange-rates/sync', payload)
   return data
 }
