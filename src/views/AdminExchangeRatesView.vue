@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { listExchangeRates, setExchangeRate, type ExchangeRateRecord } from '@/api/admin'
+import {
+  listExchangeRates,
+  setExchangeRate,
+  syncExchangeRates,
+  type ExchangeRateRecord,
+} from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
 
 const toast = useToast()
 
 const rates = ref<ExchangeRateRecord[]>([])
 const loading = ref(false)
+const syncing = ref(false)
 const error = ref('')
 
 const form = ref({
@@ -14,6 +20,11 @@ const form = ref({
   toCurrency: 'NATIVE',
   rate: '',
   feeRate: '0',
+})
+
+const syncForm = ref({
+  provider: 'BINANCE',
+  pairs: '',
 })
 
 async function load() {
@@ -83,6 +94,45 @@ async function submit() {
   }
 }
 
+async function runSync() {
+  const pairs = syncForm.value.pairs
+    .split(',')
+    .map((pair) => pair.trim())
+    .filter(Boolean)
+  if (pairs.length === 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Missing pairs',
+      detail: 'Add one or more pairs like BTC/USDT',
+      life: 3000,
+    })
+    return
+  }
+  syncing.value = true
+  try {
+    await syncExchangeRates({
+      provider: syncForm.value.provider,
+      pairs,
+    })
+    toast.add({
+      severity: 'success',
+      summary: 'Sync complete',
+      detail: `${pairs.length} pair(s) updated`,
+      life: 3000,
+    })
+    await load()
+  } catch (e: unknown) {
+    toast.add({
+      severity: 'error',
+      summary: 'Sync failed',
+      detail: e instanceof Error ? e.message : 'Error',
+      life: 4000,
+    })
+  } finally {
+    syncing.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -92,6 +142,32 @@ onMounted(load)
       <h1>Exchange Rates</h1>
       <button class="btn-secondary" :disabled="loading" @click="load">Refresh</button>
     </div>
+
+    <section class="admin-section">
+      <h2 class="section-title">Sync exchange rates</h2>
+      <form class="rate-form" @submit.prevent="runSync">
+        <div class="form-row">
+          <div class="form-field">
+            <label class="field-label" for="provider">Provider</label>
+            <select id="provider" v-model="syncForm.provider" class="field-input">
+              <option value="BINANCE">Binance</option>
+              <option value="CRYPTO_COM">Crypto.com</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pairs">Pairs</label>
+            <input
+              id="pairs"
+              v-model="syncForm.pairs"
+              class="field-input"
+              placeholder="BTC/USDT,ETH/USDT"
+            />
+          </div>
+        </div>
+        <button class="btn-secondary" type="submit" :disabled="syncing">Sync now</button>
+      </form>
+      <p class="helper-text">Pairs must match active currencies in the catalog.</p>
+    </section>
 
     <section class="admin-section">
       <h2 class="section-title">Set exchange rate</h2>
@@ -136,8 +212,7 @@ onMounted(load)
         <button class="btn-primary" type="submit">Save rate</button>
       </form>
       <p class="helper-text">
-        Manual rates for now. We will add an automated feed endpoint for external providers
-        (Binance, Crypto.com) in a later phase.
+        Manual rates are stored with source MANUAL. Feed sync updates show provider sources.
       </p>
     </section>
 
@@ -150,6 +225,7 @@ onMounted(load)
           <th>Pair</th>
           <th>Rate</th>
           <th>Fee</th>
+          <th>Source</th>
           <th>Updated</th>
         </tr>
       </thead>
@@ -158,10 +234,11 @@ onMounted(load)
           <td class="mono">{{ r.from_currency }} → {{ r.to_currency }}</td>
           <td class="mono">{{ r.rate }}</td>
           <td class="mono">{{ r.fee_rate }}</td>
+          <td class="mono">{{ r.source }}</td>
           <td class="mono text-muted">{{ r.updated_at }}</td>
         </tr>
         <tr v-if="rates.length === 0 && !loading">
-          <td colspan="4" class="empty">No exchange rates yet.</td>
+          <td colspan="5" class="empty">No exchange rates yet.</td>
         </tr>
       </tbody>
     </table>
