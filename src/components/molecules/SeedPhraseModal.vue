@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
   mnemonic: string
@@ -13,12 +13,22 @@ const emit = defineEmits<{
 
 const confirmed = ref(false)
 
+watch(
+  () => props.visible,
+  (visible) => {
+    if (!visible) {
+      confirmed.value = false
+    }
+  }
+)
+
 function onConfirm() {
   if (!confirmed.value) return
   emit('confirm')
 }
 
 function onClose() {
+  confirmed.value = false
   emit('close')
 }
 </script>
