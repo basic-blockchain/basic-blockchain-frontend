@@ -1,7 +1,7 @@
 # UX and Validation Requirements
 
-Status: proposed
-Last updated: 2026-04-24
+Status: baseline
+Last updated: 2026-05-08
 
 ## Objective
 
@@ -11,7 +11,7 @@ Improve readability, visual harmony, and validation capabilities while preservin
 
 ### 1.1 Color system
 
-Adopt the approved blockchain dark palette:
+Current blockchain dark palette (from `src/assets/main.css`):
 
 - Background: #0d0e1a
 - Sidebar: #121324
@@ -23,7 +23,7 @@ Adopt the approved blockchain dark palette:
 - Accent glow: #B4A9E6
 - Text primary: #FDFDFD
 - Text secondary: #A0A8C0
-- Text muted: #6D7382
+- Text muted: #8892A4
 - Success: #22c55e
 - Warning: #eab308
 - Error: #ef4444
@@ -47,16 +47,16 @@ Adopt the approved blockchain dark palette:
 - Forms should switch from horizontal to vertical layout on narrow viewports.
 - Validation and metrics cards must remain readable on small screens.
 
-## 2. Validation feature requirements
+## 2. Validation capabilities (current)
 
 ### 2.1 Chain validation
 
-- Provide explicit action to validate chain integrity through backend endpoint.
+- Validate the chain via the backend endpoint (`/api/v1/valid`).
 - Display backend message and pass/fail state.
 
 ### 2.2 Block validation
 
-- Validate selected block by index against local chain snapshot.
+- Validate selected block by index against the local chain snapshot.
 - Rules:
   - block exists in chain
   - proof is positive integer
@@ -73,6 +73,10 @@ Adopt the approved blockchain dark palette:
 - Validate sender, receiver, amount with rule-level status.
 - Show immediate feedback without submitting transaction.
 
+### 2.5 Validation history export
+
+- Export validation history as JSON from the Validation Center.
+
 ## 3. Accessibility requirements
 
 - Minimum readable contrast for all text on dark surfaces.
@@ -85,25 +89,20 @@ Adopt the approved blockchain dark palette:
 
 Surface reference: `--surface #1a1b2e` (L=0.017), `--bg-base #0d0e1a` (L=0.004)
 
-| Token / element | Color | Ratio on surface | WCAG AA (4.5:1) | Status |
-|-----------------|-------|-------------------|-----------------|--------|
-| `--text-strong` | `#fdfdfd` | 12.5:1 | ✅ pass | — |
-| `--text-body` | `#a0a8c0` | 6.9:1 | ✅ pass | — |
-| `--text-muted` (old) | `#6d7382` | 3.6:1 | ❌ fail | Fixed → `#8892a4` |
-| `--text-muted` (new) | `#8892a4` | 5.4:1 | ✅ pass | Phase H.2 |
-| `--primary` text | `#7d56fe` | 4.6:1 | ✅ pass | — |
-| Status ok text | `#86efac` | 7.8:1 | ✅ pass | — |
-| Status error text | `#fca5a5` | 7.2:1 | ✅ pass | — |
-| Status degraded text | `#fcd34d` | 9.1:1 | ✅ pass | — |
-| HashChip (old bg) | `#f1f5f9` light | n/a | ❌ wrong palette | Fixed H.2 |
+| Token / element      | Color           | Ratio on surface | WCAG AA (4.5:1)  | Status            |
+| -------------------- | --------------- | ---------------- | ---------------- | ----------------- |
+| `--text-strong`      | `#fdfdfd`       | 12.5:1           | ✅ pass          | —                 |
+| `--text-body`        | `#a0a8c0`       | 6.9:1            | ✅ pass          | —                 |
+| `--text-muted` (old) | `#6d7382`       | 3.6:1            | ❌ fail          | Fixed → `#8892a4` |
+| `--text-muted` (new) | `#8892a4`       | 5.4:1            | ✅ pass          | Phase H.2         |
+| `--primary` text     | `#7d56fe`       | 4.6:1            | ✅ pass          | —                 |
+| Status ok text       | `#86efac`       | 7.8:1            | ✅ pass          | —                 |
+| Status error text    | `#fca5a5`       | 7.2:1            | ✅ pass          | —                 |
+| Status degraded text | `#fcd34d`       | 9.1:1            | ✅ pass          | —                 |
+| HashChip (old bg)    | `#f1f5f9` light | n/a              | ❌ wrong palette | Fixed H.2         |
 
-## 5. Suggested implementation phases
+## 5. Remaining improvements (post v0.8.0)
 
-1. Theme foundation and global token migration. ✅ done
-2. Cross-view contrast and typography normalization. ✅ done
-3. Validation Center rollout (chain, block, node, transaction). ✅ done
-4. Accessibility pass and responsive QA. 🔄 Phase H.2 in progress
-5. Optional enhancements:
-   - historical validation logs ✅ done (Phase H.1)
-   - exportable validation report ✅ done (Phase H.1)
-   - server-side block and node validation endpoints (Phase H.1 backend)
+1. Accessibility pass and responsive QA across all views.
+2. Server-side block/node validation endpoints (backend alignment).
+3. Inline remediation hints for common validation failures.
