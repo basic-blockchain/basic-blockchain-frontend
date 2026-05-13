@@ -1,7 +1,7 @@
 # Frontend Architecture — Basic Blockchain Simulator Dashboard
 
 Status: Accepted
-Last updated: 2026-04-24
+Last updated: 2026-05-08
 Audience: Frontend engineers, tech leads, SRE, DevSecOps
 
 ---
@@ -15,31 +15,34 @@ interacts with the [Basic Blockchain Simulator](../../basic-blockchain-simulator
 It provides:
 
 - Live view of the canonical chain (blocks, transactions, metadata).
-- Mempool monitoring with pending-transaction feed.
-- Mining trigger with rate-limit awareness.
+- Mempool monitoring with pending and confirmed history.
+- Mining trigger with chain and mempool refresh.
 - Node-registry and consensus (longest-chain) visualisation.
 - Health, metrics and latency telemetry.
+- JWT authentication and session-aware routing.
+- Wallet management with BIP-39 mnemonic flow and signed transfers.
+- Admin workflows (users, wallets, minting).
 
 The frontend is a **single-page application (SPA)** that communicates with the
 backend through:
 
-- **REST** (`/api/*`) for commands and queries.
-- **WebSocket** (`/ws`) for chain and mempool change events.
+- **REST** (`/api/v1/*`) for commands and queries.
+- **WebSocket** (`/api/v1/ws`) for chain change events.
 
 ### 1.2 Tech Stack
 
-| Layer               | Technology           | Version | Role                                                     |
-|---------------------|----------------------|---------|----------------------------------------------------------|
-| Framework           | Vue                  | 3.x     | Reactive UI, Composition API                             |
-| Build tool          | Vite                 | 6.x     | Dev server, HMR, production bundler                      |
-| Language            | TypeScript           | 5.x     | Static types across domain, api, stores and components   |
-| State               | Pinia                | 2.x     | Store-based state management                             |
-| Utilities           | VueUse               | 11.x    | Composable primitives (useWebSocket, useIntervalFn, ...) |
-| UI kit              | PrimeVue             | 4.x     | Accessible components (DataTable, Toast, Dialog, ...)    |
-| Charts              | Chart.js             | 4.x     | Mining throughput, latency, mempool depth                |
-| Routing             | Vue Router           | 4.x     | Client-side routing                                      |
-| HTTP                | Axios                | 1.x     | REST client with interceptors                            |
-| Tests               | Vitest + Vue TL      | 2.x     | Unit and component tests (>= 80% coverage)               |
+| Layer      | Technology      | Version | Role                                                   |
+| ---------- | --------------- | ------- | ------------------------------------------------------ |
+| Framework  | Vue             | 3.5     | Reactive UI, Composition API                           |
+| Build tool | Vite            | 6.x     | Dev server, HMR, production bundler                    |
+| Language   | TypeScript      | 5.x     | Static types across domain, api, stores and components |
+| State      | Pinia           | 2.x     | Store-based state management                           |
+| Utilities  | VueUse          | 11.x    | Composable primitives (useWebSocket, usePolling, ...)  |
+| UI kit     | PrimeVue        | 4.x     | Accessible components (DataTable, Toast, Dialog, ...)  |
+| Charts     | Chart.js        | 4.x     | Mining throughput, latency, mempool depth              |
+| Routing    | Vue Router      | 4.x     | Client-side routing                                    |
+| HTTP       | Axios           | 1.x     | REST client with interceptors                          |
+| Tests      | Vitest + Vue TL | 2.x     | Unit and component tests (>= 80% coverage)             |
 
 ### 1.3 Key Principle: Backend Mirroring
 
@@ -54,7 +57,7 @@ repository/    ------>        src/stores/      (reactive caches, actions)
 ```
 
 This symmetry makes it trivial for a backend engineer to find the frontend
-counterpart of any module and vice versa. Domain invariants (e.g. BR-TX-*) are
+counterpart of any module and vice versa. Domain invariants (e.g. BR-TX-\*) are
 enforced both client-side (fast UX feedback) and server-side (authoritative).
 
 ---
@@ -65,15 +68,15 @@ enforced both client-side (fast UX feedback) and server-side (authoritative).
 flowchart TB
     subgraph Browser["Browser (SPA)"]
         V["Views<br/>(DashboardView, ChainView, ...)"]
-        C["Composables<br/>(useBlockchainWs, useMining, useToast)"]
-        S["Stores (Pinia)<br/>(useChainStore, useMempoolStore, useNodesStore, useMetricsStore)"]
+        C["Composables<br/>(useBlockchainWs, usePolling, useToast)"]
+        S["Stores (Pinia)<br/>(useAuthStore, useChainStore, useMempoolStore, useConfirmedTransactionsStore, useNodesStore, useMetricsStore, useWalletStore, useValidationHistoryStore)"]
         A["API Clients<br/>(src/api/client.ts, websocket.ts)"]
         D["Domain<br/>(src/domain/block.ts, transaction.ts, validation)"]
     end
 
-    subgraph Backend["Backend (FastAPI)"]
-        REST["REST /api/*"]
-        WS["WebSocket /ws"]
+    subgraph Backend["Backend (Quart)"]
+        REST["REST /api/v1/*"]
+        WS["WebSocket /api/v1/ws"]
     end
 
     V --> C
@@ -103,48 +106,57 @@ flowchart TB
     Router["RouterView"]
     App --> Router
 
+    Router --> Login["LoginView"]
+    Router --> Register["RegisterView"]
+    Router --> Activate["ActivateView"]
+    Router --> Wallet["WalletView"]
+    Router --> Admin["AdminView"]
+    Router --> AdminUsers["AdminUsersView"]
+    Router --> AdminWallets["AdminWalletsView"]
     Router --> Dash["DashboardView"]
     Router --> Chain["ChainView"]
     Router --> Mem["MempoolView"]
     Router --> Nodes["NodesView"]
+    Router --> Validation["ValidationView"]
     Router --> Health["HealthView"]
 
     Dash --> MB["MetricsBar (organism)"]
-    Dash --> MC["MiningChart (organism)"]
     Dash --> MBtn["MineButton (organism)"]
+    Dash --> CLD["ChainList (organism)"]
+    Dash --> MTD["MempoolTable (organism)"]
 
+    Chain --> MC["MiningChart (organism)"]
     Chain --> CL["ChainList (organism)"]
     CL --> BC["BlockCard (molecule)"]
     BC --> HC["HashChip (atom)"]
-    BC --> SB["StatusBadge (atom)"]
 
     Mem --> MT["MempoolTable (organism)"]
-    MT --> TR["TransactionRow (molecule)"]
-    TR --> AD["AmountDisplay (atom)"]
-    TR --> HC2["HashChip (atom)"]
+    Mem --> CT["ConfirmedTransactionsTable (organism)"]
 
     Nodes --> NP["NodePanel (organism)"]
     NP --> NB["NodeBadge (molecule)"]
-    NB --> SB2["StatusBadge (atom)"]
 
-    Health --> MT2["MetricTile (molecule)"]
+    Wallet --> Seed["SeedPhraseModal (molecule)"]
+    Health --> MBH["MetricsBar (organism)"]
+    Health --> SBH["StatusBadge (atom)"]
 ```
 
 ---
 
 ## 4. Backend to Frontend Mapping
 
-| Backend module                              | Frontend counterpart                                   | Notes                                                           |
-|---------------------------------------------|--------------------------------------------------------|-----------------------------------------------------------------|
-| `domain/models.py` (Block, Transaction)     | `src/domain/block.ts`, `src/domain/transaction.ts`     | TypeScript mirrors of Python dataclasses.                       |
-| `domain/validation.py`                      | `src/domain/transaction.ts` (`validateTransaction`)    | Client-side BR-TX-* checks before POST.                         |
-| `domain/blockchain.py` (`BlockchainService`) | `src/stores/chain.ts` (`useChainStore`)               | Holds canonical chain, height, last block.                      |
-| `domain/mempool.py`                         | `src/stores/mempool.ts` (`useMempoolStore`)            | Pending tx list + submit action.                                |
-| `domain/node_registry.py`                   | `src/stores/nodes.ts` (`useNodesStore`)                | Peer list, register/resolve actions.                            |
-| `api/websocket_hub.py`                      | `src/api/websocket.ts` + `composables/useBlockchainWs` | VueUse `useWebSocket` with reconnection.                        |
-| `api/rate_limit.py`                         | `src/components/organisms/MineButton.vue`              | Reads `Retry-After` header on HTTP 429 and disables button.     |
-| `api/errors.py` (error envelope)            | `src/api/client.ts` (axios interceptor)                | Normalises `{code, message, details}` into typed `ApiError`.    |
-| `scripts/serve_api.py` routes               | `src/api/endpoints.ts`                                 | Single source of truth for URL paths.                           |
+| Backend module                               | Frontend counterpart                                           | Notes                                               |
+| -------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
+| `domain/models.py` (Block, Transaction)      | `src/domain/block.ts`, `src/domain/transaction.ts`             | TypeScript mirrors of Python dataclasses.           |
+| `domain/validation.py`                       | `src/domain/transaction.ts` (`validateTransaction`)            | Client-side BR-TX-\* checks before POST.            |
+| `domain/blockchain.py` (`BlockchainService`) | `src/stores/chain.ts` (`useChainStore`)                        | Holds canonical chain, height, last block.          |
+| `domain/mempool.py`                          | `src/stores/mempool.ts`, `src/stores/confirmedTransactions.ts` | Pending list + confirmed history.                   |
+| `domain/node_registry.py`                    | `src/stores/nodes.ts` (`useNodesStore`)                        | Peer list, register/resolve actions.                |
+| `api/auth_routes.py`                         | `src/api/auth.ts`, `src/stores/auth.ts`                        | JWT login, session storage, role checks.            |
+| `api/wallet_routes.py`                       | `src/api/wallets.ts`, `src/stores/wallet.ts`                   | Wallet CRUD + signed transfer submission.           |
+| `api/admin_routes.py`                        | `src/api/admin.ts`, `src/views/Admin*.vue`                     | Admin workflows (users, wallets, mint).             |
+| `api/websocket_hub.py`                       | `src/api/websocket.ts` + `composables/useBlockchainWs`         | VueUse `useWebSocket` with reconnection.            |
+| `api/errors.py` (error envelope)             | `src/api/client.ts` (axios interceptor)                        | Normalises `{code, message}` into typed `ApiError`. |
 
 ---
 
@@ -160,13 +172,17 @@ sequenceDiagram
     participant CL as src/api/websocket.ts
     participant CP as useBlockchainWs
     participant ST as useChainStore
+    participant MS as useMempoolStore
+    participant MT as useMetricsStore
     participant UI as ChainList / BlockCard
 
-    BE->>WS: broadcast block.mined event
-    WS-->>CL: {type: block.mined, payload: ...}
+    BE->>WS: broadcast block_mined event
+    WS-->>CL: {event: block_mined, block: ...}
     CL->>CP: onMessage(event)
     CP->>ST: appendBlock(block)
-    ST-->>UI: reactive update (chain[])
+    CP->>MS: fetchPending()
+    CP->>MT: fetchAll()
+    ST-->>UI: reactive update (blocks[])
     UI-->>UI: render new BlockCard
 ```
 
@@ -176,27 +192,22 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant U as User
-    participant MV as MempoolView
-    participant MS as useMempoolStore
-    participant DV as validateTransaction (domain)
+    participant WV as WalletView
+    participant WS as useWalletStore
+    participant SG as signTransfer (lib/crypto)
     participant AX as axios client
-    participant BE as POST /api/transactions
+    participant BE as POST /api/v1/transactions/signed
 
-    U->>MV: fill form + submit
-    MV->>MS: submitTransaction(dto)
-    MS->>DV: validateTransaction(dto)
-    alt invalid
-        DV-->>MS: ValidationError
-        MS-->>MV: reject(error) -> toast
-    else valid
-        DV-->>MS: ok
-        MS->>AX: POST /api/transactions
-        AX->>BE: HTTP
-        BE-->>AX: 201 {tx_id}
-        AX-->>MS: TransactionCreated
-        MS->>MS: fetchPending()
-        MS-->>MV: success toast
-    end
+    U->>WV: fill transfer form + submit
+    WV->>WS: transfer(mnemonic, sender, receiver, amount, nonce)
+    WS->>SG: signTransfer(...)
+    SG-->>WS: signature
+    WS->>AX: POST /api/v1/transactions/signed
+    AX->>BE: HTTP
+    BE-->>AX: 201 {transaction_id}
+    AX-->>WS: SignedTransferResponse
+    WS->>WS: fetchMine()
+    WS-->>WV: success toast
 ```
 
 ### 5.3 Consensus Resolve
@@ -208,11 +219,11 @@ sequenceDiagram
     participant NV as NodesView
     participant NS as useNodesStore
     participant CS as useChainStore
-    participant BE as GET /api/nodes/resolve
+    participant BE as GET /api/v1/nodes/resolve
 
     U->>NV: click Resolve
     NV->>NS: resolve()
-    NS->>BE: GET /api/nodes/resolve
+    NS->>BE: GET /api/v1/nodes/resolve
     BE-->>NS: {replaced: boolean, chain?: [...]}
     alt replaced = true
         NS->>CS: fetchChain()
@@ -228,61 +239,97 @@ sequenceDiagram
 
 ```mermaid
 classDiagram
+  class useAuthStore {
+    +token
+    +user
+    +isAuthenticated
+    +isAdmin
+    +login()
+    +logout()
+    +refreshUser()
+  }
     class useChainStore {
-        +chain
-        +height
-        +lastBlock
+    +blocks
+    +length
+    +latestBlock
+    +recentBlocks
         +loading
         +fetchChain()
-        +appendBlock(b)
-        +reset()
+    +fetchValidation()
+    +appendBlock(b)
     }
     class useMempoolStore {
-        +pending
-        +submitting
+    +transactions
+    +count
+    +loading
         +fetchPending()
         +submitTransaction(dto)
-        +removeConfirmed(ids)
+    +clear()
     }
+  class useConfirmedTransactionsStore {
+    +records
+    +total
+    +loading
+    +fetchConfirmed()
+    +addFromBlock()
+    +clear()
+  }
+  class useWalletStore {
+    +wallets
+    +loading
+    +fetchMine()
+    +transfer()
+  }
     class useNodesStore {
         +peers
-        +registering
-        +register(url)
+    +total
+    +loading
+    +consensusReplaced
+    +register(urls)
         +resolve()
-        +fetchPeers()
+        +fetchNodes()
     }
     class useMetricsStore {
         +health
-        +latencyMs
-        +mempoolDepth
-        +miningRate
-        +tick()
-        +startPolling()
-        +stopPolling()
+    +metrics
+    +loading
+    +fetchAll()
     }
+  class useValidationHistoryStore {
+    +events
+    +total
+    +latest
+    +record()
+    +clear()
+    +exportJson()
+  }
 
     class apiClient
     class websocketClient
 
     useChainStore --> apiClient
-    useChainStore --> websocketClient
     useMempoolStore --> apiClient
-    useMempoolStore --> websocketClient
+  useConfirmedTransactionsStore --> apiClient
     useNodesStore --> apiClient
     useMetricsStore --> apiClient
-    useNodesStore ..> useChainStore : triggers fetchChain()
-    useChainStore ..> useMempoolStore : removeConfirmed() on block.mined
+  useAuthStore --> apiClient
+  useWalletStore --> apiClient
+  useChainStore --> websocketClient
+  useNodesStore ..> useChainStore : triggers fetchChain()
 ```
 
 **State responsibilities:**
 
-- `useChainStore` — authoritative client-side mirror of the chain; listens to
-  `block.mined` WS events and appends.
-- `useMempoolStore` — pending transactions; reacts to `tx.added` and `tx.confirmed`.
+- `useAuthStore` — JWT session persistence, role checks, and profile refresh.
+- `useChainStore` — authoritative chain mirror; appends on `block_mined` WS events.
+- `useMempoolStore` — pending transactions; refreshed on demand and on block mined.
+- `useConfirmedTransactionsStore` — confirmed transaction history from `/api/v1/transactions`.
 - `useNodesStore` — peer registry + consensus trigger; may cascade into
   `useChainStore.fetchChain()` on chain replacement.
-- `useMetricsStore` — polled every 5 s via `useIntervalFn`; powers `MetricsBar`
+- `useMetricsStore` — fetched on demand and after block mined; powers `MetricsBar`
   and `MiningChart`.
+- `useWalletStore` — wallet list + signed transfer submission.
+- `useValidationHistoryStore` — client-side validation history export.
 
 ---
 
@@ -297,42 +344,52 @@ flowchart LR
     end
     subgraph Molecules
         M1[BlockCard]
-        M2[TransactionRow]
-        M3[NodeBadge]
-        M4[MetricTile]
+    M2[NodeBadge]
+    M3[MetricTile]
+    M4[SeedPhraseModal]
+    M5[TransactionRow]
     end
     subgraph Organisms
         O1[ChainList]
         O2[MempoolTable]
-        O3[NodePanel]
-        O4[MetricsBar]
-        O5[MineButton]
-        O6[MiningChart]
+    O3[ConfirmedTransactionsTable]
+    O4[NodePanel]
+    O5[MetricsBar]
+    O6[MineButton]
+    O7[MiningChart]
     end
     subgraph Views
-        V1[DashboardView]
-        V2[ChainView]
-        V3[MempoolView]
-        V4[NodesView]
-        V5[HealthView]
+    V1[LoginView]
+    V2[RegisterView]
+    V3[ActivateView]
+    V4[WalletView]
+    V5[AdminView]
+    V6[AdminUsersView]
+    V7[AdminWalletsView]
+    V8[DashboardView]
+    V9[ChainView]
+    V10[MempoolView]
+    V11[NodesView]
+    V12[ValidationView]
+    V13[HealthView]
     end
 
-    A1 --> M1
-    A1 --> M3
+    A1 --> O5
+    A1 --> V13
     A2 --> M1
-    A2 --> M2
-    A3 --> M2
-    M1 --> O1
-    M2 --> O2
-    M3 --> O3
-    M4 --> O4
-    O1 --> V2
-    O2 --> V3
-    O3 --> V4
-    O4 --> V1
-    O5 --> V1
-    O6 --> V1
-    M4 --> V5
+  A3 --> M5
+  M1 --> O1
+  M2 --> O4
+  M3 --> O5
+  O1 --> V9
+  O2 --> V10
+  O3 --> V10
+  O4 --> V11
+  O5 --> V8
+  O6 --> V8
+  O7 --> V8
+  M4 --> V4
+  M3 --> V13
 ```
 
 **Hard rules:**
@@ -362,24 +419,20 @@ stateDiagram-v2
 ```
 
 - Reconnection is handled by VueUse `useWebSocket` with `autoReconnect`
-  (retries: Infinity, delay: 1000, exponential).
-- On each reconnect `useChainStore.fetchChain()` is called to reconcile any
-  events missed while offline (idempotent; backend returns canonical chain).
+  (retries: 10, delay: 3000).
+- On each `block_mined` message, `useBlockchainWs` appends the block and
+  refreshes mempool + metrics.
 
 ---
 
 ## 9. Environment Configuration
 
-| Variable              | Default (dev)              | Default (prod)         | Purpose                                    |
-|-----------------------|----------------------------|------------------------|--------------------------------------------|
-| `VITE_API_BASE_URL`   | `/api` (via Vite proxy)    | `https://host/api`     | Base URL for REST calls.                   |
-| `VITE_WS_URL`         | `ws://localhost:5173/ws`   | `wss://host/ws`        | WebSocket endpoint.                        |
-| `VITE_POLL_INTERVAL`  | `5000`                     | `5000`                 | Metrics polling period (ms).               |
-| `VITE_LOG_LEVEL`      | `debug`                    | `warn`                 | Console log verbosity.                     |
-| `VITE_APP_VERSION`    | from `package.json`        | from `package.json`    | Displayed in footer; injected at build.    |
+| Variable            | Default (dev) | Default (prod) | Purpose                             |
+| ------------------- | ------------- | -------------- | ----------------------------------- |
+| `VITE_API_BASE_URL` | `/api/v1`     | `/api/v1`      | Base URL for REST calls.            |
+| `VITE_WS_URL`       | derived       | derived        | WebSocket URL (falls back to host). |
 
-Override via `.env.local` (dev) or runtime `window.__ENV__` (prod, injected by
-container entrypoint). See `src/config/env.ts`.
+Override via `.env.local` (dev) or environment injection at build time.
 
 ---
 
@@ -420,13 +473,13 @@ install  ->  lint  ->  typecheck  ->  test (coverage >= 80%)  ->  build  ->  aud
 Full ADRs live under `decisions/`.
 
 | ID      | Title                                     | Rationale (short)                                                                                       |
-|---------|-------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| ------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | ADR-001 | Vue 3 over React                          | Reactivity model fits real-time chain state; single-file components keep presentational+logic cohesive. |
 | ADR-002 | Pinia over Vuex / Tanstack Query          | Simpler TypeScript inference, Composition-API native, ergonomic for both sync stores and async actions. |
 | ADR-003 | Atomic Design                             | Scales from PoC to production without structural rewrites; clear testing boundaries per layer.          |
 | -       | VueUse useWebSocket                       | Built-in reconnection with backoff eliminates hand-rolled retry logic and its edge cases.               |
-| -       | Vite dev proxy for /api and /ws           | Avoids CORS in development; production uses same-origin reverse proxy.                                  |
-| -       | Client-side validation mirroring BR-TX-*  | Instant user feedback without a round-trip; backend remains authoritative.                              |
+| -       | Vite dev proxy for /api/v1 and /api/v1/ws | Avoids CORS in development; production uses same-origin reverse proxy.                                  |
+| -       | Client-side validation mirroring BR-TX-\* | Instant user feedback without a round-trip; backend remains authoritative.                              |
 | -       | PrimeVue as UI kit                        | Accessible, themeable, batteries-included DataTable/Toast/Dialog.                                       |
 | -       | Chart.js over D3                          | Zero-config for the chart set we need (line/bar); lower bundle cost than D3.                            |
 
@@ -445,17 +498,16 @@ basic-blockchain-frontend/
       ADR-002-pinia-state.md
       ADR-003-atomic-design.md
   src/
-    api/              (client.ts, websocket.ts, endpoints.ts)
+    api/              (client.ts, websocket.ts, auth.ts, wallets.ts, admin.ts)
     domain/           (block.ts, transaction.ts, validation.ts, node.ts)
-    stores/           (chain.ts, mempool.ts, nodes.ts, metrics.ts)
-    composables/      (useBlockchainWs.ts, useMining.ts, useToast.ts)
+    stores/           (auth.ts, chain.ts, mempool.ts, confirmedTransactions.ts, nodes.ts, metrics.ts, wallet.ts)
+    composables/      (useBlockchainWs.ts, usePolling.ts, useToast.ts)
     components/
       atoms/
       molecules/
       organisms/
     views/
     router/
-    config/
     App.vue
     main.ts
   tests/

@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { login as apiLogin, me as apiMe, type LoginResponse, type MeResponse } from '@/api/auth'
+import { login as apiLogin, me as apiMe, type MeResponse } from '@/api/auth'
 
 const STORAGE_KEY = 'bb_auth'
 
 interface StoredAuth {
   token: string
-  user: AuthUser
+  user?: AuthUser
 }
 
 export interface AuthUser {
@@ -23,8 +23,11 @@ export const useAuthStore = defineStore('auth', () => {
   // ── Persistence ────────────────────────────────────────────────────────────
 
   function _persist() {
-    if (token.value && user.value) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: token.value, user: user.value }))
+    if (token.value) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ token: token.value, user: user.value ?? undefined })
+      )
     } else {
       localStorage.removeItem(STORAGE_KEY)
     }
@@ -36,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const parsed = JSON.parse(raw) as StoredAuth
       token.value = parsed.token
-      user.value = parsed.user
+      user.value = parsed.user ?? null
     } catch {
       localStorage.removeItem(STORAGE_KEY)
     }
@@ -57,12 +60,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string): Promise<void> {
     const resp = await apiLogin(username, password)
     token.value = resp.access_token
-    // Seed user from the login response (backend already returns user_id, username, roles).
-    // Persist immediately so the token reaches the Axios interceptor before any follow-up call.
-    _setUserFromLogin(resp)
+    // Persist token before fetching profile so HTTP client has it available.
     _persist()
-    // Refresh display_name (not returned by /auth/login) in the background.
-    apiMe().then(_setUser).catch(() => { /* non-critical */ })
+    const profile = await apiMe()
+    _setUser(profile)
+    _persist()
   }
 
   function logout() {
@@ -80,15 +82,6 @@ export const useAuthStore = defineStore('auth', () => {
       _persist()
     } catch {
       logout()
-    }
-  }
-
-  function _setUserFromLogin(resp: LoginResponse) {
-    user.value = {
-      user_id: resp.user_id,
-      username: resp.username,
-      display_name: resp.username, // display_name refreshed below via apiMe()
-      roles: resp.roles,
     }
   }
 
