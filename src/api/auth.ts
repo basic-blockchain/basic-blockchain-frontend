@@ -37,7 +37,7 @@ export async function register(username: string, displayName: string): Promise<R
 export async function activate(
   username: string,
   activationCode: string,
-  password: string,
+  password: string
 ): Promise<ActivateResponse> {
   const { data } = await client.post<ActivateResponse>('/auth/activate', {
     username,

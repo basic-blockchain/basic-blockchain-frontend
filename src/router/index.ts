@@ -35,6 +35,36 @@ const router = createRouter({
       meta: { requireRole: 'ADMIN' },
     },
     {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('@/views/AdminUsersView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/wallets',
+      name: 'admin-wallets',
+      component: () => import('@/views/AdminWalletsView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/currencies',
+      name: 'admin-currencies',
+      component: () => import('@/views/AdminCurrenciesView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/treasury',
+      name: 'admin-treasury',
+      component: () => import('@/views/AdminTreasuryView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/exchange-rates',
+      name: 'admin-exchange-rates',
+      component: () => import('@/views/AdminExchangeRatesView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),

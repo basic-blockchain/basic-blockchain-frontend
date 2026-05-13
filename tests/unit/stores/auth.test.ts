@@ -33,7 +33,11 @@ describe('useAuthStore', () => {
   })
 
   it('login sets token and user, persists to localStorage', async () => {
-    vi.mocked(mockLogin).mockResolvedValue({ access_token: 'tok-abc', token_type: 'bearer', expires_in: 1800 })
+    vi.mocked(mockLogin).mockResolvedValue({
+      access_token: 'tok-abc',
+      token_type: 'bearer',
+      expires_in: 1800,
+    })
     vi.mocked(mockMe).mockResolvedValue(MOCK_PROFILE)
 
     const auth = useAuthStore()
@@ -49,7 +53,11 @@ describe('useAuthStore', () => {
   })
 
   it('logout clears state and removes localStorage', async () => {
-    vi.mocked(mockLogin).mockResolvedValue({ access_token: 'tok-abc', token_type: 'bearer', expires_in: 1800 })
+    vi.mocked(mockLogin).mockResolvedValue({
+      access_token: 'tok-abc',
+      token_type: 'bearer',
+      expires_in: 1800,
+    })
     vi.mocked(mockMe).mockResolvedValue(MOCK_PROFILE)
 
     const auth = useAuthStore()
@@ -62,7 +70,11 @@ describe('useAuthStore', () => {
   })
 
   it('hasRole returns true for a role the user has', async () => {
-    vi.mocked(mockLogin).mockResolvedValue({ access_token: 'tok', token_type: 'bearer', expires_in: 1800 })
+    vi.mocked(mockLogin).mockResolvedValue({
+      access_token: 'tok',
+      token_type: 'bearer',
+      expires_in: 1800,
+    })
     vi.mocked(mockMe).mockResolvedValue(MOCK_PROFILE)
 
     const auth = useAuthStore()
@@ -73,7 +85,11 @@ describe('useAuthStore', () => {
   })
 
   it('isAdmin is false for OPERATOR', async () => {
-    vi.mocked(mockLogin).mockResolvedValue({ access_token: 'tok', token_type: 'bearer', expires_in: 1800 })
+    vi.mocked(mockLogin).mockResolvedValue({
+      access_token: 'tok',
+      token_type: 'bearer',
+      expires_in: 1800,
+    })
     vi.mocked(mockMe).mockResolvedValue(MOCK_PROFILE)
 
     const auth = useAuthStore()
@@ -83,7 +99,11 @@ describe('useAuthStore', () => {
   })
 
   it('isAdmin is true for ADMIN role', async () => {
-    vi.mocked(mockLogin).mockResolvedValue({ access_token: 'tok', token_type: 'bearer', expires_in: 1800 })
+    vi.mocked(mockLogin).mockResolvedValue({
+      access_token: 'tok',
+      token_type: 'bearer',
+      expires_in: 1800,
+    })
     vi.mocked(mockMe).mockResolvedValue({ ...MOCK_PROFILE, roles: ['ADMIN'] })
 
     const auth = useAuthStore()
@@ -93,10 +113,13 @@ describe('useAuthStore', () => {
   })
 
   it('restores session from localStorage on store creation', () => {
-    localStorage.setItem('bb_auth', JSON.stringify({
-      token: 'stored-tok',
-      user: { user_id: 'uid-2', username: 'bob', display_name: 'Bob', roles: ['VIEWER'] },
-    }))
+    localStorage.setItem(
+      'bb_auth',
+      JSON.stringify({
+        token: 'stored-tok',
+        user: { user_id: 'uid-2', username: 'bob', display_name: 'Bob', roles: ['VIEWER'] },
+      })
+    )
 
     const auth = useAuthStore()
     expect(auth.isAuthenticated).toBe(true)
