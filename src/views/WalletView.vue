@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useWalletStore } from '@/stores/wallet'
-import { createWallet } from '@/api/wallets'
+import { confirmWallet, listCurrencies, previewWallet, type CurrencyRecord } from '@/api/wallets'
 import { isValidMnemonic } from '@/lib/crypto'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
 import HashChip from '@/components/atoms/HashChip.vue'
@@ -16,11 +16,15 @@ const toast = useToast()
 const pendingMnemonic = ref('')
 const showSeedModal = ref(false)
 const creatingWallet = ref(false)
+const pendingDraftId = ref('')
+const currencies = ref<CurrencyRecord[]>([])
+const selectedCurrency = ref('NATIVE')
 
 async function handleCreateWallet() {
   creatingWallet.value = true
   try {
-    const resp = await createWallet()
+    const resp = await previewWallet(selectedCurrency.value)
+    pendingDraftId.value = resp.draft_id
     pendingMnemonic.value = resp.mnemonic
     showSeedModal.value = true
   } catch (e) {
@@ -36,15 +40,33 @@ async function handleCreateWallet() {
 }
 
 async function onSeedConfirmed() {
+  try {
+    await confirmWallet(pendingDraftId.value)
+    await walletStore.fetchMine()
+    toast.add({
+      severity: 'success',
+      summary: 'Wallet created',
+      detail: 'Your new wallet is ready',
+      life: 3000,
+    })
+  } catch (e) {
+    toast.add({
+      severity: 'error',
+      summary: 'Wallet confirmation failed',
+      detail: e instanceof Error ? e.message : 'Unexpected error',
+      life: 4000,
+    })
+  } finally {
+    showSeedModal.value = false
+    pendingMnemonic.value = ''
+    pendingDraftId.value = ''
+  }
+}
+
+function onSeedClosed() {
   showSeedModal.value = false
   pendingMnemonic.value = ''
-  await walletStore.fetchMine()
-  toast.add({
-    severity: 'success',
-    summary: 'Wallet created',
-    detail: 'Your new wallet is ready',
-    life: 3000,
-  })
+  pendingDraftId.value = ''
 }
 
 // ── Transfer form ──────────────────────────────────────────────────────────
@@ -64,8 +86,25 @@ const selectedSender = computed(() =>
   walletStore.wallets.find((w) => w.wallet_id === transferForm.value.senderWalletId)
 )
 
-function formatWalletOption(walletId: string, balance: number): string {
-  return `${walletId.slice(0, 16)}… (${balance.toFixed(8)} NATIVE)`
+function formatWalletOption(walletId: string, balance: number, currency: string): string {
+  return `${walletId.slice(0, 16)}… (${balance.toFixed(8)} ${currency})`
+}
+
+async function loadCurrencies() {
+  try {
+    const resp = await listCurrencies(true)
+    currencies.value = resp.currencies
+    if (!currencies.value.find((c) => c.code === selectedCurrency.value)) {
+      selectedCurrency.value = currencies.value[0]?.code ?? 'NATIVE'
+    }
+  } catch (e) {
+    toast.add({
+      severity: 'error',
+      summary: 'Failed to load currencies',
+      detail: e instanceof Error ? e.message : 'Unexpected error',
+      life: 4000,
+    })
+  }
 }
 
 async function submitTransfer() {
@@ -125,7 +164,9 @@ async function submitTransfer() {
   }
 }
 
-onMounted(() => walletStore.fetchMine())
+onMounted(async () => {
+  await Promise.all([walletStore.fetchMine(), loadCurrencies()])
+})
 </script>
 
 <template>
@@ -134,6 +175,7 @@ onMounted(() => walletStore.fetchMine())
       :mnemonic="pendingMnemonic"
       :visible="showSeedModal"
       @confirm="onSeedConfirmed"
+      @close="onSeedClosed"
     />
 
     <!-- Header -->
@@ -142,11 +184,18 @@ onMounted(() => walletStore.fetchMine())
         <span class="pi pi-wallet" aria-hidden="true" />
         My Wallets
       </h1>
-      <button class="btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
-        <span v-if="creatingWallet" class="pi pi-spin pi-spinner" aria-hidden="true" />
-        <span v-else class="pi pi-plus" aria-hidden="true" />
-        New wallet
-      </button>
+      <div class="create-controls">
+        <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
+          <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
+            {{ currency.code }} · {{ currency.name }}
+          </option>
+        </select>
+        <button class="btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
+          <span v-if="creatingWallet" class="pi pi-spin pi-spinner" aria-hidden="true" />
+          <span v-else class="pi pi-plus" aria-hidden="true" />
+          New wallet
+        </button>
+      </div>
     </div>
 
     <!-- Wallet list -->
@@ -172,7 +221,7 @@ onMounted(() => walletStore.fetchMine())
           </span>
         </div>
         <div class="wallet-balance">
-          <AmountDisplay :amount="w.balance" :precision="8" unit="NATIVE" />
+          <AmountDisplay :amount="w.balance" :precision="8" :unit="w.currency" />
         </div>
         <div class="wallet-footer">
           <HashChip :hash="w.public_key" :length="20" label="public key" />
@@ -197,12 +246,15 @@ onMounted(() => walletStore.fetchMine())
                 :key="w.wallet_id"
                 :value="w.wallet_id"
               >
-                {{ formatWalletOption(w.wallet_id, w.balance) }}
+                {{ formatWalletOption(w.wallet_id, w.balance, w.currency) }}
               </option>
             </select>
             <span v-if="selectedSender" class="field-hint balance-hint">
-              Available:
-              <AmountDisplay :amount="selectedSender.balance" :precision="8" unit="NATIVE" />
+              <AmountDisplay
+                :amount="selectedSender.balance"
+                :precision="8"
+                :unit="selectedSender.currency"
+              />
             </span>
           </div>
           <div class="form-field">
@@ -291,6 +343,12 @@ onMounted(() => walletStore.fetchMine())
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+.create-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .page-title {
   font-size: 1.4rem;
