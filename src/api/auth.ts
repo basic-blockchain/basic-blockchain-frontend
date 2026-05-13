@@ -15,9 +15,6 @@ export interface LoginResponse {
   access_token: string
   token_type: string
   expires_in: number
-  user_id: string
-  username: string
-  roles: string[]
 }
 
 export interface MeResponse {
@@ -40,7 +37,7 @@ export async function register(username: string, displayName: string): Promise<R
 export async function activate(
   username: string,
   activationCode: string,
-  password: string,
+  password: string
 ): Promise<ActivateResponse> {
   const { data } = await client.post<ActivateResponse>('/auth/activate', {
     username,
