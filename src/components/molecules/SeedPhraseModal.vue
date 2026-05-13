@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
   mnemonic: string
@@ -8,13 +8,28 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'confirm'): void
+  (e: 'close'): void
 }>()
 
 const confirmed = ref(false)
 
+watch(
+  () => props.visible,
+  (visible) => {
+    if (!visible) {
+      confirmed.value = false
+    }
+  }
+)
+
 function onConfirm() {
   if (!confirmed.value) return
   emit('confirm')
+}
+
+function onClose() {
+  confirmed.value = false
+  emit('close')
 }
 </script>
 
@@ -26,52 +41,36 @@ function onConfirm() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="seed-modal-title"
+      @click.self="onClose"
     >
       <div class="modal-card">
+        <button
+          class="modal-close"
+          type="button"
+          aria-label="Close recovery phrase dialog"
+          @click="onClose"
+        >
+          <span class="pi pi-times" aria-hidden="true" />
+        </button>
         <div class="modal-icon">
-          <span
-            class="pi pi-exclamation-triangle"
-            aria-hidden="true"
-          />
+          <span class="pi pi-exclamation-triangle" aria-hidden="true" />
         </div>
-        <h2
-          id="seed-modal-title"
-          class="modal-title"
-        >
-          Save your recovery phrase
-        </h2>
+        <h2 id="seed-modal-title" class="modal-title">Save your recovery phrase</h2>
         <p class="modal-desc">
-          This is the <strong>only time</strong> your 12-word recovery phrase will be shown.
-          Write it down and store it securely. Without it you cannot sign transfers from this wallet.
+          This is the <strong>only time</strong> your 12-word recovery phrase will be shown. Write
+          it down and store it securely. Without it you cannot sign transfers from this wallet.
         </p>
-        <div
-          class="seed-grid"
-          aria-label="Recovery phrase words"
-        >
-          <div
-            v-for="(word, i) in props.mnemonic.split(' ')"
-            :key="i"
-            class="seed-word"
-          >
+        <div class="seed-grid" aria-label="Recovery phrase words">
+          <div v-for="(word, i) in props.mnemonic.split(' ')" :key="i" class="seed-word">
             <span class="word-index">{{ i + 1 }}</span>
             <span class="word-text">{{ word }}</span>
           </div>
         </div>
         <label class="confirm-label">
-          <input
-            v-model="confirmed"
-            type="checkbox"
-            class="confirm-checkbox"
-          >
+          <input v-model="confirmed" type="checkbox" class="confirm-checkbox" />
           I have written down my recovery phrase and stored it safely
         </label>
-        <button
-          class="btn-confirm"
-          :disabled="!confirmed"
-          @click="onConfirm"
-        >
-          Continue
-        </button>
+        <button class="btn-confirm" :disabled="!confirmed" @click="onConfirm">Continue</button>
       </div>
     </div>
   </Teleport>
@@ -89,6 +88,7 @@ function onConfirm() {
   padding: 1rem;
 }
 .modal-card {
+  position: relative;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
   border-radius: 16px;
@@ -101,6 +101,21 @@ function onConfirm() {
   font-size: 2rem;
   color: #f59e0b;
   margin-bottom: 0.75rem;
+}
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: var(--surface-ground);
+  color: var(--text-muted);
+  cursor: pointer;
 }
 .modal-title {
   font-size: 1.3rem;
@@ -151,7 +166,10 @@ function onConfirm() {
   margin-bottom: 1.25rem;
   line-height: 1.5;
 }
-.confirm-checkbox { margin-top: 2px; flex-shrink: 0; }
+.confirm-checkbox {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
 .btn-confirm {
   width: 100%;
   padding: 0.7rem;
@@ -164,5 +182,8 @@ function onConfirm() {
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 </style>

@@ -1,7 +1,7 @@
 # Phase Flow Plan
 
-Status: proposed
-Last updated: 2026-04-24
+Status: living
+Last updated: 2026-05-08
 
 ## Purpose
 
@@ -9,17 +9,14 @@ Define the real execution flow from current feature delivery to release promotio
 
 ## 1. Current state
 
-- Feature branch: feature/validation-center-ux-dark-palette
-- PR open to develop: #3
-- Scope delivered:
-  - Validation Center (chain/block/node/transaction checks)
-  - Dark palette and contrast pass
-  - User and UX requirements guides
+- Latest release: v0.8.0 (Phase I.5, paired with simulator v0.14.0).
+- Auth, wallet, and admin flows are in production branches.
+- GitFlow promotion scripts are the primary release mechanism.
 
 ## 2. GitFlow phases for this delivery
 
 1. Feature phase
-   - Branch pattern: feature/*
+   - Branch pattern: feature/\*
    - Target: develop
    - Exit criteria:
      - CI green (lint, typecheck, test, build, audit)
@@ -34,7 +31,7 @@ Define the real execution flow from current feature delivery to release promotio
      - accepted QA pre-check list
 
 3. Release phase
-   - Branch pattern: release/* (cut from develop)
+   - Branch pattern: release/\* (cut from develop)
    - Goal: stabilize release candidate
    - Exit criteria:
      - full regression pass
@@ -70,38 +67,25 @@ Define the real execution flow from current feature delivery to release promotio
 4. Verify branch protections are still correct after branch changes:
    - scripts/bootstrap_github_rules.sh
 5. Validate branch content alignment:
-    - scripts/devsecops_check_content_sync.sh
+   - scripts/devsecops_check_content_sync.sh
 
 ## 3.1 GitFlow controls now present in frontend
 
 - Automated promotion PR chain:
-   - .github/workflows/branch-promotion-prs.yml
+  - .github/workflows/branch-promotion-prs.yml
 - Merge source policy guard:
-   - .github/workflows/merge-policy.yml
+  - .github/workflows/merge-policy.yml
 - Scheduled/manual branch content sync check:
-   - .github/workflows/branch-content-sync-check.yml
+  - .github/workflows/branch-content-sync-check.yml
 - PR checklist template:
-   - .github/pull_request_template.md
+  - .github/pull_request_template.md
 - Local push safety hook:
-   - .githooks/pre-push
+  - .githooks/pre-push
 
 ## 4. Next implementation phases (product)
 
-1. Phase H.1: Validation hardening
-   - Add backend endpoints for block/node validation (server-authoritative checks).
-   - Persist validation events for auditability.
-
-2. Phase H.2: UX accessibility closure
-   - Contrast audit (WCAG), keyboard-only navigation, focus visibility.
-   - Mobile-first QA matrix for Dashboard, Mempool, Validation.
-
-3. Phase H.3: Observability and operator workflow
-   - Validation history timeline and export report.
-   - Health alerts with severity and remediation hints.
-
-4. Phase H.4: Enterprise controls
-   - Role-based access for sensitive actions (mine, consensus, register node).
-   - Action-level audit logs.
+- Roadmap items are tracked in issues and ADRs; update this section when
+  a new phase is approved.
 
 ## 5. Definition of done by phase
 

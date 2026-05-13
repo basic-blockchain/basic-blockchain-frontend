@@ -11,6 +11,25 @@ export interface AdminUser {
   created_at: string
 }
 
+export type WalletType = 'USER' | 'TREASURY' | 'FEE'
+
+export interface CurrencyRecord {
+  code: string
+  name: string
+  decimals: number
+  active: boolean
+}
+
+export interface ExchangeRateRecord {
+  rate_id: number
+  from_currency: string
+  to_currency: string
+  rate: string
+  fee_rate: string
+  source: string
+  updated_at: string
+}
+
 export interface UsersResponse {
   users: AdminUser[]
 }
@@ -63,14 +82,14 @@ export interface UpdateUserPayload {
 
 export async function updateUser(
   userId: string,
-  payload: UpdateUserPayload,
+  payload: UpdateUserPayload
 ): Promise<UserAdminRecord> {
   const { data } = await client.patch<UserAdminRecord>(`/admin/users/${userId}`, payload)
   return data
 }
 
 export async function softDeleteUser(
-  userId: string,
+  userId: string
 ): Promise<{ user_id: string; deleted: boolean; frozen_wallets: string[] }> {
   const { data } = await client.delete(`/admin/users/${userId}`)
   return data
@@ -78,7 +97,7 @@ export async function softDeleteUser(
 
 export async function restoreUser(
   userId: string,
-  unfreezeWallets = true,
+  unfreezeWallets = true
 ): Promise<{ user_id: string; restored: boolean; unfrozen_wallets: string[] }> {
   const { data } = await client.post(`/admin/users/${userId}/restore`, {
     unfreeze_wallets: unfreezeWallets,
@@ -94,6 +113,7 @@ export interface WalletAdminRecord {
   username: string
   display_name: string
   currency: string
+  wallet_type: WalletType
   balance: string
   public_key: string
   frozen: boolean
@@ -105,15 +125,78 @@ export async function listAllWallets(): Promise<{ wallets: WalletAdminRecord[]; 
 }
 
 export async function freezeWallet(
-  walletId: string,
+  walletId: string
 ): Promise<{ wallet_id: string; frozen: boolean }> {
   const { data } = await client.post(`/admin/wallets/${walletId}/freeze`)
   return data
 }
 
 export async function unfreezeWallet(
-  walletId: string,
+  walletId: string
 ): Promise<{ wallet_id: string; frozen: boolean }> {
   const { data } = await client.post(`/admin/wallets/${walletId}/unfreeze`)
+  return data
+}
+
+// ── Currency catalog (MC-1) ───────────────────────────────────────────────
+
+export async function listCurrencies(
+  activeOnly = false
+): Promise<{ currencies: CurrencyRecord[]; count: number }> {
+  const { data } = await client.get('/admin/currencies', {
+    params: activeOnly ? { active: 'true' } : undefined,
+  })
+  return data
+}
+
+export interface CreateCurrencyPayload {
+  code: string
+  name: string
+  decimals?: number
+  active?: boolean
+}
+
+export async function createCurrency(payload: CreateCurrencyPayload): Promise<CurrencyRecord> {
+  const { data } = await client.post('/admin/currencies', payload)
+  return data
+}
+
+// ── Treasury wallets (MC-2) ───────────────────────────────────────────────
+
+export async function createTreasuryWallet(currency: string): Promise<{
+  wallet_id: string
+  public_key: string
+  currency: string
+  wallet_type: WalletType
+}> {
+  const { data } = await client.post('/admin/treasury', { currency })
+  return data
+}
+
+// ── Exchange rates (MC-3) ─────────────────────────────────────────────────
+
+export async function listExchangeRates(params?: {
+  from?: string
+  to?: string
+  limit?: number
+}): Promise<{ rates: ExchangeRateRecord[]; count: number }> {
+  const { data } = await client.get('/admin/exchange-rates', { params })
+  return data
+}
+
+export async function setExchangeRate(
+  fromCurrency: string,
+  toCurrency: string,
+  payload: { rate: number; fee_rate?: number }
+): Promise<ExchangeRateRecord> {
+  const { data } = await client.put(`/admin/exchange-rates/${fromCurrency}/${toCurrency}`, payload)
+  return data
+}
+
+export async function syncExchangeRates(payload: {
+  provider: string
+  pairs: string[]
+}): Promise<{ rates: ExchangeRateRecord[]; count: number; provider: string }> {
+  const { data } = await client.post('/admin/exchange-rates/sync', payload)
   return data
 }
