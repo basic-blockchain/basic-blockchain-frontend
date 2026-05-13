@@ -73,6 +73,8 @@ function parseBalance(balance: string): number {
     <div v-if="loading" class="loading">Loading…</div>
 
     <table v-else class="wallets-table">
+      <tbody>
+        <tr v-for="w in filtered" :key="w.wallet_id">
           <td class="mono">
             <HashChip :hash="w.wallet_id" :length="16" label="wallet id" />
           </td>
@@ -82,20 +84,6 @@ function parseBalance(balance: string): number {
           </td>
           <td class="mono">
             <AmountDisplay :amount="parseBalance(w.balance)" :precision="8" :unit="w.currency" />
-          </td>
-          <td>
-            <span class="type-badge" :class="`type-${w.wallet_type.toLowerCase()}`">
-              {{ w.wallet_type }}
-            </span>
-          </td>
-          <td class="mono text-muted">
-            <HashChip :hash="w.public_key" :length="14" label="public key" />
-          </td>
-              label="public key"
-            />
-=======
-            <AmountDisplay :amount="parseBalance(w.balance)" :precision="8" :unit="w.currency" />
->>>>>>> feature/exchange-feeds-frontend
           </td>
           <td>
             <span class="type-badge" :class="`type-${w.wallet_type.toLowerCase()}`">

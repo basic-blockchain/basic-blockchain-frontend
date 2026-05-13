@@ -106,7 +106,6 @@ async function loadCurrencies() {
     })
   }
 }
-}
 
 async function submitTransfer() {
   const { senderWalletId, receiverWalletId, amount, nonce, mnemonic } = transferForm.value
@@ -185,13 +184,6 @@ onMounted(async () => {
         <span class="pi pi-wallet" aria-hidden="true" />
         My Wallets
       </h1>
-<<<<<<< HEAD
-      <button class="btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
-        <span v-if="creatingWallet" class="pi pi-spin pi-spinner" aria-hidden="true" />
-        <span v-else class="pi pi-plus" aria-hidden="true" />
-        New wallet
-      </button>
-=======
       <div class="create-controls">
         <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
           <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
@@ -204,7 +196,6 @@ onMounted(async () => {
           New wallet
         </button>
       </div>
->>>>>>> feature/exchange-feeds-frontend
     </div>
 
     <!-- Wallet list -->
@@ -230,11 +221,7 @@ onMounted(async () => {
           </span>
         </div>
         <div class="wallet-balance">
-<<<<<<< HEAD
-          <AmountDisplay :amount="w.balance" :precision="8" unit="NATIVE" />
-=======
           <AmountDisplay :amount="w.balance" :precision="8" :unit="w.currency" />
->>>>>>> feature/exchange-feeds-frontend
         </div>
         <div class="wallet-footer">
           <HashChip :hash="w.public_key" :length="20" label="public key" />
@@ -259,24 +246,15 @@ onMounted(async () => {
                 :key="w.wallet_id"
                 :value="w.wallet_id"
               >
-<<<<<<< HEAD
-                {{ formatWalletOption(w.wallet_id, w.balance) }}
-=======
                 {{ formatWalletOption(w.wallet_id, w.balance, w.currency) }}
->>>>>>> feature/exchange-feeds-frontend
               </option>
             </select>
             <span v-if="selectedSender" class="field-hint balance-hint">
-              Available:
-<<<<<<< HEAD
-              <AmountDisplay :amount="selectedSender.balance" :precision="8" unit="NATIVE" />
-=======
               <AmountDisplay
                 :amount="selectedSender.balance"
                 :precision="8"
                 :unit="selectedSender.currency"
               />
->>>>>>> feature/exchange-feeds-frontend
             </span>
           </div>
           <div class="form-field">
