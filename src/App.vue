@@ -11,111 +11,168 @@ const { wsStatus } = useBlockchainWs()
 const auth = useAuthStore()
 const navOpen = ref(false)
 
-watch(route, () => {
-  navOpen.value = false
-})
+watch(route, () => { navOpen.value = false })
 
-const allNavItems = [
-  { to: '/wallet', label: 'Wallet', icon: 'pi pi-wallet', requireAuth: true },
-  { to: '/dashboard', label: 'Dashboard', icon: 'pi pi-home' },
-  { to: '/chain', label: 'Chain', icon: 'pi pi-link' },
-  { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
-  { to: '/nodes', label: 'Nodes', icon: 'pi pi-sitemap' },
-  { to: '/validation', label: 'Validation', icon: 'pi pi-verified' },
-  { to: '/health', label: 'Health', icon: 'pi pi-heart' },
-  { to: '/admin', label: 'Admin', icon: 'pi pi-shield', requireRole: 'ADMIN' },
-  { to: '/admin/users', label: 'Users', icon: 'pi pi-users', requireRole: 'ADMIN' },
-  { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet', requireRole: 'ADMIN' },
-  { to: '/admin/currencies', label: 'Currencies', icon: 'pi pi-globe', requireRole: 'ADMIN' },
-  { to: '/admin/treasury', label: 'Treasury', icon: 'pi pi-building', requireRole: 'ADMIN' },
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  requireAuth?: true
+  requireRole?: string
+}
+
+interface NavGroup {
+  label: string
+  requireRole?: string
+  items: NavItem[]
+}
+
+const allGroups: NavGroup[] = [
   {
-    to: '/admin/exchange-rates',
-    label: 'Exchange Rates',
-    icon: 'pi pi-sort-alt',
+    label: 'Operaciones',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: 'pi pi-home' },
+      { to: '/wallet',    label: 'Wallet',    icon: 'pi pi-wallet', requireAuth: true },
+    ],
+  },
+  {
+    label: 'Blockchain',
+    items: [
+      { to: '/chain',      label: 'Chain',      icon: 'pi pi-link' },
+      { to: '/mempool',    label: 'Mempool',    icon: 'pi pi-inbox' },
+      { to: '/nodes',      label: 'Nodos',      icon: 'pi pi-sitemap' },
+      { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
+      { to: '/health',     label: 'Health',     icon: 'pi pi-heart' },
+    ],
+  },
+  {
+    label: 'Plataforma',
     requireRole: 'ADMIN',
+    items: [
+      { to: '/admin',                label: 'Resumen',      icon: 'pi pi-chart-bar',  requireRole: 'ADMIN' },
+      { to: '/admin/users',          label: 'Usuarios',     icon: 'pi pi-users',      requireRole: 'ADMIN' },
+      { to: '/admin/wallets',        label: 'Wallets',      icon: 'pi pi-wallet',     requireRole: 'ADMIN' },
+      { to: '/admin/currencies',     label: 'Monedas',      icon: 'pi pi-globe',      requireRole: 'ADMIN' },
+      { to: '/admin/treasury',       label: 'Tesorería',    icon: 'pi pi-building',   requireRole: 'ADMIN' },
+      { to: '/admin/exchange-rates', label: 'Tasas',        icon: 'pi pi-sort-alt',   requireRole: 'ADMIN' },
+    ],
   },
 ]
 
-const navItems = computed(() =>
-  allNavItems.filter((item) => {
-    if (item.requireRole) return auth.hasRole(item.requireRole)
-    if (item.requireAuth) return auth.isAuthenticated
-    return true
-  })
+const navGroups = computed(() =>
+  allGroups
+    .filter(g => !g.requireRole || auth.hasRole(g.requireRole))
+    .map(g => ({
+      ...g,
+      items: g.items.filter(item => {
+        if (item.requireRole) return auth.hasRole(item.requireRole)
+        if (item.requireAuth) return auth.isAuthenticated
+        return true
+      }),
+    }))
+    .filter(g => g.items.length > 0)
 )
 
-// Auth views render full-screen without the sidebar layout.
-const isAuthRoute = computed(() => ['/login', '/register', '/activate'].includes(route.path))
+function isActive(to: string): boolean {
+  if (to === '/admin') return route.path === '/admin'
+  return route.path.startsWith(to)
+}
+
+const routeLabels: Record<string, string> = {
+  dashboard:       'Dashboard',
+  chain:           'Chain',
+  mempool:         'Mempool',
+  nodes:           'Nodos',
+  validation:      'Validación',
+  health:          'Health',
+  wallet:          'Wallet',
+  admin:           'Plataforma',
+  users:           'Usuarios',
+  wallets:         'Wallets',
+  currencies:      'Monedas',
+  treasury:        'Tesorería',
+  'exchange-rates':'Tasas',
+}
+
+const breadcrumbs = computed(() =>
+  route.path
+    .split('/')
+    .filter(Boolean)
+    .map(seg => ({ label: routeLabels[seg] ?? seg }))
+)
+
+const isAuthRoute = computed(() =>
+  ['/login', '/register', '/activate'].includes(route.path)
+)
 
 async function logout() {
   auth.logout()
   await router.push('/login')
 }
+
+function avatarInitial(name: string): string {
+  return name.charAt(0).toUpperCase()
+}
 </script>
 
 <template>
-  <!-- Auth views render full-screen without the sidebar. -->
+  <!-- Auth views render full-screen without the shell -->
   <div v-if="isAuthRoute">
     <RouterView />
     <Toast position="bottom-right" />
   </div>
 
-  <div v-else class="layout">
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div v-else class="app">
+    <a href="#main-content" class="skip-link">Saltar al contenido</a>
 
     <!-- Mobile top bar -->
     <header class="mobile-bar">
-      <span class="pi pi-bitcoin mobile-logo" aria-hidden="true" />
-      <span class="mobile-title">Blockchain</span>
+      <span class="sb-brand-mark" aria-hidden="true">C</span>
+      <span class="mobile-title">Cadena</span>
       <button
         class="hamburger"
         :aria-expanded="navOpen"
         aria-controls="sidebar-nav"
-        aria-label="Toggle navigation"
+        aria-label="Abrir navegación"
         @click="navOpen = !navOpen"
       >
         <span class="pi" :class="navOpen ? 'pi-times' : 'pi-bars'" aria-hidden="true" />
       </button>
     </header>
 
-    <!-- Overlay -->
     <div v-if="navOpen" class="nav-overlay" aria-hidden="true" @click="navOpen = false" />
 
-    <aside id="sidebar-nav" class="sidebar" :class="{ open: navOpen }" aria-label="Main navigation">
-      <div class="sidebar-header">
-        <span class="pi pi-bitcoin" aria-hidden="true" style="font-size: 1.5rem" />
-        <span class="sidebar-title">Blockchain</span>
+    <!-- Sidebar -->
+    <aside id="sidebar-nav" class="sidebar" :class="{ open: navOpen }" aria-label="Navegación principal">
+      <div class="sb-brand">
+        <span class="sb-brand-mark" aria-hidden="true">C</span>
+        <span>Cadena</span>
       </div>
-      <nav aria-label="Site sections">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="nav-item"
-          :class="{
-            active: item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to),
-          }"
-          :aria-current="
-            (item.to === '/admin' ? route.path === '/admin' : route.path.startsWith(item.to))
-              ? 'page'
-              : undefined
-          "
-        >
-          <span :class="item.icon" aria-hidden="true" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
+
+      <nav aria-label="Secciones">
+        <template v-for="group in navGroups" :key="group.label">
+          <span class="sb-section">{{ group.label }}</span>
+          <RouterLink
+            v-for="item in group.items"
+            :key="item.to"
+            :to="item.to"
+            class="sb-link"
+            :class="{ active: isActive(item.to) }"
+            :aria-current="isActive(item.to) ? 'page' : undefined"
+          >
+            <span :class="item.icon" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </RouterLink>
+        </template>
       </nav>
 
-      <!-- User chip -->
-      <div v-if="auth.isAuthenticated && auth.user" class="user-chip">
-        <div class="user-chip-info">
-          <span class="user-avatar">{{ auth.user.display_name.charAt(0).toUpperCase() }}</span>
-          <div class="user-chip-text">
-            <span class="user-display">{{ auth.user.display_name }}</span>
-            <span class="user-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
-          </div>
+      <div v-if="auth.isAuthenticated && auth.user" class="sb-foot">
+        <span class="sb-avatar" aria-hidden="true">{{ avatarInitial(auth.user.display_name) }}</span>
+        <div class="sb-foot-text">
+          <span class="sb-foot-name">{{ auth.user.display_name }}</span>
+          <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
         </div>
-        <button class="logout-btn" aria-label="Sign out" title="Sign out" @click="logout">
+        <button class="sb-logout" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
           <span class="pi pi-sign-out" aria-hidden="true" />
         </button>
       </div>
@@ -125,177 +182,303 @@ async function logout() {
         :class="wsStatus"
         role="status"
         aria-live="polite"
-        :aria-label="`WebSocket: ${wsStatus === 'OPEN' ? 'connected' : 'connecting'}`"
+        :aria-label="`WebSocket: ${wsStatus === 'OPEN' ? 'conectado' : 'conectando'}`"
       >
-        <span class="dot" aria-hidden="true" />
-        <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Connecting…' }}</span>
+        <span class="ws-dot" aria-hidden="true" />
+        <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Conectando…' }}</span>
       </div>
     </aside>
 
-    <main id="main-content" class="main-content" tabindex="-1">
-      <RouterView />
-    </main>
+    <!-- Main area -->
+    <div class="main">
+      <!-- Topbar with breadcrumbs -->
+      <header class="topbar">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <template v-for="(crumb, i) in breadcrumbs" :key="crumb.label">
+            <span v-if="i > 0" class="crumb-sep" aria-hidden="true">·</span>
+            <strong v-if="i === breadcrumbs.length - 1">{{ crumb.label }}</strong>
+            <span v-else>{{ crumb.label }}</span>
+          </template>
+        </nav>
+        <div class="topbar-search" role="search">
+          <span class="pi pi-search" aria-hidden="true" />
+          <input placeholder="Buscar…" aria-label="Buscar en la plataforma" />
+          <kbd class="topbar-kbd">⌘K</kbd>
+        </div>
+      </header>
+
+      <main id="main-content" class="page-content" tabindex="-1">
+        <RouterView />
+      </main>
+    </div>
+
     <Toast position="bottom-right" />
   </div>
 </template>
 
 <style scoped>
-.layout {
-  display: flex;
+/* ── App shell grid ─────────────────────────────────────────────────────── */
+.app {
   min-height: 100vh;
-  background: var(--bg-base);
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  background: var(--bg);
 }
 
-/* ── Desktop sidebar ─────────────────────────────────────────────────── */
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
 .sidebar {
-  width: 240px;
-  background: linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%);
-  color: var(--sidebar-text);
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  padding: 1rem 0.85rem;
-  gap: 0.4rem;
-  position: fixed;
+  gap: 2px;
+  position: sticky;
+  top: 0;
   height: 100vh;
-  border-right: 1px solid var(--sidebar-border);
-  box-shadow: var(--shadow-soft);
+  overflow-y: auto;
   z-index: 200;
 }
-.sidebar-header {
+
+.sb-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: var(--sidebar-title);
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.62rem 0.78rem;
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--sidebar-link);
-  transition: all 0.18s ease;
-  border: 1px solid transparent;
-}
-.nav-item:hover,
-.nav-item.active {
-  background: var(--sidebar-link-active-bg);
-  color: var(--sidebar-link-active-text);
-  border-color: var(--sidebar-link-active-border);
+  gap: 8px;
+  padding: 6px 8px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
-/* User chip */
-.user-chip {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.6rem 0.5rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--sidebar-border);
-}
-.user-chip-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-.user-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
+.sb-brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1a1917 0%, #3a3833 100%);
+  display: grid;
+  place-items: center;
+  color: #faf9f6;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
 }
-.user-chip-text {
+
+.sb-section {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 14px 8px 6px;
+}
+
+.sb-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.12s, color 0.12s;
+}
+.sb-link:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.sb-link.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.sb-link .pi {
+  font-size: 14px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.sb-link.active .pi {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* User chip at sidebar bottom */
+.sb-foot {
+  margin-top: auto;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  border-top: 1px solid var(--border);
+}
+
+.sb-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c9a87a, #8a6a3e);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sb-foot-text {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
-.user-display {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--sidebar-link-active-text);
+.sb-foot-name {
+  font-weight: 500;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text);
 }
-.user-role {
-  font-size: 0.68rem;
-  color: var(--sidebar-link);
+.sb-foot-role {
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-}
-.logout-btn {
-  background: none;
-  border: none;
-  color: var(--sidebar-link);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 6px;
-  transition:
-    color 0.15s,
-    background 0.15s;
-  flex-shrink: 0;
-}
-.logout-btn:hover {
-  color: var(--sidebar-link-active-text);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-3);
 }
 
+.sb-logout {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+}
+.sb-logout:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+/* WebSocket indicator */
 .ws-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  padding: 0.6rem 0.5rem;
-  color: var(--sidebar-link);
+  gap: 6px;
+  font-size: 11px;
+  padding: 6px 8px;
+  color: var(--text-3);
 }
-.ws-status .dot {
-  width: 8px;
-  height: 8px;
+.ws-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #95a4c2;
+  background: var(--border-strong);
+  flex-shrink: 0;
 }
-.ws-status.OPEN .dot {
-  background: #34d399;
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+.ws-status.OPEN .ws-dot {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-soft);
 }
 
-.main-content {
-  margin-left: 240px;
+/* ── Main column ────────────────────────────────────────────────────────── */
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Topbar ─────────────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.crumbs strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.crumb-sep {
+  opacity: 0.4;
+}
+
+.topbar-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  width: 280px;
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+.topbar-search input {
+  border: 0;
+  outline: 0;
+  background: transparent;
   flex: 1;
-  padding: 1.6rem;
-  background:
-    radial-gradient(circle at 92% 8%, rgba(61, 118, 221, 0.08), transparent 24%),
-    radial-gradient(circle at 15% 94%, rgba(38, 180, 136, 0.08), transparent 20%), var(--bg-base);
-  min-height: 100vh;
+  font: inherit;
+  color: var(--text);
+}
+.topbar-search input::placeholder {
+  color: var(--text-3);
+}
+.topbar-kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
 }
 
-/* ── Mobile top bar (hidden on desktop) ─────────────────────────────── */
+/* ── Page content ───────────────────────────────────────────────────────── */
+.page-content {
+  flex: 1;
+  padding: 20px 24px 80px;
+}
+
+/* ── Mobile top bar (hidden on desktop) ─────────────────────────────────── */
 .mobile-bar {
   display: none;
 }
 
-/* ── Mobile overlay ──────────────────────────────────────────────────── */
 .nav-overlay {
   display: none;
 }
 
-/* ── Mobile breakpoint ───────────────────────────────────────────────── */
+/* ── Mobile breakpoint ──────────────────────────────────────────────────── */
 @media (max-width: 960px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
   .mobile-bar {
     display: flex;
     align-items: center;
@@ -304,69 +487,64 @@ async function logout() {
     top: 0;
     left: 0;
     right: 0;
-    height: 52px;
+    height: 50px;
     padding: 0 1rem;
-    background: var(--sidebar-start);
-    border-bottom: 1px solid var(--sidebar-border);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
     z-index: 300;
   }
-  .mobile-logo {
-    font-size: 1.3rem;
-    color: var(--sidebar-title);
-  }
   .mobile-title {
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--sidebar-title);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
     flex: 1;
   }
   .hamburger {
     background: none;
-    border: 1px solid var(--surface-border);
-    border-radius: 8px;
-    color: var(--text-body);
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-2);
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.12s;
   }
   .hamburger:hover {
-    background: var(--surface-soft);
+    background: var(--hover);
   }
 
   .nav-overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(20, 18, 12, 0.42);
     z-index: 190;
   }
 
   .sidebar {
     position: fixed;
     top: 0;
-    left: -260px;
-    width: 240px;
+    left: -240px;
+    width: 220px;
     height: 100vh;
-    padding-top: 1rem;
     transition: left 0.22s ease;
-    border-right: 1px solid var(--sidebar-border);
   }
   .sidebar.open {
     left: 0;
   }
 
-  .main-content {
-    margin-left: 0;
-    padding: 1rem;
-    padding-top: calc(52px + 1rem);
+  .main {
+    padding-top: 50px;
   }
 
-  .layout {
-    flex-direction: column;
+  .topbar {
+    top: 50px;
+  }
+
+  .topbar-search {
+    display: none;
   }
 }
 </style>
