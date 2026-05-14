@@ -78,17 +78,41 @@ onMounted(load)
         <h1>Tasas de cambio</h1>
         <p>Gestión manual y sincronización automática de tasas</p>
       </div>
-      <button class="btn-ghost" :disabled="loading" @click="load">
-        <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
-        Actualizar
-      </button>
+      <div class="page-actions">
+        <button class="btn btn-sm" :disabled="loading" @click="load">
+          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+          <span>Refrescar</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Sync panel -->
-    <section class="panel">
-      <div class="panel-h">Sincronizar tasas desde proveedor externo</div>
-      <form class="panel-form" @submit.prevent="runSync">
-        <div class="form-row">
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Pares activos</div>
+        <div class="vl">{{ rates.length }}</div>
+        <div class="ds">tasas vigentes</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Fuente BINANCE</div>
+        <div class="vl">{{ rates.filter(r => r.source === 'BINANCE').length }}</div>
+        <div class="ds">automáticas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Fuente MANUAL</div>
+        <div class="vl">{{ rates.filter(r => r.source === 'MANUAL').length }}</div>
+        <div class="ds">configuradas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Última actualización</div>
+        <div class="vl">{{ rates[0]?.updated_at?.slice(0, 16) ?? '—' }}</div>
+        <div class="ds">más reciente</div>
+      </div>
+    </div>
+
+    <div class="forms-grid">
+      <section class="flow-card form-card">
+        <div class="panel-h">Sincronizar desde proveedor</div>
+        <form class="panel-form" @submit.prevent="runSync">
           <div class="field">
             <label class="field-label" for="provider">Proveedor</label>
             <select id="provider" v-model="syncForm.provider" class="field-select">
@@ -100,60 +124,59 @@ onMounted(load)
             <label class="field-label" for="pairs">Pares</label>
             <input id="pairs" v-model="syncForm.pairs" class="field-input" placeholder="BTC/USDT,ETH/USDT" />
           </div>
-        </div>
-        <div class="form-footer">
-          <button class="btn-primary" type="submit" :disabled="syncing">
-            <span v-if="syncing" class="pi pi-spin pi-spinner" aria-hidden="true" />
-            Sincronizar ahora
-          </button>
-          <span class="hint">Los pares deben coincidir con las monedas activas del catálogo.</span>
-        </div>
-      </form>
-    </section>
+          <div class="form-footer">
+            <button class="btn btn-primary" type="submit" :disabled="syncing">
+              <span v-if="syncing" class="pi pi-spin pi-spinner" aria-hidden="true" />
+              <i v-else class="pi pi-sync" />
+              <span>Sincronizar ahora</span>
+            </button>
+            <span class="hint">Los pares deben coincidir con las monedas activas del catálogo.</span>
+          </div>
+        </form>
+      </section>
 
-    <!-- Set rate panel -->
-    <section class="panel">
-      <div class="panel-h">Establecer tasa manualmente</div>
-      <form class="panel-form" @submit.prevent="submit">
-        <div class="form-row">
-          <div class="field">
-            <label class="field-label" for="from">Desde</label>
-            <input id="from" v-model="form.fromCurrency" class="field-input" placeholder="USD" />
+      <section class="flow-card form-card">
+        <div class="panel-h">Tasa manual</div>
+        <form class="panel-form" @submit.prevent="submit">
+          <div class="form-row">
+            <div class="field">
+              <label class="field-label" for="from">Desde</label>
+              <input id="from" v-model="form.fromCurrency" class="field-input" placeholder="USD" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="to">Hacia</label>
+              <input id="to" v-model="form.toCurrency" class="field-input" placeholder="EUR" />
+            </div>
           </div>
-          <div class="field">
-            <label class="field-label" for="to">Hacia</label>
-            <input id="to" v-model="form.toCurrency" class="field-input" placeholder="EUR" />
+          <div class="form-row">
+            <div class="field">
+              <label class="field-label" for="rate">Tasa</label>
+              <input id="rate" v-model="form.rate" class="field-input" type="number" min="0" step="any" placeholder="1.05" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="fee">Comisión</label>
+              <input id="fee" v-model="form.feeRate" class="field-input" type="number" min="0" max="1" step="0.000001" placeholder="0.01" />
+            </div>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="field">
-            <label class="field-label" for="rate">Tasa</label>
-            <input id="rate" v-model="form.rate" class="field-input" type="number" min="0" step="any" placeholder="1.05" />
+          <div class="form-footer">
+            <button class="btn btn-primary" type="submit">
+              <i class="pi pi-save" />
+              <span>Guardar tasa</span>
+            </button>
+            <span class="hint">Las tasas manuales se almacenan con fuente MANUAL.</span>
           </div>
-          <div class="field">
-            <label class="field-label" for="fee">Comisión</label>
-            <input id="fee" v-model="form.feeRate" class="field-input" type="number" min="0" max="1" step="0.000001" placeholder="0.01" />
-          </div>
-        </div>
-        <div class="form-footer">
-          <button class="btn-primary" type="submit">Guardar tasa</button>
-          <span class="hint">Las tasas manuales se almacenan con fuente MANUAL.</span>
-        </div>
-      </form>
-    </section>
+        </form>
+      </section>
+    </div>
 
     <div v-if="error" class="inline-alert danger">{{ error }}</div>
 
-    <!-- Rates table -->
-    <div class="panel">
-      <div class="panel-h">
-        <span>Tasas vigentes</span>
-        <span class="count-badge sm">{{ rates.length }}</span>
-      </div>
+    <div class="section-h">Tasas vigentes</div>
+    <div class="flow-card">
       <div v-if="loading" class="loading-row">
         <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <table v-else class="data-table">
+      <table v-else class="tbl">
         <thead>
           <tr>
             <th>Par</th>
@@ -168,7 +191,16 @@ onMounted(load)
             <td class="mono pair-cell">{{ r.from_currency }}<span class="arrow"> → </span>{{ r.to_currency }}</td>
             <td class="mono">{{ r.rate }}</td>
             <td class="mono">{{ r.fee_rate }}</td>
-            <td><span class="source-badge">{{ r.source }}</span></td>
+            <td>
+              <span
+                class="bdg"
+                :style="r.source === 'MANUAL'
+                  ? 'background: var(--accent-soft); color: var(--accent-text)'
+                  : 'background: var(--success-soft); color: var(--success)'"
+              >
+                {{ r.source }}
+              </span>
+            </td>
             <td class="mono text-dim">{{ r.updated_at }}</td>
           </tr>
           <tr v-if="rates.length === 0 && !loading">
@@ -181,22 +213,24 @@ onMounted(load)
 </template>
 
 <style scoped>
-.exchange-view { display: flex; flex-direction: column; gap: 18px; }
+.exchange-view { display: flex; flex-direction: column; gap: 14px; }
 
 .page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
 .page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
 .page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
+.page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-.btn-ghost {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 13px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: background 0.12s, color 0.12s; font-family: var(--font-sans);
-}
-.btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
-.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+.bigstat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.bigstat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
+.ds { font-size: 11.5px; color: var(--text-3); }
 
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.forms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.form-card { padding: 0; overflow: hidden; }
+
+.section-h { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+
 .panel-h {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text-2);
@@ -205,7 +239,7 @@ onMounted(load)
 }
 .panel-form { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.form-footer { display: flex; align-items: center; gap: 12px; }
+.form-footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
 .field-input, .field-select {
@@ -216,40 +250,22 @@ onMounted(load)
 .field-input:focus, .field-select:focus { border-color: var(--accent); }
 .hint { font-size: 12px; color: var(--text-3); }
 
-.btn-primary {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px; background: var(--accent); color: #fff; border: none;
-  border-radius: var(--radius); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: opacity 0.12s; font-family: var(--font-sans); white-space: nowrap;
-}
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { opacity: 0.88; }
-
 .inline-alert { padding: 10px 14px; border-radius: var(--radius); border: 1px solid; font-size: 13px; }
 .inline-alert.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
 .loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; padding: 16px; }
 
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th {
-  text-align: left; padding: 8px 14px; font-size: 11.5px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); background: var(--surface-2);
-}
-.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
-.data-table tr:last-child td { border-bottom: none; }
 .mono { font-family: var(--font-mono); font-size: 12px; }
 .text-dim { color: var(--text-3); }
 .pair-cell { font-weight: 600; color: var(--text); }
 .arrow { color: var(--text-3); }
-.source-badge {
-  padding: 2px 7px; border-radius: 20px; font-size: 11px;
-  font-weight: 600; background: var(--muted-soft); color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
 .empty-row { padding: 24px; text-align: center; color: var(--text-3); }
-.count-badge.sm { font-size: 11px; padding: 1px 7px; }
 
+@media (max-width: 900px) {
+  .forms-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
   .page-h   { flex-direction: column; align-items: flex-start; }
   .form-row { grid-template-columns: 1fr; }
+  .bigstat-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
