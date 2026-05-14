@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useChainStore } from '@/stores/chain'
 import { useMempoolStore } from '@/stores/mempool'
 import { useMetricsStore } from '@/stores/metrics'
 import ChainList from '@/components/organisms/ChainList.vue'
 import MempoolTable from '@/components/organisms/MempoolTable.vue'
-import MineButton from '@/components/organisms/MineButton.vue'
+import MineBlockFlow from '@/components/flows/MineBlockFlow.vue'
+import type { MineBlockData } from '@/components/flows/MineBlockFlow.vue'
 
 const chainStore = useChainStore()
 const mempoolStore = useMempoolStore()
@@ -13,13 +14,22 @@ const metricsStore = useMetricsStore()
 
 const nodeStatus = computed(() => metricsStore.health?.status ?? null)
 
-onMounted(async () => {
+const showMineFlow = ref(false)
+const mineData = computed<MineBlockData>(() => ({
+  nextHeight: (metricsStore.metrics?.chainHeight ?? 0) + 1,
+  pendingCount: mempoolStore.count,
+  prevHash: '—',
+}))
+
+async function refreshAll() {
   await Promise.all([
     chainStore.fetchChain(),
     mempoolStore.fetchPending(),
     metricsStore.fetchAll(),
   ])
-})
+}
+
+onMounted(refreshAll)
 </script>
 
 <template>
@@ -29,34 +39,39 @@ onMounted(async () => {
         <h1>Dashboard</h1>
         <p>Estado en tiempo real de la cadena</p>
       </div>
-      <MineButton />
+      <button class="btn btn-primary btn-sm" type="button" @click="showMineFlow = true">
+        <span class="pi pi-bolt" aria-hidden="true" />
+        Minar
+      </button>
     </div>
 
-    <!-- KPI stat bar -->
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-lbl">Altura de cadena</div>
-        <div class="stat-val">{{ metricsStore.metrics?.chainHeight ?? '—' }}</div>
-        <div class="stat-sub">bloques confirmados</div>
+    <!-- KPI bigstat row -->
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Altura</div>
+        <div class="vl">{{ metricsStore.metrics?.chainHeight ?? '—' }}</div>
+        <div class="ds">bloques confirmados</div>
       </div>
-      <div class="stat">
-        <div class="stat-lbl">Transacciones pendientes</div>
-        <div class="stat-val">{{ metricsStore.metrics?.pendingTransactions ?? '—' }}</div>
-        <div class="stat-sub">en mempool</div>
+      <div class="bigstat">
+        <div class="lb">Mempool</div>
+        <div class="vl">{{ mempoolStore.count }}</div>
+        <div class="ds">txs pendientes</div>
       </div>
-      <div class="stat">
-        <div class="stat-lbl">Tiempo medio de minado</div>
-        <div class="stat-val tnum">
+      <div class="bigstat">
+        <div class="lb">Avg. minado</div>
+        <div class="vl">
           {{ metricsStore.metrics?.avgMineTimeSeconds != null
               ? metricsStore.metrics.avgMineTimeSeconds.toFixed(2)
-              : '—' }}
-          <span v-if="metricsStore.metrics?.avgMineTimeSeconds != null" class="stat-unit">s</span>
+              : '—' }}<span
+            v-if="metricsStore.metrics?.avgMineTimeSeconds != null"
+            class="vl-unit"
+          >s</span>
         </div>
-        <div class="stat-sub">últimos bloques</div>
+        <div class="ds">tiempo medio</div>
       </div>
-      <div class="stat">
-        <div class="stat-lbl">Estado del nodo</div>
-        <div class="stat-val">
+      <div class="bigstat">
+        <div class="lb">Nodo</div>
+        <div class="vl">
           <span
             class="node-dot"
             :class="nodeStatus === 'ok' ? 'ok' : nodeStatus === 'degraded' ? 'degraded' : 'unknown'"
@@ -64,32 +79,41 @@ onMounted(async () => {
           />
           {{ nodeStatus === 'ok' ? 'Operativo' : nodeStatus === 'degraded' ? 'Degradado' : '—' }}
         </div>
-        <div class="stat-sub">{{ metricsStore.health?.db === 'ok' ? 'DB conectada' : metricsStore.health?.db === 'error' ? 'DB error' : 'DB n/a' }}</div>
+        <div class="ds">
+          {{ metricsStore.health?.db === 'ok'
+              ? 'DB conectada'
+              : metricsStore.health?.db === 'error'
+              ? 'DB error'
+              : 'DB n/a' }}
+        </div>
       </div>
     </div>
 
     <!-- Content grid -->
     <div class="dashboard-grid">
-      <section class="panel-section">
-        <div class="section-h">
+      <section class="panel">
+        <div class="panel-h">
           <span>Bloques recientes</span>
-          <span class="count-badge">{{ chainStore.length }}</span>
+          <span class="count-badge sm">{{ chainStore.length }}</span>
         </div>
-        <div class="table-wrap">
-          <ChainList :blocks="chainStore.recentBlocks" compact />
-        </div>
+        <ChainList :blocks="chainStore.recentBlocks" compact />
       </section>
 
-      <section class="panel-section">
-        <div class="section-h">
+      <section class="panel">
+        <div class="panel-h">
           <span>Mempool</span>
-          <span class="count-badge">{{ mempoolStore.count }}</span>
+          <span class="count-badge sm">{{ mempoolStore.count }}</span>
         </div>
-        <div class="table-wrap">
-          <MempoolTable :transactions="mempoolStore.transactions" />
-        </div>
+        <MempoolTable :transactions="mempoolStore.transactions" />
       </section>
     </div>
+
+    <MineBlockFlow
+      v-if="showMineFlow"
+      :data="mineData"
+      @close="showMineFlow = false"
+      @complete="refreshAll"
+    />
   </div>
 </template>
 
@@ -119,45 +143,43 @@ onMounted(async () => {
   font-size: 13px;
 }
 
-/* KPI stats — reuse design system classes via deep selector */
-.stats {
+/* Bigstat KPIs */
+.bigstat-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
+  gap: 12px;
+}
+.bigstat {
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  padding: 16px;
 }
-.stat {
-  background: var(--surface);
-  padding: 14px 16px 16px;
-}
-.stat-lbl {
+.lb {
   font-size: 11.5px;
   color: var(--text-2);
-  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.stat-val {
-  font-size: 24px;
+.vl {
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
+  margin: 4px 0;
   color: var(--text);
-  display: flex;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 6px;
 }
-.stat-unit {
+.vl-unit {
   font-size: 14px;
   font-weight: 400;
   color: var(--text-2);
 }
-.stat-sub {
+.ds {
   font-size: 11.5px;
   color: var(--text-3);
-  margin-top: 4px;
 }
 
 .node-dot {
@@ -172,23 +194,23 @@ onMounted(async () => {
 .node-dot.degraded { background: var(--warning); box-shadow: 0 0 0 3px var(--warning-soft); }
 .node-dot.unknown  { background: var(--border-strong); }
 
-/* Content grid */
+/* Two-column dashboard grid */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--border);
+  gap: 12px;
+}
+
+/* Local panel/panel-h overrides (header + body container) */
+.panel {
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  padding: 0;
+  box-shadow: none;
 }
-
-.panel-section {
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-}
-.section-h {
+.panel-h {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -202,17 +224,12 @@ onMounted(async () => {
   background: var(--surface-2);
 }
 
-.table-wrap {
-  flex: 1;
-  overflow: hidden;
-}
-
 @media (max-width: 900px) {
-  .stats            { grid-template-columns: 1fr 1fr; }
-  .dashboard-grid   { grid-template-columns: 1fr; }
-  .page-h           { flex-direction: column; align-items: flex-start; }
+  .bigstat-row     { grid-template-columns: 1fr 1fr; }
+  .dashboard-grid  { grid-template-columns: 1fr; }
+  .page-h          { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 560px) {
-  .stats { grid-template-columns: 1fr; }
+  .bigstat-row { grid-template-columns: 1fr; }
 }
 </style>
