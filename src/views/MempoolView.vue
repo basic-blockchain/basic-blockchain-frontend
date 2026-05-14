@@ -178,11 +178,11 @@ function openTx(tx: Transaction, i: number, status: 'pending' | 'completed') {
               class="row-click"
               @click="openTx(rec, i, 'completed')"
             >
-              <td class="mono">#{{ rec.blockIndex ?? rec.block_index ?? '—' }}</td>
+              <td class="mono">#{{ rec.blockIndex ?? '—' }}</td>
               <td class="mono xs">{{ shortAddr(rec.sender) }}</td>
               <td class="mono xs">{{ shortAddr(rec.receiver) }}</td>
               <td class="num mono">{{ rec.amount }}</td>
-              <td class="muted xs">{{ rec.blockTimestamp ?? rec.block_timestamp ?? '—' }}</td>
+              <td class="muted xs">{{ rec.blockTimestamp ?? '—' }}</td>
             </tr>
           </tbody>
         </table>
