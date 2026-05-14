@@ -6,6 +6,12 @@ import type { Transaction } from '@/domain/transaction'
 import MineBlockFlow, { type MineBlockData } from '@/components/flows/MineBlockFlow.vue'
 import TransactionDetailFlow, { type TxDetailData } from '@/components/flows/TransactionDetailFlow.vue'
 
+interface PendingTx extends Transaction {
+  id?: string | number
+  currency?: string
+  fee?: number
+}
+
 const mempoolStore = useMempoolStore()
 const confirmedStore = useConfirmedTransactionsStore()
 
@@ -13,7 +19,7 @@ const showMineFlow = ref(false)
 const selectedTx = ref<TxDetailData | null>(null)
 
 const mineData = computed<MineBlockData>(() => ({
-  nextHeight: (confirmedStore as any).total ?? 0,
+  nextHeight: confirmedStore.total ?? 0,
   pendingCount: mempoolStore.count,
   prevHash: '',
 }))
@@ -23,9 +29,8 @@ onMounted(() => {
   confirmedStore.fetchConfirmed()
 })
 
-function shortId(tx: Transaction, i: number): string {
-  const anyTx = tx as any
-  if (anyTx.id) return String(anyTx.id)
+function shortId(tx: PendingTx, i: number): string {
+  if (tx.id != null) return String(tx.id)
   return `tx_${(i + 1).toString(36).padStart(6, '0')}`
 }
 
@@ -36,8 +41,8 @@ function shortAddr(addr: string, n = 6): string {
 
 const totalFees = computed(() => {
   let sum = 0
-  for (const tx of mempoolStore.transactions) {
-    const f = Number((tx as any).fee ?? 0)
+  for (const tx of mempoolStore.transactions as PendingTx[]) {
+    const f = Number(tx.fee ?? 0)
     if (!Number.isNaN(f)) sum += f
   }
   return sum > 0 ? sum.toFixed(4) : '$3.21'
@@ -46,15 +51,15 @@ const totalFees = computed(() => {
 const totalSize = computed(() => `${mempoolStore.count * 280} B`)
 
 function openTx(tx: Transaction, i: number, status: 'pending' | 'completed') {
-  const anyTx = tx as any
+  const ptx = tx as PendingTx
   selectedTx.value = {
     tx: {
-      id: shortId(tx, i),
+      id: shortId(ptx, i),
       sender: tx.sender,
       receiver: tx.receiver,
       amount: String(tx.amount),
-      currency: anyTx.currency ?? 'BTC',
-      fee: String(anyTx.fee ?? '0.0001'),
+      currency: ptx.currency ?? 'BTC',
+      fee: String(ptx.fee ?? '0.0001'),
       size: 240,
     },
     status,
@@ -133,10 +138,10 @@ function openTx(tx: Transaction, i: number, status: 'pending' | 'completed') {
               class="row-click"
               @click="openTx(tx, i, 'pending')"
             >
-              <td class="mono xs">{{ shortId(tx, i) }}</td>
+              <td class="mono xs">{{ shortId(tx as PendingTx, i) }}</td>
               <td class="mono xs">{{ shortAddr(tx.sender) }} → {{ shortAddr(tx.receiver) }}</td>
               <td class="num mono">{{ tx.amount }}</td>
-              <td class="num mono xs muted">{{ (tx as any).fee ?? '0.0001' }}</td>
+              <td class="num mono xs muted">{{ (tx as PendingTx).fee ?? '0.0001' }}</td>
               <td class="num muted">240 B</td>
               <td><span class="bdg bdg-pending_kyc">En mempool</span></td>
               <td>
@@ -168,10 +173,10 @@ function openTx(tx: Transaction, i: number, status: 'pending' | 'completed') {
           </thead>
           <tbody>
             <tr
-              v-for="(rec, i) in (confirmedStore.records as any[])"
+              v-for="(rec, i) in confirmedStore.records"
               :key="i"
               class="row-click"
-              @click="openTx(rec as Transaction, i, 'completed')"
+              @click="openTx(rec, i, 'completed')"
             >
               <td class="mono">#{{ rec.blockIndex ?? rec.block_index ?? '—' }}</td>
               <td class="mono xs">{{ shortAddr(rec.sender) }}</td>
