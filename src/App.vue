@@ -5,6 +5,7 @@ import Toast from 'primevue/toast'
 import { useBlockchainWs } from '@/composables/useBlockchainWs'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
+import ProfileDrawer from '@/components/drawers/ProfileDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,6 +13,7 @@ const { wsStatus } = useBlockchainWs()
 const auth = useAuthStore()
 const { theme, toggle: toggleTheme } = useTheme()
 const navOpen = ref(false)
+const showProfile = ref(false)
 
 watch(route, () => { navOpen.value = false })
 
@@ -183,11 +185,13 @@ function avatarInitial(name: string): string {
       </nav>
 
       <div v-if="auth.isAuthenticated && auth.user" class="sb-foot">
-        <span class="sb-avatar" aria-hidden="true">{{ avatarInitial(auth.user.display_name) }}</span>
-        <div class="sb-foot-text">
-          <span class="sb-foot-name">{{ auth.user.display_name }}</span>
-          <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
-        </div>
+        <button class="sb-profile-btn" aria-label="Abrir perfil" @click="showProfile = true">
+          <span class="sb-avatar" aria-hidden="true">{{ avatarInitial(auth.user.display_name) }}</span>
+          <div class="sb-foot-text">
+            <span class="sb-foot-name">{{ auth.user.display_name }}</span>
+            <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
+          </div>
+        </button>
         <button class="sb-logout" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
           <span class="pi pi-sign-out" aria-hidden="true" />
         </button>
@@ -237,6 +241,12 @@ function avatarInitial(name: string): string {
     </div>
 
     <Toast position="bottom-right" />
+
+    <ProfileDrawer
+      :user="auth.user"
+      :open="showProfile"
+      @close="showProfile = false"
+    />
   </div>
 </template>
 
@@ -374,6 +384,22 @@ function avatarInitial(name: string): string {
   letter-spacing: 0.05em;
   color: var(--text-3);
 }
+
+.sb-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius);
+  text-align: left;
+  transition: background 0.12s;
+}
+.sb-profile-btn:hover { background: var(--hover); }
 
 .sb-logout {
   background: none;
