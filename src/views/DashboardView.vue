@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useChainStore } from '@/stores/chain'
 import { useMempoolStore } from '@/stores/mempool'
 import { useMetricsStore } from '@/stores/metrics'
+import { sharedWsStatus } from '@/composables/useBlockchainWs'
 import ChainList from '@/components/organisms/ChainList.vue'
 import MempoolTable from '@/components/organisms/MempoolTable.vue'
 import MineBlockFlow from '@/components/flows/MineBlockFlow.vue'
@@ -13,6 +14,7 @@ const mempoolStore = useMempoolStore()
 const metricsStore = useMetricsStore()
 
 const nodeStatus = computed(() => metricsStore.health?.status ?? null)
+const wsLive = computed(() => sharedWsStatus.value === 'OPEN')
 
 const showMineFlow = ref(false)
 const mineData = computed<MineBlockData>(() => ({
@@ -20,6 +22,25 @@ const mineData = computed<MineBlockData>(() => ({
   pendingCount: mempoolStore.count,
   prevHash: '—',
 }))
+
+// Flash state — triggers brief glow on the chain panel when a new block arrives
+const flashBlocks = ref(false)
+const newBlockIndex = ref<number | null>(null)
+let flashTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => chainStore.latestBlock,
+  (block, prev) => {
+    if (block && block.index !== prev?.index) {
+      newBlockIndex.value = block.index
+      flashBlocks.value = true
+      if (flashTimer) clearTimeout(flashTimer)
+      flashTimer = setTimeout(() => {
+        flashBlocks.value = false
+      }, 2500)
+    }
+  },
+)
 
 async function refreshAll() {
   await Promise.all([
@@ -30,6 +51,14 @@ async function refreshAll() {
 }
 
 onMounted(refreshAll)
+
+function formatTs(ts: string): string {
+  try {
+    return new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  } catch {
+    return ts
+  }
+}
 </script>
 
 <template>
@@ -37,7 +66,13 @@ onMounted(refreshAll)
     <div class="page-h">
       <div>
         <h1>Dashboard</h1>
-        <p>Estado en tiempo real de la cadena</p>
+        <p class="page-sub">
+          Estado en tiempo real de la cadena
+          <span class="live-pill" :class="wsLive ? 'live' : 'reconnecting'">
+            <span class="live-dot" aria-hidden="true" />
+            {{ wsLive ? 'Live' : 'Reconectando…' }}
+          </span>
+        </p>
       </div>
       <button class="btn btn-primary btn-sm" type="button" @click="showMineFlow = true">
         <span class="pi pi-bolt" aria-hidden="true" />
@@ -91,10 +126,25 @@ onMounted(refreshAll)
 
     <!-- Content grid -->
     <div class="dashboard-grid">
-      <section class="panel">
+      <section class="panel" :class="{ 'panel-flash': flashBlocks }">
         <div class="panel-h">
           <span>Bloques recientes</span>
           <span class="count-badge sm">{{ chainStore.length }}</span>
+          <Transition name="badge-pop">
+            <span v-if="flashBlocks" class="new-block-badge">
+              <span class="pi pi-bolt" aria-hidden="true" />
+              Bloque #{{ newBlockIndex }}
+              <span v-if="chainStore.latestBlock"> · {{ formatTs(chainStore.latestBlock.timestamp) }}</span>
+            </span>
+          </Transition>
+          <span class="panel-h-spacer" />
+          <span
+            v-if="!wsLive"
+            class="ws-warn"
+            title="WebSocket desconectado — actualizaciones pausadas"
+          >
+            <span class="pi pi-wifi" aria-hidden="true" /> Sin live
+          </span>
         </div>
         <ChainList :blocks="chainStore.recentBlocks" compact />
       </section>
@@ -137,10 +187,48 @@ onMounted(refreshAll)
   margin: 0 0 2px;
   color: var(--text);
 }
-.page-h p {
+.page-sub {
   margin: 0;
   color: var(--text-2);
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Live / reconnecting pill */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.01em;
+}
+.live-pill.live {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+}
+.live-pill.reconnecting {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.live-pill.live .live-dot {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
 }
 
 /* Bigstat KPIs */
@@ -201,7 +289,7 @@ onMounted(refreshAll)
   gap: 12px;
 }
 
-/* Local panel/panel-h overrides (header + body container) */
+/* Local panel override */
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -209,7 +297,18 @@ onMounted(refreshAll)
   overflow: hidden;
   padding: 0;
   box-shadow: none;
+  transition: box-shadow 0.3s, border-color 0.3s;
 }
+.panel-flash {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  animation: flash-glow 2.5s ease-out forwards;
+}
+@keyframes flash-glow {
+  0%   { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent); border-color: var(--accent); }
+  100% { box-shadow: none; border-color: var(--border); }
+}
+
 .panel-h {
   display: flex;
   align-items: center;
@@ -222,6 +321,38 @@ onMounted(refreshAll)
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
+}
+.panel-h-spacer { flex: 1; }
+
+/* New block badge */
+.new-block-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.badge-pop-enter-active { transition: opacity 0.2s, transform 0.2s; }
+.badge-pop-leave-active { transition: opacity 0.4s, transform 0.3s; }
+.badge-pop-enter-from   { opacity: 0; transform: scale(0.8); }
+.badge-pop-leave-to     { opacity: 0; transform: scale(0.9); }
+
+/* WS disconnected warning in panel header */
+.ws-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--warning);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 @media (max-width: 900px) {
