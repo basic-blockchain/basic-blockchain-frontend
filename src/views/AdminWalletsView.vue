@@ -53,10 +53,43 @@ function parseBalance(balance: string): number {
         <h1>Wallets</h1>
         <p>Gestión y congelamiento de wallets de la plataforma</p>
       </div>
-      <button class="btn-ghost" :disabled="loading" @click="load">
-        <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
-        Actualizar
-      </button>
+      <div class="page-actions">
+        <button class="btn btn-sm" :disabled="loading" @click="load">
+          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+          <span>Actualizar</span>
+        </button>
+        <button class="btn btn-sm">
+          <i class="pi pi-download" />
+          <span>Exportar</span>
+        </button>
+        <button class="btn btn-sm">
+          <i class="pi pi-lock" />
+          <span>Congelar selección</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Total</div>
+        <div class="vl">{{ wallets.length }}</div>
+        <div class="ds">{{ wallets.length }} registradas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Activas</div>
+        <div class="vl">{{ wallets.filter(w => !w.frozen).length }}</div>
+        <div class="ds">en operación</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Congeladas</div>
+        <div class="vl">{{ wallets.filter(w => w.frozen).length }}</div>
+        <div class="ds">bloqueadas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Inactivas</div>
+        <div class="vl">0</div>
+        <div class="ds">sin actividad</div>
+      </div>
     </div>
 
     <div class="filters-bar">
@@ -78,6 +111,7 @@ function parseBalance(balance: string): number {
       <table class="data-table">
         <thead>
           <tr>
+            <th>Activo</th>
             <th>Wallet ID</th>
             <th>Usuario</th>
             <th>Balance</th>
@@ -89,6 +123,7 @@ function parseBalance(balance: string): number {
         </thead>
         <tbody>
           <tr v-for="w in filtered" :key="w.wallet_id" :class="{ 'row-muted': w.frozen }">
+            <td><span class="asset-pill">{{ w.currency }}</span></td>
             <td class="mono"><HashChip :hash="w.wallet_id" :length="16" label="wallet id" /></td>
             <td>
               <span class="display-name">{{ w.display_name }}</span>
@@ -111,7 +146,7 @@ function parseBalance(balance: string): number {
             </td>
           </tr>
           <tr v-if="filtered.length === 0 && !loading">
-            <td colspan="7" class="empty-row">No se encontraron wallets.</td>
+            <td colspan="8" class="empty-row">No se encontraron wallets.</td>
           </tr>
         </tbody>
       </table>
@@ -125,15 +160,20 @@ function parseBalance(balance: string): number {
 .page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
 .page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
 .page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
+.page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-.btn-ghost {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 13px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: background 0.12s, color 0.12s; font-family: var(--font-sans);
+.bigstat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.bigstat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
+.ds { font-size: 11.5px; color: var(--text-3); }
+
+.asset-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; padding: 2px 7px; border-radius: 5px;
+  background: var(--accent-soft); color: var(--accent-text);
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
 }
-.btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
-.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .filters-bar {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
@@ -184,5 +224,6 @@ function parseBalance(balance: string): number {
 
 @media (max-width: 640px) {
   .page-h { flex-direction: column; align-items: flex-start; }
+  .bigstat-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
