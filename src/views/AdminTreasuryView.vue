@@ -4,6 +4,8 @@ import { listAllWallets, createTreasuryWallet, listCurrencies, type WalletAdminR
 import HashChip from '@/components/atoms/HashChip.vue'
 import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
 import { useToast } from 'primevue/usetoast'
+import TreasuryApprovalFlow from '@/components/flows/TreasuryApprovalFlow.vue'
+import type { TreasuryData } from '@/components/flows/TreasuryApprovalFlow.vue'
 
 const toast = useToast()
 const wallets = ref<WalletAdminRecord[]>([])
@@ -44,6 +46,18 @@ async function createTreasury() {
 }
 
 onMounted(load)
+
+const treasuryFlowData = ref<TreasuryData | null>(null)
+
+function openDistribution() {
+  treasuryFlowData.value = {
+    source: 'USDT Treasury',
+    destination: '41 wallets de usuarios activos',
+    amount: '205,000',
+    perWallet: '5,000',
+    asset: 'USDT',
+  }
+}
 </script>
 
 <template>
@@ -53,10 +67,16 @@ onMounted(load)
         <h1>Tesorería</h1>
         <p>Wallets de reserva de la plataforma por moneda</p>
       </div>
-      <button class="btn-ghost" :disabled="loading" @click="load">
-        <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
-        Actualizar
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" @click="openDistribution">
+          <span class="pi pi-send" aria-hidden="true" />
+          Distribuir
+        </button>
+        <button class="btn-ghost" :disabled="loading" @click="load">
+          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+          Actualizar
+        </button>
+      </div>
     </div>
 
     <!-- Create treasury panel -->
@@ -110,6 +130,13 @@ onMounted(load)
       </table>
     </div>
   </div>
+
+  <TreasuryApprovalFlow
+    v-if="treasuryFlowData"
+    :data="treasuryFlowData"
+    @close="treasuryFlowData = null"
+    @complete="treasuryFlowData = null"
+  />
 </template>
 
 <style scoped>

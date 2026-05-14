@@ -8,6 +8,14 @@ import HashChip from '@/components/atoms/HashChip.vue'
 import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
 import { useToast } from 'primevue/usetoast'
 import { BlockchainApiError } from '@/api/errors'
+import SendConfirmFlow from '@/components/flows/SendConfirmFlow.vue'
+import type { SendData } from '@/components/flows/SendConfirmFlow.vue'
+import ReceiveFlow from '@/components/flows/ReceiveFlow.vue'
+import type { ReceiveData } from '@/components/flows/ReceiveFlow.vue'
+import WithdrawFlow from '@/components/flows/WithdrawFlow.vue'
+import type { WithdrawData } from '@/components/flows/WithdrawFlow.vue'
+import ConvertFlow from '@/components/flows/ConvertFlow.vue'
+import type { ConvertData } from '@/components/flows/ConvertFlow.vue'
 
 const walletStore = useWalletStore()
 const toast = useToast()
@@ -102,6 +110,24 @@ async function submitTransfer() {
 onMounted(async () => {
   await Promise.all([walletStore.fetchMine(), loadCurrencies()])
 })
+
+const sendFlowData = ref<SendData | null>(null)
+const receiveFlowData = ref<ReceiveData | null>(null)
+const withdrawFlowData = ref<WithdrawData | null>(null)
+const convertFlowData = ref<ConvertData | null>(null)
+
+function openSend() {
+  sendFlowData.value = { to: 'Sofía Pérez', handle: '@sofia.p', amount: '50.00', asset: 'cUSD', note: '' }
+}
+function openReceive() {
+  receiveFlowData.value = { asset: 'cUSD', address: '0xCAdEna1234abcdef9X8Kp4z2a8b1c4d5e6f7891' }
+}
+function openWithdraw() {
+  withdrawFlowData.value = { asset: 'USDT', network: 'Ethereum (ERC-20)', balance: '24,420.50' }
+}
+function openConvert() {
+  convertFlowData.value = { from: 'USDT', to: 'BTC' }
+}
 </script>
 
 <template>
@@ -119,6 +145,22 @@ onMounted(async () => {
         <p>Gestiona tus wallets y realiza transferencias</p>
       </div>
       <div class="page-actions">
+        <button class="wallet-action-btn" @click="openSend">
+          <span class="pi pi-send" style="font-size:13px" />
+          Enviar
+        </button>
+        <button class="wallet-action-btn" @click="openReceive">
+          <span class="pi pi-download" style="font-size:13px" />
+          Recibir
+        </button>
+        <button class="wallet-action-btn" @click="openWithdraw">
+          <span class="pi pi-external-link" style="font-size:13px" />
+          Retirar
+        </button>
+        <button class="wallet-action-btn" @click="openConvert">
+          <span class="pi pi-arrows-h" style="font-size:13px" />
+          Convertir
+        </button>
         <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
           <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
             {{ currency.code }} · {{ currency.name }}
@@ -224,6 +266,31 @@ onMounted(async () => {
       </p>
     </section>
   </div>
+
+  <SendConfirmFlow
+    v-if="sendFlowData"
+    :data="sendFlowData"
+    @close="sendFlowData = null"
+    @complete="sendFlowData = null"
+  />
+  <ReceiveFlow
+    v-if="receiveFlowData"
+    :data="receiveFlowData"
+    @close="receiveFlowData = null"
+    @complete="receiveFlowData = null"
+  />
+  <WithdrawFlow
+    v-if="withdrawFlowData"
+    :data="withdrawFlowData"
+    @close="withdrawFlowData = null"
+    @complete="withdrawFlowData = null"
+  />
+  <ConvertFlow
+    v-if="convertFlowData"
+    :data="convertFlowData"
+    @close="convertFlowData = null"
+    @complete="convertFlowData = null"
+  />
 </template>
 
 <style scoped>
@@ -258,6 +325,23 @@ onMounted(async () => {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.wallet-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.wallet-action-btn:hover { background: var(--hover); color: var(--text); }
 
 .btn-primary {
   display: flex;

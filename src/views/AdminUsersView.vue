@@ -5,6 +5,8 @@ import {
   grantRole, revokeRole, type AdminUser,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
+import ConfirmUserModal from '@/components/modals/ConfirmUserModal.vue'
+import type { UserAction, ConfirmUserTarget } from '@/components/modals/ConfirmUserModal.vue'
 
 const auth = useAuthStore()
 const users = ref<AdminUser[]>([])
@@ -14,6 +16,34 @@ const error = ref('')
 const editTarget = ref<AdminUser | null>(null)
 const editForm = ref({ display_name: '', email: '' })
 const deleteTarget = ref<AdminUser | null>(null)
+
+const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget } | null>(null)
+
+function openConfirm(u: AdminUser, action: UserAction) {
+  confirmModal.value = {
+    action,
+    target: {
+      fullName: u.display_name,
+      email: u.email ?? u.username,
+      walletCount: 1,
+      totalUsd: 0,
+    },
+  }
+}
+
+async function handleConfirm(payload: { action: UserAction }) {
+  if (!confirmModal.value) return
+  const u = users.value.find((x) => x.display_name === confirmModal.value!.target.fullName)
+  if (!u) { confirmModal.value = null; return }
+  try {
+    if (payload.action === 'ban') await banUser(u.user_id)
+    else if (payload.action === 'unban') await unbanUser(u.user_id)
+    else if (payload.action === 'delete') await softDeleteUser(u.user_id)
+    else if (payload.action === 'restore') await restoreUser(u.user_id)
+    await load()
+  } catch { /* handled by existing error display */ }
+  confirmModal.value = null
+}
 
 async function load() {
   loading.value = true
@@ -53,23 +83,10 @@ async function submitEdit() {
   await load()
 }
 
-async function toggleBan(u: AdminUser) {
-  if (u.banned) await unbanUser(u.user_id)
-  else await banUser(u.user_id)
-  await load()
-}
-
-function confirmDelete(u: AdminUser) { deleteTarget.value = u }
-
 async function executeDelete() {
   if (!deleteTarget.value) return
   await softDeleteUser(deleteTarget.value.user_id)
   deleteTarget.value = null
-  await load()
-}
-
-async function restore(u: AdminUser) {
-  await restoreUser(u.user_id, true)
   await load()
 }
 
@@ -141,13 +158,13 @@ const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
             <td class="actions-cell">
               <template v-if="!u.deleted_at">
                 <button class="btn-sm btn-edit" @click="openEdit(u)">Editar</button>
-                <button class="btn-sm" :class="u.banned ? 'btn-success' : 'btn-danger'" :disabled="isSelf(u)" @click="toggleBan(u)">
+                <button class="btn-sm" :class="u.banned ? 'btn-success' : 'btn-danger'" :disabled="isSelf(u)" @click="openConfirm(u, u.banned ? 'unban' : 'ban')">
                   {{ u.banned ? 'Desbanear' : 'Banear' }}
                 </button>
-                <button class="btn-sm btn-danger" :disabled="isSelf(u)" @click="confirmDelete(u)">Eliminar</button>
+                <button class="btn-sm btn-danger" :disabled="isSelf(u)" @click="openConfirm(u, 'delete')">Eliminar</button>
               </template>
               <template v-else>
-                <button class="btn-sm btn-success" @click="restore(u)">Restaurar</button>
+                <button class="btn-sm btn-success" @click="openConfirm(u, 'restore')">Restaurar</button>
               </template>
             </td>
           </tr>
@@ -190,6 +207,14 @@ const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
       </div>
     </div>
   </div>
+
+  <ConfirmUserModal
+    v-if="confirmModal"
+    :action="confirmModal.action"
+    :user="confirmModal.target"
+    @close="confirmModal = null"
+    @confirm="handleConfirm"
+  />
 </template>
 
 <style scoped>

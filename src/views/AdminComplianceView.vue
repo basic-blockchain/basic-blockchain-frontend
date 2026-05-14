@@ -2,6 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { listUsers, type UserAdminRecord } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
+import KYCReviewFlow from '@/components/flows/KYCReviewFlow.vue'
+import type { KYCData } from '@/components/flows/KYCReviewFlow.vue'
+import DisputeResolutionFlow from '@/components/flows/DisputeResolutionFlow.vue'
+import type { DisputeData } from '@/components/flows/DisputeResolutionFlow.vue'
 
 const toast = useToast()
 const users = ref<UserAdminRecord[]>([])
@@ -53,6 +57,29 @@ const filteredQueue = computed(() => {
   if (activeTab.value === 'resolved') return []
   return mockQueue.filter((q) => q.category === activeTab.value)
 })
+
+const kycFlowData = ref<KYCData | null>(null)
+const disputeFlowData = ref<DisputeData | null>(null)
+
+function openReview(item: QueueItem) {
+  if (item.category === 'disputes') {
+    disputeFlowData.value = {
+      opId: '4821',
+      buyer: 'Valentina Sosa',
+      seller: 'GauchoCripto',
+      amount: '1,820.00',
+      asset: 'USDT',
+    }
+  } else {
+    kycFlowData.value = {
+      user: item.user,
+      country: '🇦🇷',
+      kind: item.kind,
+      age: item.age,
+      risk: item.risk,
+    }
+  }
+}
 
 const stats = [
   { label: 'En cola', value: '23', detail: '4 prioritarias', detailColor: 'var(--danger)' },
@@ -167,12 +194,25 @@ onMounted(load)
             <div class="meta-age">hace {{ item.age }}</div>
           </div>
           <div class="queue-actions">
-            <button class="btn-sm btn-outline">Revisar</button>
+            <button class="btn-sm btn-outline" @click="openReview(item)">Revisar</button>
           </div>
         </div>
       </template>
     </div>
   </div>
+
+  <KYCReviewFlow
+    v-if="kycFlowData"
+    :data="kycFlowData"
+    @close="kycFlowData = null"
+    @complete="kycFlowData = null"
+  />
+  <DisputeResolutionFlow
+    v-if="disputeFlowData"
+    :data="disputeFlowData"
+    @close="disputeFlowData = null"
+    @complete="disputeFlowData = null"
+  />
 </template>
 
 <style scoped>
