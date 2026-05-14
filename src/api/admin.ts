@@ -200,3 +200,24 @@ export async function syncExchangeRates(payload: {
   const { data } = await client.post('/admin/exchange-rates/sync', payload)
   return data
 }
+
+export interface AuditEntry {
+  id: string
+  actor_id: string
+  action: string
+  target_id: string | null
+  details: Record<string, unknown>
+  created_at: string
+}
+
+export interface AuditParams {
+  limit?: number
+  action?: string
+  actor_id?: string
+  target_id?: string
+}
+
+export async function listAuditLog(params?: AuditParams): Promise<{ entries: AuditEntry[]; count: number }> {
+  const { data } = await client.get('/admin/audit', { params })
+  return data
+}
