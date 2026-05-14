@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import {
   listUsers, banUser, unbanUser, softDeleteUser, restoreUser, updateUser,
-  listAllWallets, type AdminUser, type WalletAdminRecord,
+  listAllWallets, freezeWallet, unfreezeWallet, type AdminUser, type WalletAdminRecord,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
 import UserDrawer, { type DrawerUser, type DrawerAction } from '@/components/drawers/UserDrawer.vue'
@@ -134,19 +134,38 @@ async function openDrawer(u: AdminUser) {
 async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
   const u = users.value.find((x) => x.user_id === user.id)
   if (!u) return
+
   if (action === 'edit') {
     openEdit(u)
     drawerOpen.value = false
     return
   }
   if (isSelf(u) && (action === 'ban' || action === 'delete')) return
-  if (action === 'ban') await banUser(u.user_id)
-  else if (action === 'unban') await unbanUser(u.user_id)
-  else if (action === 'delete') await softDeleteUser(u.user_id)
-  else if (action === 'restore') await restoreUser(u.user_id, true)
-  drawerOpen.value = false
+
+  if (action === 'freeze') {
+    const walletIds = (drawerUser.value?.wallets ?? [])
+      .filter((w) => w.status === 'active')
+      .map((w) => w.id)
+    await Promise.all(walletIds.map(freezeWallet))
+  } else if (action === 'unfreeze') {
+    const walletIds = (drawerUser.value?.wallets ?? [])
+      .filter((w) => w.status === 'frozen')
+      .map((w) => w.id)
+    await Promise.all(walletIds.map(unfreezeWallet))
+  } else if (action === 'ban')     await banUser(u.user_id)
+  else if (action === 'unban')     await unbanUser(u.user_id)
+  else if (action === 'delete')    await softDeleteUser(u.user_id)
+  else if (action === 'restore')   await restoreUser(u.user_id, true)
+
   await load()
-  drawerUser.value = null
+  // Re-open drawer with refreshed data so the user sees the updated state
+  const updated = users.value.find((x) => x.user_id === u.user_id)
+  if (updated) {
+    await openDrawer(updated)
+  } else {
+    drawerOpen.value = false
+    drawerUser.value = null
+  }
 }
 </script>
 
