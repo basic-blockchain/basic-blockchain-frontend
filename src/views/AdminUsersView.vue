@@ -2,12 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import {
   listUsers, banUser, unbanUser, softDeleteUser, restoreUser, updateUser,
-  grantRole, revokeRole, type AdminUser,
+  type AdminUser,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
 import UserDrawer, { type DrawerUser, type DrawerAction } from '@/components/drawers/UserDrawer.vue'
-import ConfirmUserModal from '@/components/modals/ConfirmUserModal.vue'
-import type { UserAction, ConfirmUserTarget } from '@/components/modals/ConfirmUserModal.vue'
 
 const auth = useAuthStore()
 const users = ref<AdminUser[]>([])
@@ -16,35 +14,7 @@ const error = ref('')
 
 const editTarget = ref<AdminUser | null>(null)
 const editForm = ref({ display_name: '', email: '' })
-const deleteTarget = ref<AdminUser | null>(null)
 
-const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget } | null>(null)
-
-function openConfirm(u: AdminUser, action: UserAction) {
-  confirmModal.value = {
-    action,
-    target: {
-      fullName: u.display_name,
-      email: u.email ?? u.username,
-      walletCount: 1,
-      totalUsd: 0,
-    },
-  }
-}
-
-async function handleConfirm(payload: { action: UserAction }) {
-  if (!confirmModal.value) return
-  const u = users.value.find((x) => x.display_name === confirmModal.value!.target.fullName)
-  if (!u) { confirmModal.value = null; return }
-  try {
-    if (payload.action === 'ban') await banUser(u.user_id)
-    else if (payload.action === 'unban') await unbanUser(u.user_id)
-    else if (payload.action === 'delete') await softDeleteUser(u.user_id)
-    else if (payload.action === 'restore') await restoreUser(u.user_id)
-    await load()
-  } catch { /* handled by existing error display */ }
-  confirmModal.value = null
-}
 
 async function load() {
   loading.value = true
@@ -60,12 +30,6 @@ async function load() {
 }
 
 onMounted(load)
-
-function userStatus(u: AdminUser): 'deleted' | 'banned' | 'active' {
-  if (u.deleted_at) return 'deleted'
-  if (u.banned) return 'banned'
-  return 'active'
-}
 
 function openEdit(u: AdminUser) {
   editTarget.value = u
@@ -84,21 +48,29 @@ async function submitEdit() {
   await load()
 }
 
-async function executeDelete() {
-  if (!deleteTarget.value) return
-  await softDeleteUser(deleteTarget.value.user_id)
-  deleteTarget.value = null
-  await load()
-}
-
-const ROLES = ['ADMIN', 'OPERATOR', 'VIEWER']
-async function toggleRole(u: AdminUser, role: string) {
-  if (u.roles.includes(role)) await revokeRole(u.user_id, role)
-  else await grantRole(u.user_id, role)
-  await load()
-}
-
 const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
+
+type FilterTab = 'all' | 'active' | 'banned' | 'deleted'
+const activeTab = ref<FilterTab>('all')
+
+const filteredUsers = computed(() => {
+  switch (activeTab.value) {
+    case 'active':  return users.value.filter((u) => !u.banned && !u.deleted_at)
+    case 'banned':  return users.value.filter((u) => u.banned && !u.deleted_at)
+    case 'deleted': return users.value.filter((u) => !!u.deleted_at)
+    default:        return users.value
+  }
+})
+
+function avatarColor(name: string): string {
+  const palette = ['#7c3aed','#0284c7','#16a34a','#d97706','#db2777','#dc2626']
+  return palette[name.charCodeAt(0) % palette.length]
+}
+
+function formatDate(iso: string): string {
+  try { return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) }
+  catch { return iso }
+}
 
 const totalCount   = computed(() => users.value.length)
 const activeCount  = computed(() => users.value.filter((u) => !u.banned && !u.deleted_at).length)
@@ -138,12 +110,19 @@ function openDrawer(u: AdminUser) {
 async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
   const u = users.value.find((x) => x.user_id === user.id)
   if (!u) return
+  if (action === 'edit') {
+    openEdit(u)
+    drawerOpen.value = false
+    return
+  }
+  if (isSelf(u) && (action === 'ban' || action === 'delete')) return
   if (action === 'ban') await banUser(u.user_id)
   else if (action === 'unban') await unbanUser(u.user_id)
   else if (action === 'delete') await softDeleteUser(u.user_id)
   else if (action === 'restore') await restoreUser(u.user_id, true)
   drawerOpen.value = false
   await load()
+  drawerUser.value = null
 }
 </script>
 
@@ -154,7 +133,7 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
         <h1>Usuarios</h1>
         <p>Gestión de usuarios, roles y estado de cuentas</p>
       </div>
-      <button class="btn-ghost" :disabled="loading" @click="load">
+      <button class="btn btn-ghost" :disabled="loading" @click="load">
         <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
         Actualizar
       </button>
@@ -188,55 +167,79 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
       <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
 
-    <div v-else class="panel">
+    <div class="panel">
       <div class="panel-h">
-        <span>Todos los usuarios</span>
-        <span class="count-badge sm">{{ users.length }}</span>
+        <nav class="filter-tabs" aria-label="Filtrar usuarios">
+          <button class="filter-tab" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
+            Todos <span class="tab-count">{{ totalCount }}</span>
+          </button>
+          <button class="filter-tab" :class="{ active: activeTab === 'active' }" @click="activeTab = 'active'">
+            Activos <span class="tab-count">{{ activeCount }}</span>
+          </button>
+          <button class="filter-tab" :class="{ active: activeTab === 'banned' }" @click="activeTab = 'banned'">
+            Baneados <span class="tab-count">{{ bannedCount }}</span>
+          </button>
+          <button class="filter-tab" :class="{ active: activeTab === 'deleted' }" @click="activeTab = 'deleted'">
+            Eliminados <span class="tab-count">{{ deletedCount }}</span>
+          </button>
+        </nav>
+        <span class="panel-h-spacer" />
+        <button class="btn btn-sm" disabled title="Próximamente">
+          <span class="pi pi-user-plus" aria-hidden="true" /> Crear usuario
+        </button>
       </div>
-      <table class="data-table">
+
+      <div v-if="loading" class="loading-row" style="padding: 24px 16px;">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+      </div>
+      <div v-else-if="filteredUsers.length === 0" class="empty-row">
+        Sin usuarios en esta categoría.
+      </div>
+      <table v-else class="data-table">
         <thead>
           <tr>
             <th>Usuario</th>
-            <th>Roles</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <th>Roles</th>
+            <th>Registro</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="u in users" :key="u.user_id" :class="{ 'row-muted': !!u.deleted_at }" style="cursor:pointer" @click="openDrawer(u)">
+          <tr
+            v-for="u in filteredUsers"
+            :key="u.user_id"
+            class="row-click"
+            :class="{ 'row-deleted': !!u.deleted_at }"
+            @click="openDrawer(u)"
+          >
             <td class="user-cell">
-              <span class="display-name">{{ u.display_name }}</span>
-              <span class="username">@{{ u.username }}</span>
-              <span v-if="u.email" class="email">{{ u.email }}</span>
-            </td>
-            <td class="roles-cell">
-              <button
-                v-for="role in ROLES"
-                :key="role"
-                class="role-chip"
-                :class="{ active: u.roles.includes(role) }"
-                :disabled="isSelf(u) && role === 'ADMIN'"
-                :title="u.roles.includes(role) ? `Revocar ${role}` : `Otorgar ${role}`"
-                @click="toggleRole(u, role)"
-              >{{ role }}</button>
+              <div
+                class="u-avatar"
+                :style="{ background: avatarColor(u.display_name) }"
+                aria-hidden="true"
+              >{{ u.display_name.charAt(0).toUpperCase() }}</div>
+              <div class="u-info">
+                <span class="u-name">{{ u.display_name }}</span>
+                <span class="u-handle">@{{ u.username }}</span>
+                <span v-if="u.email" class="u-email">{{ u.email }}</span>
+              </div>
             </td>
             <td>
-              <span class="status-dot" :class="userStatus(u)">
-                {{ userStatus(u) === 'active' ? 'Activo' : userStatus(u) === 'banned' ? 'Baneado' : 'Eliminado' }}
+              <span class="bdg" :class="
+                u.deleted_at ? 'bdg-deleted' :
+                u.banned     ? 'bdg-banned'  : 'bdg-active'
+              ">
+                {{ u.deleted_at ? 'Eliminado' : u.banned ? 'Baneado' : 'Activo' }}
               </span>
             </td>
-            <td class="actions-cell" @click.stop>
-              <template v-if="!u.deleted_at">
-                <button class="btn-sm btn-edit" @click="openEdit(u)">Editar</button>
-                <button class="btn-sm" :class="u.banned ? 'btn-success' : 'btn-danger'" :disabled="isSelf(u)" @click="openConfirm(u, u.banned ? 'unban' : 'ban')">
-                  {{ u.banned ? 'Desbanear' : 'Banear' }}
-                </button>
-                <button class="btn-sm btn-danger" :disabled="isSelf(u)" @click="openConfirm(u, 'delete')">Eliminar</button>
-              </template>
-              <template v-else>
-                <button class="btn-sm btn-success" @click="openConfirm(u, 'restore')">Restaurar</button>
-              </template>
+            <td class="roles-cell">
+              <span
+                v-for="role in u.roles"
+                :key="role"
+                class="bdg bdg-info sm"
+              >{{ role }}</span>
             </td>
+            <td class="muted xs mono">{{ formatDate(u.created_at) }}</td>
           </tr>
         </tbody>
       </table>
@@ -257,22 +260,8 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
           </div>
         </div>
         <div class="modal-actions">
-          <button class="btn-ghost" @click="closeEdit">Cancelar</button>
-          <button class="btn-primary" @click="submitEdit">Guardar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete confirm modal -->
-    <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
-      <div class="modal modal-danger">
-        <div class="modal-h">¿Eliminar a @{{ deleteTarget.username }}?</div>
-        <div class="modal-body">
-          <p class="modal-text">Es una eliminación suave. Todas las wallets quedarán congeladas. El usuario puede restaurarse después.</p>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-ghost" @click="deleteTarget = null">Cancelar</button>
-          <button class="btn-danger" @click="executeDelete">Confirmar eliminación</button>
+          <button class="btn btn-ghost" @click="closeEdit">Cancelar</button>
+          <button class="btn btn-primary" @click="submitEdit">Guardar</button>
         </div>
       </div>
     </div>
@@ -285,13 +274,6 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
     />
   </div>
 
-  <ConfirmUserModal
-    v-if="confirmModal"
-    :action="confirmModal.action"
-    :user="confirmModal.target"
-    @close="confirmModal = null"
-    @confirm="handleConfirm"
-  />
 </template>
 
 <style scoped>
@@ -338,7 +320,7 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
 .inline-alert.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
 .loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
 
-/* Panel + table */
+/* Panel + filter tabs */
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -348,81 +330,89 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
 .panel-h {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  gap: 0;
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
+  padding-right: 12px;
 }
+.panel-h-spacer { flex: 1; }
+
+.filter-tabs { display: flex; }
+.filter-tab {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  transition: color 0.12s;
+}
+.filter-tab:hover { color: var(--text); }
+.filter-tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-count {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.filter-tab.active .tab-count { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border-color: transparent; }
+
+/* Table */
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th {
   text-align: left;
   padding: 8px 14px;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
 }
 .data-table td {
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
-  vertical-align: top;
+  vertical-align: middle;
   font-size: 13px;
 }
 .data-table tr:last-child td { border-bottom: none; }
-.row-muted td { opacity: 0.5; }
+.row-click { cursor: pointer; }
+.row-click:hover td { background: var(--surface-2); }
+.row-deleted td { opacity: 0.55; }
 
-.user-cell { display: flex; flex-direction: column; gap: 2px; }
-.display-name { font-weight: 600; color: var(--text); }
-.username { color: var(--text-2); font-size: 12px; }
-.email { color: var(--text-3); font-size: 11.5px; }
+/* User cell */
+.user-cell { display: flex; align-items: center; gap: 10px; }
+.u-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.u-info { display: flex; flex-direction: column; gap: 1px; }
+.u-name   { font-weight: 600; font-size: 13px; color: var(--text); }
+.u-handle { font-size: 11.5px; color: var(--text-2); }
+.u-email  { font-size: 11px; color: var(--text-3); }
 
 .roles-cell { display: flex; gap: 4px; flex-wrap: wrap; }
-.role-chip {
-  padding: 2px 8px;
-  border-radius: 20px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 11.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-.role-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
-.role-chip:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.status-dot {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 20px;
-}
-.status-dot.active   { background: var(--success-soft); color: var(--success); }
-.status-dot.banned   { background: var(--danger-soft);  color: var(--danger); }
-.status-dot.deleted  { background: var(--muted-soft);   color: var(--muted); }
-
-.actions-cell { display: flex; gap: 4px; flex-wrap: wrap; align-items: flex-start; }
-.btn-sm {
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-}
-.btn-edit    { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
-.btn-success { background: var(--success-soft); color: var(--success); }
-.btn-danger  { background: var(--danger-soft);  color: var(--danger); }
-.btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+.mono  { font-family: var(--font-mono); }
+.xs    { font-size: 11.5px; }
+.muted { color: var(--text-3); }
+.empty-row { padding: 32px; text-align: center; color: var(--text-3); font-size: 13px; }
 
 /* Modal */
 .modal-overlay {
