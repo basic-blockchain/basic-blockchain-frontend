@@ -79,7 +79,7 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
                 <h3>Información general</h3>
                 <p>Nombre, dominios y entorno operativo.</p>
               </div>
-              <button class="btn-primary" @click="saveGeneral">Guardar cambios</button>
+              <button class="btn btn-primary" @click="saveGeneral">Guardar cambios</button>
             </div>
 
             <div class="fld">
@@ -254,15 +254,6 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
 }
 .field-input:focus { border-color: var(--accent); }
 .field-input.mono { font-family: var(--font-mono); }
-
-/* Save button */
-.btn-primary {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px; background: var(--accent); color: #fff; border: none;
-  border-radius: var(--radius); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: opacity 0.12s; font-family: var(--font-sans); white-space: nowrap;
-}
-.btn-primary:hover { opacity: 0.88; }
 
 /* Toggle rows */
 .toggle-row {

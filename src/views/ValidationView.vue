@@ -136,7 +136,7 @@ onMounted(async () => {
       </div>
       <div class="page-actions">
         <button
-          class="btn-primary"
+          class="btn btn-primary"
           type="button"
           :disabled="loadingChainValidation"
           @click="validateCurrentChain"
@@ -150,13 +150,41 @@ onMounted(async () => {
         </button>
         <button
           v-if="historyStore.total > 0"
-          class="btn-ghost"
+          class="btn btn-ghost"
           type="button"
           @click="downloadHistory"
         >
           <span class="pi pi-download" aria-hidden="true" />
           Exportar historial
         </button>
+      </div>
+    </div>
+
+    <!-- KPI bigstat row -->
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Validaciones</div>
+        <div class="vl">{{ historyStore.total }}</div>
+        <div class="ds">en esta sesión</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Cadena</div>
+        <div class="vl" :class="chainValidation === null ? '' : chainValidation.valid ? 'vl-ok' : 'vl-err'">
+          {{ chainValidation === null ? '—' : chainValidation.valid ? 'Válida' : 'Inválida' }}
+        </div>
+        <div class="ds">último resultado</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Correctas</div>
+        <div class="vl vl-ok">{{ historyStore.events.filter((e: any) => e.status === 'valid').length }}</div>
+        <div class="ds">validaciones OK</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Fallidas</div>
+        <div class="vl" :class="historyStore.events.filter((e: any) => e.status !== 'valid').length > 0 ? 'vl-err' : ''">
+          {{ historyStore.events.filter((e: any) => e.status !== 'valid').length }}
+        </div>
+        <div class="ds">errores o inválidas</div>
       </div>
     </div>
 
@@ -331,40 +359,23 @@ onMounted(async () => {
 }
 .page-actions { display: flex; gap: 8px; }
 
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.12s;
-  font-family: var(--font-sans);
+/* Bigstat KPI row */
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { opacity: 0.88; }
-
-.btn-ghost {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 13px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+.bigstat {
   background: var(--surface);
-  color: var(--text-2);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-  font-family: var(--font-sans);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
 }
-.btn-ghost:hover { background: var(--hover); color: var(--text); }
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds { font-size: 11.5px; color: var(--text-3); }
+.vl-ok  { color: var(--success); }
+.vl-err { color: var(--danger); }
 
 /* Panels */
 .panel {
