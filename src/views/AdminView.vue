@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { mint as mintApi } from '@/api/wallets'
 import { useStatsStore } from '@/stores/stats'
@@ -13,46 +13,6 @@ const metricsStore = useMetricsStore()
 
 const mintForm = ref({ walletId: '', amount: '' })
 const minting = ref(false)
-
-const kpis = computed(() => [
-  {
-    label: 'Usuarios totales',
-    value: statsStore.stats?.users.total ?? '—',
-    sub: `${statsStore.stats?.users.active ?? '—'} activos`,
-    variant: 'default',
-  },
-  {
-    label: 'Usuarios activos',
-    value: statsStore.stats?.users.active ?? '—',
-    sub: `${statsStore.stats?.users.banned ?? 0} baneados`,
-    variant: 'default',
-  },
-  {
-    label: 'Wallets',
-    value: statsStore.stats?.wallets.total ?? '—',
-    sub: `${statsStore.stats?.wallets.user_wallets ?? '—'} de usuario`,
-    variant: 'default',
-  },
-  {
-    label: 'Wallets congeladas',
-    value: statsStore.stats?.wallets.frozen ?? '—',
-    sub: `de ${statsStore.stats?.wallets.total ?? '—'} total`,
-    variant: (statsStore.stats?.wallets.frozen ?? 0) > 0 ? 'warn' : 'default',
-  },
-])
-
-const chainKpis = computed(() => [
-  {
-    label: 'Altura de cadena',
-    value: metricsStore.metrics?.chainHeight ?? '—',
-    sub: 'bloques confirmados',
-  },
-  {
-    label: 'Txs pendientes',
-    value: metricsStore.metrics?.pendingTransactions ?? '—',
-    sub: 'en mempool',
-  },
-])
 
 async function submitMint() {
   const amount = Number(mintForm.value.amount)
@@ -96,26 +56,41 @@ onMounted(async () => {
         <p>Panel de administración de la plataforma</p>
       </div>
       <div class="page-actions">
-        <button class="btn-ghost" type="button" @click="router.push('/admin/users')">
+        <button class="btn btn-ghost" type="button" @click="router.push('/admin/users')">
           Ver usuarios
         </button>
-        <button class="btn-ghost" type="button" @click="router.push('/admin/audit')">
+        <button class="btn btn-ghost" type="button" @click="router.push('/admin/audit')">
           Ver auditoría
         </button>
       </div>
     </div>
 
-    <!-- Platform KPIs -->
-    <div class="kpi-grid">
-      <div
-        v-for="kpi in kpis"
-        :key="kpi.label"
-        class="kpi-card"
-        :class="kpi.variant === 'warn' ? 'kpi-warn' : ''"
-      >
-        <div class="kpi-lbl">{{ kpi.label }}</div>
-        <div class="kpi-val">{{ kpi.value }}</div>
-        <div class="kpi-sub">{{ kpi.sub }}</div>
+    <!-- Platform KPIs (bigstat) -->
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Usuarios</div>
+        <div class="vl">{{ statsStore.stats?.users.total ?? '—' }}</div>
+        <div class="ds">{{ statsStore.stats?.users.active ?? '—' }} activos</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Activos</div>
+        <div class="vl">{{ statsStore.stats?.users.active ?? '—' }}</div>
+        <div class="ds">{{ statsStore.stats?.users.banned ?? 0 }} baneados</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Wallets</div>
+        <div class="vl">{{ statsStore.stats?.wallets.total ?? '—' }}</div>
+        <div class="ds">{{ statsStore.stats?.wallets.user_wallets ?? '—' }} de usuario</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Congeladas</div>
+        <div
+          class="vl"
+          :class="{ 'vl-danger': (statsStore.stats?.wallets.frozen ?? 0) > 0 }"
+        >
+          {{ statsStore.stats?.wallets.frozen ?? '—' }}
+        </div>
+        <div class="ds">de {{ statsStore.stats?.wallets.total ?? '—' }} total</div>
       </div>
     </div>
 
@@ -125,10 +100,15 @@ onMounted(async () => {
       <section class="panel">
         <div class="panel-h">Blockchain</div>
         <div class="chain-kpis">
-          <div v-for="ck in chainKpis" :key="ck.label" class="chain-kpi">
-            <div class="ck-val">{{ ck.value }}</div>
-            <div class="ck-lbl">{{ ck.label }}</div>
-            <div class="ck-sub">{{ ck.sub }}</div>
+          <div class="chain-kpi">
+            <div class="ck-val">{{ metricsStore.metrics?.chainHeight ?? '—' }}</div>
+            <div class="ck-lbl">Altura de cadena</div>
+            <div class="ck-sub">bloques confirmados</div>
+          </div>
+          <div class="chain-kpi">
+            <div class="ck-val">{{ metricsStore.metrics?.pendingTransactions ?? '—' }}</div>
+            <div class="ck-lbl">Txs pendientes</div>
+            <div class="ck-sub">en mempool</div>
           </div>
         </div>
       </section>
@@ -161,7 +141,7 @@ onMounted(async () => {
               required
             >
           </div>
-          <button class="btn-primary" type="submit" :disabled="minting">
+          <button class="btn btn-primary" type="submit" :disabled="minting">
             <span v-if="minting" class="pi pi-spin pi-spinner" aria-hidden="true" />
             <span v-else class="pi pi-plus" aria-hidden="true" />
             {{ minting ? 'Enviando…' : 'Mintear' }}
@@ -220,79 +200,29 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
 }
-.btn-ghost {
-  padding: 7px 13px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-2);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-}
-.btn-ghost:hover {
-  background: var(--hover);
-  color: var(--text);
-}
 
-/* KPI grid */
-.kpi-grid {
+/* Bigstat row (Phase 5 design system) */
+.bigstat-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
+  gap: 12px;
+}
+.bigstat {
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  padding: 16px;
 }
-.kpi-card {
-  background: var(--surface);
-  padding: 14px 16px 16px;
-}
-.kpi-card.kpi-warn .kpi-val { color: var(--warning); }
-.kpi-lbl {
-  font-size: 11.5px;
-  color: var(--text-2);
-  font-weight: 500;
-}
-.kpi-val {
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-.kpi-sub {
-  font-size: 11.5px;
-  color: var(--text-3);
-  margin-top: 4px;
-}
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds { font-size: 11.5px; color: var(--text-3); }
+.vl-danger { color: var(--danger) !important; }
 
 /* Content grid */
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-
-/* Panels */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-.panel-h {
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
 }
 
 /* Chain KPIs inside panel */
@@ -356,24 +286,6 @@ onMounted(async () => {
   font-family: var(--font-sans);
 }
 .field-input:focus { border-color: var(--accent); }
-.btn-primary {
-  align-self: flex-start;
-  padding: 7px 14px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.12s;
-  font-family: var(--font-sans);
-}
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { opacity: 0.88; }
 
 /* Balances */
 .balances-grid {
@@ -405,11 +317,11 @@ onMounted(async () => {
 
 /* Responsive */
 @media (max-width: 900px) {
-  .kpi-grid     { grid-template-columns: 1fr 1fr; }
+  .bigstat-row  { grid-template-columns: 1fr 1fr; }
   .content-grid { grid-template-columns: 1fr; }
   .page-h       { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 560px) {
-  .kpi-grid { grid-template-columns: 1fr; }
+  .bigstat-row { grid-template-columns: 1fr; }
 }
 </style>

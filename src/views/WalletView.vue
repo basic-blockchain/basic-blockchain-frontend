@@ -116,6 +116,20 @@ const receiveFlowData = ref<ReceiveData | null>(null)
 const withdrawFlowData = ref<WithdrawData | null>(null)
 const convertFlowData = ref<ConvertData | null>(null)
 
+// Phase 5 KPI tiles
+const totalWallets = computed(() => walletStore.wallets.length)
+const totalBalance = computed(() => {
+  const native = walletStore.wallets.filter((w) => w.currency === 'NATIVE')
+  if (native.length === 0) return '—'
+  return native.reduce((sum, w) => sum + Number(w.balance), 0).toFixed(4)
+})
+const currencyCount = computed(
+  () => new Set(walletStore.wallets.map((w) => w.currency)).size,
+)
+const frozenCount = computed(
+  () => walletStore.wallets.filter((w) => w.frozen).length,
+)
+
 function openSend() {
   sendFlowData.value = { to: 'Sofía Pérez', handle: '@sofia.p', amount: '50.00', asset: 'cUSD', note: '' }
 }
@@ -145,33 +159,57 @@ function openConvert() {
         <p>Gestiona tus wallets y realiza transferencias</p>
       </div>
       <div class="page-actions">
-        <button class="wallet-action-btn" @click="openSend">
-          <span class="pi pi-send" style="font-size:13px" />
-          Enviar
-        </button>
-        <button class="wallet-action-btn" @click="openReceive">
-          <span class="pi pi-download" style="font-size:13px" />
-          Recibir
-        </button>
-        <button class="wallet-action-btn" @click="openWithdraw">
-          <span class="pi pi-external-link" style="font-size:13px" />
-          Retirar
-        </button>
-        <button class="wallet-action-btn" @click="openConvert">
-          <span class="pi pi-arrows-h" style="font-size:13px" />
-          Convertir
-        </button>
         <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
           <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
             {{ currency.code }} · {{ currency.name }}
           </option>
         </select>
-        <button class="btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
+        <button class="btn btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
           <span v-if="creatingWallet" class="pi pi-spin pi-spinner" aria-hidden="true" />
           <span v-else class="pi pi-plus" aria-hidden="true" />
           Nueva wallet
         </button>
       </div>
+    </div>
+
+    <!-- KPI tiles -->
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Wallets</div>
+        <div class="vl">{{ totalWallets }}</div>
+        <div class="ds">cuentas activas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Balance NATIVE</div>
+        <div class="vl">{{ totalBalance }}</div>
+        <div class="ds">saldo nativo total</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Monedas</div>
+        <div class="vl">{{ currencyCount }}</div>
+        <div class="ds">tipos de activo</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Congeladas</div>
+        <div class="vl" :class="{ 'vl-danger': frozenCount > 0 }">{{ frozenCount }}</div>
+        <div class="ds">requieren atención</div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quick-actions">
+      <button class="btn btn-primary btn-sm" @click="openSend">
+        <span class="pi pi-send" aria-hidden="true" /> Enviar
+      </button>
+      <button class="btn btn-sm" @click="openReceive">
+        <span class="pi pi-download" aria-hidden="true" /> Recibir
+      </button>
+      <button class="btn btn-sm" @click="openWithdraw">
+        <span class="pi pi-external-link" aria-hidden="true" /> Retirar
+      </button>
+      <button class="btn btn-sm" @click="openConvert">
+        <span class="pi pi-arrows-h" aria-hidden="true" /> Convertir
+      </button>
     </div>
 
     <!-- Wallet list -->
@@ -183,30 +221,36 @@ function openConvert() {
       <span class="pi pi-wallet empty-icon" aria-hidden="true" />
       <p>Sin wallets todavía. Crea una para empezar.</p>
     </div>
-    <div v-else class="wallet-grid">
-      <div
-        v-for="w in walletStore.wallets"
-        :key="w.wallet_id"
-        class="wallet-card"
-        :class="{ frozen: w.frozen }"
-      >
-        <div class="wc-top">
-          <HashChip :hash="w.wallet_id" :length="16" label="wallet id" />
-          <span v-if="w.frozen" class="frozen-tag">
-            <span class="pi pi-lock" aria-hidden="true" /> Congelada
-          </span>
-        </div>
-        <div class="wc-balance">
-          <AmountDisplay :amount="w.balance" :precision="8" :unit="w.currency" />
-        </div>
-        <div class="wc-key">
-          <HashChip :hash="w.public_key" :length="20" label="public key" />
+    <section v-else class="panel">
+      <div class="panel-h">
+        <span>Mis wallets</span>
+        <span class="count-badge sm">{{ totalWallets }}</span>
+      </div>
+      <div class="wallet-grid">
+        <div
+          v-for="w in walletStore.wallets"
+          :key="w.wallet_id"
+          class="wallet-card"
+          :class="{ frozen: w.frozen }"
+        >
+          <div class="wc-top">
+            <HashChip :hash="w.wallet_id" :length="16" label="wallet id" />
+            <span v-if="w.frozen" class="frozen-tag">
+              <span class="pi pi-lock" aria-hidden="true" /> Congelada
+            </span>
+          </div>
+          <div class="wc-balance">
+            <AmountDisplay :amount="w.balance" :precision="8" :unit="w.currency" />
+          </div>
+          <div class="wc-key">
+            <HashChip :hash="w.public_key" :length="20" label="public key" />
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Transfer panel -->
-    <section v-if="walletStore.wallets.length > 0" class="panel">
+    <section v-if="walletStore.wallets.length > 0" class="flow-card">
       <div class="panel-h">Transferencia</div>
       <form class="transfer-form" @submit.prevent="submitTransfer">
         <div class="form-row">
@@ -253,7 +297,7 @@ function openConvert() {
           <span v-else class="field-hint">Tu frase nunca sale del navegador — solo se usa para firmar la transacción localmente</span>
         </div>
         <div class="form-actions">
-          <button class="btn-primary" type="submit" :disabled="transferring || !mnemonicValid">
+          <button class="btn btn-primary" type="submit" :disabled="transferring || !mnemonicValid">
             <span v-if="transferring" class="pi pi-spin pi-spinner" aria-hidden="true" />
             <span v-else class="pi pi-send" aria-hidden="true" />
             {{ transferring ? 'Enviando…' : 'Enviar transferencia' }}
@@ -326,40 +370,29 @@ function openConvert() {
   flex-wrap: wrap;
 }
 
-.wallet-action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+/* Bigstat KPI row */
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.bigstat {
   background: var(--surface);
-  color: var(--text-2);
-  font-size: 12.5px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
 }
-.wallet-action-btn:hover { background: var(--hover); color: var(--text); }
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds { font-size: 11.5px; color: var(--text-3); }
+.vl-danger { color: var(--danger); }
 
-.btn-primary {
+/* Quick actions bar */
+.quick-actions {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.12s;
-  font-family: var(--font-sans);
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { opacity: 0.88; }
 
 /* Wallet grid */
 .wallet-grid {
@@ -411,13 +444,7 @@ function openConvert() {
 }
 .empty-icon { font-size: 36px; opacity: 0.3; }
 
-/* Transfer panel */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
+/* Panel header (panel card is global) */
 .panel-h {
   padding: 10px 14px;
   font-size: 12px;
