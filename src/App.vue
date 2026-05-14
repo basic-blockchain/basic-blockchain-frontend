@@ -4,11 +4,13 @@ import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
 import { useBlockchainWs } from '@/composables/useBlockchainWs'
 import { useAuthStore } from '@/stores/auth'
+import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const { wsStatus } = useBlockchainWs()
 const auth = useAuthStore()
+const { theme, toggle: toggleTheme } = useTheme()
 const navOpen = ref(false)
 
 watch(route, () => { navOpen.value = false })
@@ -200,6 +202,14 @@ function avatarInitial(name: string): string {
             <span v-else>{{ crumb.label }}</span>
           </template>
         </nav>
+        <button
+          class="theme-toggle"
+          :aria-label="theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          :title="theme === 'dark' ? 'Modo claro' : 'Modo oscuro'"
+          @click="toggleTheme"
+        >
+          <span class="pi" :class="theme === 'dark' ? 'pi-sun' : 'pi-moon'" aria-hidden="true" />
+        </button>
         <div class="topbar-search" role="search">
           <span class="pi pi-search" aria-hidden="true" />
           <input placeholder="Buscar…" aria-label="Buscar en la plataforma" />
@@ -448,6 +458,28 @@ function avatarInitial(name: string): string {
 .topbar-search input::placeholder {
   color: var(--text-3);
 }
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-3);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  background: var(--hover);
+  border-color: var(--border-strong);
+}
+.theme-toggle .pi {
+  font-size: 13px;
+}
+
 .topbar-kbd {
   font-family: var(--font-mono);
   font-size: 10.5px;
