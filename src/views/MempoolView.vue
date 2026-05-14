@@ -16,41 +16,84 @@ onMounted(() => {
 
 <template>
   <div class="mempool-view">
-    <h1>Mempool <span class="count">{{ store.count }}</span></h1>
+    <div class="page-h">
+      <div>
+        <h1>Mempool</h1>
+        <p>Transacciones pendientes de confirmación</p>
+      </div>
+      <span class="count-badge">{{ store.count }} pendientes</span>
+    </div>
+
     <section class="panel">
-      <h2>Pending Transactions</h2>
+      <div class="panel-h">
+        <span>Transacciones pendientes</span>
+        <span class="count-badge sm">{{ store.count }}</span>
+      </div>
       <MempoolTable :transactions="store.transactions" />
     </section>
+
     <section class="panel">
-      <h2>
-        Transaction History
-        <span
-          v-if="confirmedStore.total > 0"
-          class="count"
-        >{{ confirmedStore.total }}</span>
-      </h2>
+      <div class="panel-h">
+        <span>Historial de transacciones</span>
+        <span v-if="confirmedStore.total > 0" class="count-badge sm">{{ confirmedStore.total }}</span>
+      </div>
       <ConfirmedTransactionsTable :transactions="confirmedStore.records" />
     </section>
   </div>
 </template>
 
 <style scoped>
-.mempool-view { display: flex; flex-direction: column; gap: 1.5rem; }
+.mempool-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.page-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.page-h h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
 .panel {
   background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
-.count {
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 0.8rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: 10px;
-  margin-left: 0.5rem;
-  vertical-align: middle;
-  border: 1px solid rgba(180, 169, 230, 0.32);
+.panel-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.count-badge.sm {
+  font-size: 11px;
+  padding: 1px 7px;
+}
+
+@media (max-width: 640px) {
+  .page-h { flex-direction: column; align-items: flex-start; }
 }
 </style>

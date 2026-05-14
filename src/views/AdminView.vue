@@ -1,56 +1,58 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { listUsers, grantRole, revokeRole, banUser, unbanUser, type AdminUser } from '@/api/admin'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { mint as mintApi } from '@/api/wallets'
+import { useStatsStore } from '@/stores/stats'
+import { useMetricsStore } from '@/stores/metrics'
 import { useToast } from 'primevue/usetoast'
 
+const router = useRouter()
 const toast = useToast()
-
-const users = ref<AdminUser[]>([])
-const loading = ref(false)
+const statsStore = useStatsStore()
+const metricsStore = useMetricsStore()
 
 const mintForm = ref({ walletId: '', amount: '' })
 const minting = ref(false)
 
-const AVAILABLE_ROLES = ['ADMIN', 'OPERATOR', 'VIEWER']
+const kpis = computed(() => [
+  {
+    label: 'Usuarios totales',
+    value: statsStore.stats?.users.total ?? '—',
+    sub: `${statsStore.stats?.users.active ?? '—'} activos`,
+    variant: 'default',
+  },
+  {
+    label: 'Usuarios activos',
+    value: statsStore.stats?.users.active ?? '—',
+    sub: `${statsStore.stats?.users.banned ?? 0} baneados`,
+    variant: 'default',
+  },
+  {
+    label: 'Wallets',
+    value: statsStore.stats?.wallets.total ?? '—',
+    sub: `${statsStore.stats?.wallets.user_wallets ?? '—'} de usuario`,
+    variant: 'default',
+  },
+  {
+    label: 'Wallets congeladas',
+    value: statsStore.stats?.wallets.frozen ?? '—',
+    sub: `de ${statsStore.stats?.wallets.total ?? '—'} total`,
+    variant: (statsStore.stats?.wallets.frozen ?? 0) > 0 ? 'warn' : 'default',
+  },
+])
 
-async function fetchUsers() {
-  loading.value = true
-  try {
-    const resp = await listUsers()
-    users.value = resp.users
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Failed to load users', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
-  } finally {
-    loading.value = false
-  }
-}
-
-async function toggleRole(user: AdminUser, role: string) {
-  try {
-    if (user.roles.includes(role)) {
-      await revokeRole(user.user_id, role)
-    } else {
-      await grantRole(user.user_id, role)
-    }
-    await fetchUsers()
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Role change failed', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
-  }
-}
-
-async function toggleBan(user: AdminUser) {
-  try {
-    if (user.banned) {
-      await unbanUser(user.user_id)
-    } else {
-      await banUser(user.user_id)
-    }
-    await fetchUsers()
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Ban action failed', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
-  }
-}
+const chainKpis = computed(() => [
+  {
+    label: 'Altura de cadena',
+    value: metricsStore.metrics?.chainHeight ?? '—',
+    sub: 'bloques confirmados',
+  },
+  {
+    label: 'Txs pendientes',
+    value: metricsStore.metrics?.pendingTransactions ?? '—',
+    sub: 'en mempool',
+  },
+])
 
 async function submitMint() {
   const amount = Number(mintForm.value.amount)
@@ -58,61 +60,96 @@ async function submitMint() {
   minting.value = true
   try {
     await mintApi({ wallet_id: mintForm.value.walletId, amount })
-    toast.add({ severity: 'success', summary: 'Mint submitted', detail: 'Transaction is in the mempool — mine a block to confirm', life: 5000 })
+    toast.add({
+      severity: 'success',
+      summary: 'Mint enviado',
+      detail: 'Transacción en mempool — mina un bloque para confirmar',
+      life: 5000,
+    })
     mintForm.value = { walletId: '', amount: '' }
   } catch (e) {
-    toast.add({ severity: 'error', summary: 'Mint failed', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
+    toast.add({
+      severity: 'error',
+      summary: 'Error al mintear',
+      detail: e instanceof Error ? e.message : 'Error',
+      life: 4000,
+    })
   } finally {
     minting.value = false
   }
 }
 
-onMounted(fetchUsers)
+onMounted(async () => {
+  await Promise.all([
+    statsStore.fetchStats(),
+    metricsStore.fetchAll(),
+  ])
+})
 </script>
 
 <template>
-  <div class="admin-page">
-    <h1 class="page-title">
-      <span
-        class="pi pi-shield"
-        aria-hidden="true"
-      />
-      Admin
-    </h1>
+  <div class="admin-view">
+    <!-- Page header -->
+    <div class="page-h">
+      <div>
+        <h1>Resumen</h1>
+        <p>Panel de administración de la plataforma</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn-ghost" type="button" @click="router.push('/admin/users')">
+          Ver usuarios
+        </button>
+        <button class="btn-ghost" type="button" @click="router.push('/admin/audit')">
+          Ver auditoría
+        </button>
+      </div>
+    </div>
 
-    <!-- Mint section -->
-    <section class="admin-section">
-      <h2 class="section-title">
-        <span
-          class="pi pi-plus-circle"
-          aria-hidden="true"
-        />
-        Mint tokens
-      </h2>
-      <form
-        class="mint-form"
-        @submit.prevent="submitMint"
+    <!-- Platform KPIs -->
+    <div class="kpi-grid">
+      <div
+        v-for="kpi in kpis"
+        :key="kpi.label"
+        class="kpi-card"
+        :class="kpi.variant === 'warn' ? 'kpi-warn' : ''"
       >
-        <div class="form-row">
-          <div class="form-field">
-            <label
-              class="field-label"
-              for="wallet-id"
-            >Wallet ID</label>
+        <div class="kpi-lbl">{{ kpi.label }}</div>
+        <div class="kpi-val">{{ kpi.value }}</div>
+        <div class="kpi-sub">{{ kpi.sub }}</div>
+      </div>
+    </div>
+
+    <!-- Content grid -->
+    <div class="content-grid">
+      <!-- Chain summary -->
+      <section class="panel">
+        <div class="panel-h">Blockchain</div>
+        <div class="chain-kpis">
+          <div v-for="ck in chainKpis" :key="ck.label" class="chain-kpi">
+            <div class="ck-val">{{ ck.value }}</div>
+            <div class="ck-lbl">{{ ck.label }}</div>
+            <div class="ck-sub">{{ ck.sub }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Mint tokens -->
+      <section class="panel">
+        <div class="panel-h">Mintear tokens</div>
+        <form class="mint-form" @submit.prevent="submitMint">
+          <div class="field">
+            <label class="field-label" for="wallet-id">Wallet ID</label>
             <input
               id="wallet-id"
               v-model="mintForm.walletId"
               class="field-input"
               type="text"
-              placeholder="recipient wallet ID"
+              placeholder="ID de la wallet destinataria"
               required
             >
           </div>
-          <div class="form-field">
-            <label
-              class="field-label"
-              for="mint-amount"
-            >Amount</label>
+          <div class="field">
+            <label class="field-label" for="mint-amount">Cantidad</label>
             <input
               id="mint-amount"
               v-model="mintForm.amount"
@@ -124,111 +161,29 @@ onMounted(fetchUsers)
               required
             >
           </div>
-        </div>
-        <button
-          class="btn-primary"
-          type="submit"
-          :disabled="minting"
-        >
-          <span
-            v-if="minting"
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          />
-          <span
-            v-else
-            class="pi pi-plus"
-            aria-hidden="true"
-          />
-          {{ minting ? 'Minting…' : 'Mint' }}
-        </button>
-      </form>
-    </section>
+          <button class="btn-primary" type="submit" :disabled="minting">
+            <span v-if="minting" class="pi pi-spin pi-spinner" aria-hidden="true" />
+            <span v-else class="pi pi-plus" aria-hidden="true" />
+            {{ minting ? 'Enviando…' : 'Mintear' }}
+          </button>
+        </form>
+      </section>
+    </div>
 
-    <!-- Users section -->
-    <section class="admin-section">
-      <div class="section-header">
-        <h2 class="section-title">
-          <span
-            class="pi pi-users"
-            aria-hidden="true"
-          />
-          Users
-        </h2>
-        <button
-          class="btn-refresh"
-          @click="fetchUsers"
-        >
-          <span
-            class="pi pi-refresh"
-            aria-hidden="true"
-          />
-          Refresh
-        </button>
-      </div>
-
-      <div
-        v-if="loading"
-        class="loading-state"
-      >
-        <span
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        />
-        Loading users…
-      </div>
-      <div
-        v-else
-        class="user-table"
-      >
-        <div class="user-row header-row">
-          <span>User</span>
-          <span>Roles</span>
-          <span>Status</span>
-          <span>Actions</span>
-        </div>
+    <!-- Balances by currency -->
+    <section
+      v-if="statsStore.stats?.balances && Object.keys(statsStore.stats.balances).length"
+      class="panel"
+    >
+      <div class="panel-h">Balances en circulación</div>
+      <div class="balances-grid">
         <div
-          v-for="u in users"
-          :key="u.user_id"
-          class="user-row"
-          :class="{ banned: u.banned }"
+          v-for="(amount, currency) in statsStore.stats.balances"
+          :key="currency"
+          class="balance-card"
         >
-          <div class="user-info">
-            <span class="user-name">{{ u.display_name }}</span>
-            <span class="user-handle">@{{ u.username }}</span>
-          </div>
-          <div class="role-chips">
-            <button
-              v-for="role in AVAILABLE_ROLES"
-              :key="role"
-              class="role-chip"
-              :class="{ active: u.roles.includes(role) }"
-              type="button"
-              @click="toggleRole(u, role)"
-            >
-              {{ role }}
-            </button>
-          </div>
-          <div>
-            <span
-              v-if="u.banned"
-              class="status-badge banned"
-            >Banned</span>
-            <span
-              v-else
-              class="status-badge active"
-            >Active</span>
-          </div>
-          <div class="action-btns">
-            <button
-              class="btn-action"
-              :class="u.banned ? 'btn-unban' : 'btn-ban'"
-              type="button"
-              @click="toggleBan(u)"
-            >
-              {{ u.banned ? 'Unban' : 'Ban' }}
-            </button>
-          </div>
+          <div class="bc-currency">{{ currency }}</div>
+          <div class="bc-amount">{{ amount }}</div>
         </div>
       </div>
     </section>
@@ -236,146 +191,225 @@ onMounted(fetchUsers)
 </template>
 
 <style scoped>
-.admin-page { max-width: 960px; }
-.page-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--text-heading);
+.admin-view {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 1.5rem;
+  flex-direction: column;
+  gap: 18px;
 }
-.admin-section {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-soft);
-  margin-bottom: 1.5rem;
-}
-.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
-.section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-heading);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 1.25rem;
-}
-.section-header .section-title { margin: 0; }
-.btn-refresh {
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 8px;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
-  color: var(--text-body);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  transition: background 0.15s;
-}
-.btn-refresh:hover { background: var(--surface-soft); }
 
-/* Mint form */
-.mint-form { display: flex; flex-direction: column; gap: 0.75rem; }
-.form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; }
-@media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
-.form-field { display: flex; flex-direction: column; gap: 0.3rem; }
-.field-label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
-.field-input {
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 8px;
-  background: var(--surface-ground);
-  color: var(--text-body);
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.15s;
-  width: 100%;
-  box-sizing: border-box;
+/* Header */
+.page-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
 }
-.field-input:focus { border-color: var(--primary-color); }
-.btn-primary {
-  align-self: flex-start;
-  padding: 0.55rem 1rem;
-  background: var(--primary-color);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
+.page-h h1 {
+  font-size: 22px;
   font-weight: 600;
-  cursor: pointer;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.page-actions {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: opacity 0.15s;
+  gap: 8px;
 }
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-ghost {
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.btn-ghost:hover {
+  background: var(--hover);
+  color: var(--text);
+}
 
-/* User table */
-.user-table { display: flex; flex-direction: column; gap: 0.5rem; }
-.user-row {
+/* KPI grid */
+.kpi-grid {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.65rem 0.75rem;
-  border-radius: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
-@media (max-width: 700px) { .user-row { grid-template-columns: 1fr; } }
-.header-row {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-muted);
+.kpi-card {
+  background: var(--surface);
+  padding: 14px 16px 16px;
+}
+.kpi-card.kpi-warn .kpi-val { color: var(--warning); }
+.kpi-lbl {
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.kpi-val {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.kpi-sub {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+
+/* Content grid */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Panels */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.panel-h {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  background: var(--surface-ground);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
-.user-row:not(.header-row) { background: var(--surface-ground); }
-.user-row.banned { opacity: 0.6; }
-.user-info { display: flex; flex-direction: column; }
-.user-name { font-weight: 600; font-size: 0.9rem; color: var(--text-body); }
-.user-handle { font-size: 0.78rem; color: var(--text-muted); }
-.role-chips { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-.role-chip {
-  padding: 0.2rem 0.5rem;
-  border-radius: 20px;
-  font-size: 0.72rem;
+
+/* Chain KPIs inside panel */
+.chain-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+.chain-kpi {
+  background: var(--surface);
+  padding: 16px;
+}
+.ck-val {
+  font-size: 28px;
   font-weight: 600;
-  border: 1px solid var(--surface-border);
-  background: var(--surface-card);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.15s;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
-.role-chip.active {
-  background: var(--primary-color);
+.ck-lbl {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+.ck-sub {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* Mint form */
+.mint-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.field-input {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+}
+.field-input:focus { border-color: var(--accent); }
+.btn-primary {
+  align-self: flex-start;
+  padding: 7px 14px;
+  background: var(--accent);
   color: #fff;
-  border-color: var(--primary-color);
-}
-.status-badge {
-  padding: 0.15rem 0.5rem;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-.status-badge.active { background: rgba(52, 211, 153, 0.12); color: #059669; }
-.status-badge.banned { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
-.action-btns { display: flex; gap: 0.4rem; }
-.btn-action {
-  padding: 0.25rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
   border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.12s;
+  font-family: var(--font-sans);
 }
-.btn-ban { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
-.btn-unban { background: rgba(52, 211, 153, 0.1); color: #059669; }
-.loading-state { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); padding: 1rem 0; }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-primary:not(:disabled):hover { opacity: 0.88; }
+
+/* Balances */
+.balances-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  background: var(--border);
+}
+.balance-card {
+  background: var(--surface);
+  padding: 14px 20px;
+  min-width: 140px;
+}
+.bc-currency {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+}
+.bc-amount {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .kpi-grid     { grid-template-columns: 1fr 1fr; }
+  .content-grid { grid-template-columns: 1fr; }
+  .page-h       { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 560px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+}
 </style>
