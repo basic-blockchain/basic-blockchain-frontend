@@ -65,6 +65,18 @@ const router = createRouter({
       meta: { requireRole: 'ADMIN' },
     },
     {
+      path: '/admin/audit',
+      name: 'admin-audit',
+      component: () => import('@/views/AdminAuditView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/compliance',
+      name: 'admin-compliance',
+      component: () => import('@/views/AdminComplianceView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),

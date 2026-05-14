@@ -57,6 +57,8 @@ const allGroups: NavGroup[] = [
       { to: '/admin/currencies',     label: 'Monedas',      icon: 'pi pi-globe',      requireRole: 'ADMIN' },
       { to: '/admin/treasury',       label: 'Tesorería',    icon: 'pi pi-building',   requireRole: 'ADMIN' },
       { to: '/admin/exchange-rates', label: 'Tasas',        icon: 'pi pi-sort-alt',   requireRole: 'ADMIN' },
+      { to: '/admin/audit',          label: 'Auditoría',    icon: 'pi pi-list',       requireRole: 'ADMIN' },
+      { to: '/admin/compliance',     label: 'Compliance',   icon: 'pi pi-shield',     requireRole: 'ADMIN' },
     ],
   },
 ]
@@ -94,6 +96,8 @@ const routeLabels: Record<string, string> = {
   currencies:      'Monedas',
   treasury:        'Tesorería',
   'exchange-rates':'Tasas',
+  audit:           'Auditoría',
+  compliance:      'Compliance',
 }
 
 const breadcrumbs = computed(() =>
