@@ -77,6 +77,24 @@ const router = createRouter({
       meta: { requireRole: 'ADMIN' },
     },
     {
+      path: '/admin/movements',
+      name: 'admin-movements',
+      component: () => import('@/views/AdminMovementsView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/sends',
+      name: 'admin-sends',
+      component: () => import('@/views/AdminSendsView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/settings',
+      name: 'admin-settings',
+      component: () => import('@/views/AdminSettingsView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),
