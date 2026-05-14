@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
+import { useMiningStore } from '@/stores/mining'
 
 export interface MineBlockData {
   nextHeight: number
@@ -10,10 +11,12 @@ export interface MineBlockData {
 const props = defineProps<{ data: MineBlockData }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'complete'): void }>()
 
-const step = ref<0 | 1 | 2>(0)
+const step = ref<0 | 1>(0)
 const nonce = ref(0)
 const hash = ref('')
 const iter = ref(0)
+
+const miningStore = useMiningStore()
 
 let rafId = 0
 let counter = 0
@@ -27,7 +30,8 @@ function randHex(len: number): string {
 }
 
 function truncPrev(): string {
-  const h = props.data.prevHash && props.data.prevHash.length > 0 ? props.data.prevHash : '0xa4f1…d77e'
+  const h =
+    props.data.prevHash && props.data.prevHash.length > 0 ? props.data.prevHash : '0xa4f1…d77e'
   if (h === '0xa4f1…d77e') return h
   return h.slice(0, 18) + '…'
 }
@@ -40,9 +44,6 @@ function tick(): void {
       nonce.value = 100000 + Math.floor(Math.random() * 900000)
       hash.value = '0x0000' + h.slice(4) + 'a8c4f9d12b3e7f1a9b2c8d77'
       iter.value = counter
-      finishTimer = setTimeout(() => {
-        step.value = 2
-      }, 220)
       return
     }
     if (i === 0) {
@@ -60,12 +61,18 @@ function startMining(): void {
   nonce.value = 0
   hash.value = ''
   iter.value = 0
-  rafId = requestAnimationFrame(tick)
-}
 
-function finish(): void {
-  emit('complete')
-  emit('close')
+  // Start animation
+  rafId = requestAnimationFrame(tick)
+
+  // Start mining in background via store
+  miningStore.mine()
+
+  // Close modal after brief animation (1.5s)
+  finishTimer = setTimeout(() => {
+    emit('complete')
+    emit('close')
+  }, 1500)
 }
 
 onUnmounted(() => {
@@ -80,7 +87,9 @@ onUnmounted(() => {
       <div class="modal-h">
         <div>
           <div style="font-size: 14px; font-weight: 600">Minar nuevo bloque</div>
-          <div class="muted" style="font-size: 11.5px">Proof of Work · altura #{{ data.nextHeight }}</div>
+          <div class="muted" style="font-size: 11.5px">
+            Proof of Work · altura #{{ data.nextHeight }}
+          </div>
         </div>
         <button class="btn btn-ghost btn-icon" @click="emit('close')">
           <i class="pi pi-times"></i>
@@ -100,7 +109,10 @@ onUnmounted(() => {
             </div>
             <div class="detail-row">
               <span class="muted">Transacciones a incluir</span>
-              <span>{{ data.pendingCount }} del mempool + 1 coinbase = {{ data.pendingCount + 1 }}</span>
+              <span
+                >{{ data.pendingCount }} del mempool + 1 coinbase =
+                {{ data.pendingCount + 1 }}</span
+              >
             </div>
             <div class="detail-row">
               <span class="muted">Recompensa de bloque</span>
@@ -130,60 +142,24 @@ onUnmounted(() => {
             </div>
           </div>
           <div
-            style="background: #0a0a0a; color: #86efac; border-radius: 8px; font-family: var(--font-mono); font-size: 11px; padding: 14px; margin-bottom: 12px"
+            style="
+              background: #0a0a0a;
+              color: #86efac;
+              border-radius: 8px;
+              font-family: var(--font-mono);
+              font-size: 11px;
+              padding: 14px;
+              margin-bottom: 12px;
+            "
           >
             <div style="color: #6a6a64">
-              $ mining... target prefix: <span style="color:#ffaa00">0000</span>
+              $ mining... target prefix: <span style="color: #ffaa00">0000</span>
             </div>
             <div style="color: #67e8f9">nonce = {{ nonce.toLocaleString('en-US') }}</div>
-            <div style="color: #fda4af">hash  = {{ hash }}</div>
+            <div style="color: #fda4af">hash = {{ hash }}</div>
           </div>
           <div class="muted" style="font-size: 11px">
-            El espacio de búsqueda es 2^32 · estamos probando ~8 hashes por frame
-          </div>
-        </div>
-
-        <div v-else-if="step === 2">
-          <div style="text-align: center; padding: 8px 0 16px">
-            <div
-              style="width: 72px; height: 72px; border-radius: 50%; background: var(--success-soft); color: var(--success); display: inline-flex; align-items: center; justify-content: center; margin: 0 auto"
-            >
-              <i class="pi pi-check" style="font-size: 32px"></i>
-            </div>
-            <div style="font-size: 18px; font-weight: 600; margin-top: 12px">
-              Bloque #{{ data.nextHeight }} minado
-            </div>
-            <div class="muted" style="font-size: 12px; margin-top: 4px">Propagando a 3 peers…</div>
-          </div>
-          <div class="flow-card">
-            <div class="detail-row">
-              <span class="muted">Altura</span>
-              <span class="mono">#{{ data.nextHeight }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="muted">Nonce ganador</span>
-              <span class="mono">{{ nonce.toLocaleString('en-US') }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="muted">Hash</span>
-              <span class="mono">{{ hash.slice(0, 26) }}…</span>
-            </div>
-            <div class="detail-row">
-              <span class="muted">Transacciones</span>
-              <span>{{ data.pendingCount + 1 }} ({{ data.pendingCount }} + coinbase)</span>
-            </div>
-            <div class="detail-row">
-              <span class="muted">Intentos</span>
-              <span class="mono">{{ iter.toLocaleString('en-US') }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="muted">Tiempo</span>
-              <span>~3.4 s</span>
-            </div>
-            <div class="detail-row">
-              <span class="muted">Recompensa</span>
-              <span>50 BTC + $3.21 fees</span>
-            </div>
+            El minado continúa en background. Puedes cerrar este modal.
           </div>
         </div>
       </div>
@@ -193,15 +169,8 @@ onUnmounted(() => {
           <button class="btn" @click="emit('close')">Cancelar</button>
           <button class="btn btn-primary" @click="startMining">⛏ Empezar a minar</button>
         </template>
-        <template v-else-if="step === 1">
-          <button class="btn" @click="emit('close')">Cerrar (sigue corriendo)</button>
-        </template>
         <template v-else>
           <button class="btn" @click="emit('close')">Cerrar</button>
-          <button class="btn btn-primary" @click="finish">
-            <i class="pi pi-external-link"></i>
-            <span>Ver en explorer</span>
-          </button>
         </template>
       </div>
     </div>
