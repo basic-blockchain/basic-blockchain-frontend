@@ -5,6 +5,7 @@ import {
   grantRole, revokeRole, type AdminUser,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
+import UserDrawer, { type DrawerUser, type DrawerAction } from '@/components/drawers/UserDrawer.vue'
 
 const auth = useAuthStore()
 const users = ref<AdminUser[]>([])
@@ -81,6 +82,47 @@ async function toggleRole(u: AdminUser, role: string) {
 }
 
 const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
+
+const drawerUser = ref<DrawerUser | null>(null)
+const drawerOpen = ref(false)
+
+function toDrawerUser(u: AdminUser): DrawerUser {
+  const status = u.deleted_at ? 'deleted' : u.banned ? 'banned' : 'active'
+  return {
+    id: u.user_id,
+    fullName: u.display_name,
+    email: u.email ?? u.username,
+    phone: '—',
+    country: { name: '—', code: '—', flag: '🌐' },
+    role: u.roles?.includes('ADMIN') ? 'admin' : u.roles?.includes('OPERATOR') ? 'staff' : 'user',
+    twoFA: false,
+    kyc: 'L1',
+    status,
+    createdAt: u.created_at ?? new Date().toISOString(),
+    lastActive: u.created_at ?? new Date().toISOString(),
+    totalUsd: 0,
+    wallets: [],
+    movements: [],
+    audit: [],
+    flags: {},
+  }
+}
+
+function openDrawer(u: AdminUser) {
+  drawerUser.value = toDrawerUser(u)
+  drawerOpen.value = true
+}
+
+async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
+  const u = users.value.find((x) => x.user_id === user.id)
+  if (!u) return
+  if (action === 'ban') await banUser(u.user_id)
+  else if (action === 'unban') await unbanUser(u.user_id)
+  else if (action === 'delete') await softDeleteUser(u.user_id)
+  else if (action === 'restore') await restoreUser(u.user_id, true)
+  drawerOpen.value = false
+  await load()
+}
 </script>
 
 <template>
@@ -116,7 +158,7 @@ const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
           </tr>
         </thead>
         <tbody>
-          <tr v-for="u in users" :key="u.user_id" :class="{ 'row-muted': !!u.deleted_at }">
+          <tr v-for="u in users" :key="u.user_id" :class="{ 'row-muted': !!u.deleted_at }" style="cursor:pointer" @click="openDrawer(u)">
             <td class="user-cell">
               <span class="display-name">{{ u.display_name }}</span>
               <span class="username">@{{ u.username }}</span>
@@ -138,7 +180,7 @@ const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
                 {{ userStatus(u) === 'active' ? 'Activo' : userStatus(u) === 'banned' ? 'Baneado' : 'Eliminado' }}
               </span>
             </td>
-            <td class="actions-cell">
+            <td class="actions-cell" @click.stop>
               <template v-if="!u.deleted_at">
                 <button class="btn-sm btn-edit" @click="openEdit(u)">Editar</button>
                 <button class="btn-sm" :class="u.banned ? 'btn-success' : 'btn-danger'" :disabled="isSelf(u)" @click="toggleBan(u)">
@@ -189,6 +231,13 @@ const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
         </div>
       </div>
     </div>
+
+    <UserDrawer
+      :user="drawerUser"
+      :open="drawerOpen"
+      @close="drawerOpen = false"
+      @action="([action, user]) => handleDrawerAction(action, user)"
+    />
   </div>
 </template>
 
