@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import {
   listUsers, banUser, unbanUser, softDeleteUser, restoreUser, updateUser,
-  type AdminUser,
+  listAllWallets, type AdminUser, type WalletAdminRecord,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
 import UserDrawer, { type DrawerUser, type DrawerAction } from '@/components/drawers/UserDrawer.vue'
@@ -79,8 +79,22 @@ const deletedCount = computed(() => users.value.filter((u) => !!u.deleted_at).le
 
 const drawerUser = ref<DrawerUser | null>(null)
 const drawerOpen = ref(false)
+const drawerLoading = ref(false)
 
-function toDrawerUser(u: AdminUser): DrawerUser {
+function walletRecordToDrawer(w: WalletAdminRecord): import('@/components/drawers/UserDrawer.vue').DrawerWallet {
+  return {
+    id: w.wallet_id,
+    asset: w.currency,
+    network: w.currency,
+    address: w.wallet_id,
+    balance: String(w.balance),
+    balanceUsd: 0,
+    status: w.frozen ? 'frozen' : 'active',
+    createdAt: '—',
+  }
+}
+
+function toDrawerUser(u: AdminUser, wallets: WalletAdminRecord[] = []): DrawerUser {
   const status = u.deleted_at ? 'deleted' : u.banned ? 'banned' : 'active'
   return {
     id: u.user_id,
@@ -94,17 +108,27 @@ function toDrawerUser(u: AdminUser): DrawerUser {
     status,
     createdAt: u.created_at ?? new Date().toISOString(),
     lastActive: u.created_at ?? new Date().toISOString(),
-    totalUsd: 0,
-    wallets: [],
+    totalUsd: wallets.reduce((s, w) => s + Number(w.balance), 0),
+    wallets: wallets.map(walletRecordToDrawer),
     movements: [],
     audit: [],
     flags: {},
   }
 }
 
-function openDrawer(u: AdminUser) {
+async function openDrawer(u: AdminUser) {
   drawerUser.value = toDrawerUser(u)
   drawerOpen.value = true
+  drawerLoading.value = true
+  try {
+    const { wallets } = await listAllWallets()
+    const userWallets = wallets.filter((w) => w.user_id === u.user_id)
+    drawerUser.value = toDrawerUser(u, userWallets)
+  } catch {
+    // keep drawer open with no wallet data
+  } finally {
+    drawerLoading.value = false
+  }
 }
 
 async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
