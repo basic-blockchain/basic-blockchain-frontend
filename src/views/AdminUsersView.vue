@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   listUsers, banUser, unbanUser, softDeleteUser, restoreUser, updateUser,
   grantRole, revokeRole, type AdminUser,
@@ -100,6 +100,11 @@ async function toggleRole(u: AdminUser, role: string) {
 
 const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
 
+const totalCount   = computed(() => users.value.length)
+const activeCount  = computed(() => users.value.filter((u) => !u.banned && !u.deleted_at).length)
+const bannedCount  = computed(() => users.value.filter((u) => u.banned && !u.deleted_at).length)
+const deletedCount = computed(() => users.value.filter((u) => !!u.deleted_at).length)
+
 const drawerUser = ref<DrawerUser | null>(null)
 const drawerOpen = ref(false)
 
@@ -153,6 +158,29 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
         <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
         Actualizar
       </button>
+    </div>
+
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Usuarios</div>
+        <div class="vl">{{ totalCount }}</div>
+        <div class="ds">registrados en total</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Activos</div>
+        <div class="vl vl-ok">{{ activeCount }}</div>
+        <div class="ds">cuentas operativas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Baneados</div>
+        <div class="vl" :class="{ 'vl-warn': bannedCount > 0 }">{{ bannedCount }}</div>
+        <div class="ds">acceso restringido</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Eliminados</div>
+        <div class="vl" :class="{ 'vl-danger': deletedCount > 0 }">{{ deletedCount }}</div>
+        <div class="ds">soft-delete activo</div>
+      </div>
     </div>
 
     <div v-if="error" class="inline-alert danger">{{ error }}</div>
@@ -472,7 +500,27 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
 
 .count-badge.sm { font-size: 11px; padding: 1px 7px; }
 
+/* Bigstat KPI row */
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.bigstat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+.lb  { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl  { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds  { font-size: 11.5px; color: var(--text-3); }
+.vl-ok     { color: var(--success); }
+.vl-warn   { color: var(--warning); }
+.vl-danger { color: var(--danger); }
+
 @media (max-width: 900px) {
+  .bigstat-row { grid-template-columns: repeat(2, 1fr); }
   .data-table th:nth-child(2),
   .data-table td:nth-child(2) { display: none; }
 }
