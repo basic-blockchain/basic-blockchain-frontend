@@ -1,7 +1,7 @@
 # Phase Flow Plan
 
 Status: living
-Last updated: 2026-05-08
+Last updated: 2026-05-14
 
 ## Purpose
 
@@ -82,10 +82,28 @@ Define the real execution flow from current feature delivery to release promotio
 - Local push safety hook:
   - .githooks/pre-push
 
-## 4. Next implementation phases (product)
+## 4. Frontend Phase 5 — delivery map (2026-05)
 
-- Roadmap items are tracked in issues and ADRs; update this section when
-  a new phase is approved.
+Phase 5 delivers the complete interactive UI companion to the simulator v0.14 backend.
+Each sub-phase is a dedicated feature branch targeting `develop`.
+
+| Sub-phase | Branch | Scope | Status |
+|-----------|--------|-------|--------|
+| 5a | feature/design-system-base | Design tokens, global CSS utilities, layout shell | merged |
+| 5b | feature/blockchain-explorer-ux | ChainList, MempoolTable, ConfirmedTransactionsTable v1 | merged |
+| 5c | feature/admin-dashboard-stats | DashboardView bigstat row, MetricsBar, MineButton | merged |
+| 5d | feature/flows-modals | MineBlockFlow, TransactionDetailFlow, ConfirmUserModal, SendFlow, ExchangeFlow | merged |
+| 5e | feature/chain-views-drawers | ChainView explorer, MempoolView click-through, NodesView peer table, UserDrawer, AdminUsersView wiring | open → develop |
+| 5f | feature/admin-catalog-views | AdminWalletsView, AdminCurrenciesView, AdminExchangeRatesView bigstat + layout enrichment | open → develop |
+| 5g | — | Release notes, promotion chain, docs | this document |
+
+### Phase 5g — documentation and promotion checklist
+
+- [ ] `docs/components.md` — Flows + Drawers sections added (this PR)
+- [ ] `docs/phase-flow-plan.md` — section 4 updated (this PR)
+- [ ] Simulator `docs/architecture.md` + `docs/user-journeys.md` — Frontend companion section
+- [ ] Merge all feature branches to `develop`
+- [ ] Run `scripts/devsecops_promotion_chain.sh` for both repos
 
 ## 5. Definition of done by phase
 
