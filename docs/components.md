@@ -1,7 +1,7 @@
 # Component Catalog
 
 Status: Accepted
-Last updated: 2026-05-08
+Last updated: 2026-05-14
 Scope: All reusable UI components under `src/components/` and `src/views/`.
 
 Components are organised under the **Atomic Design** methodology:
@@ -33,6 +33,11 @@ may call `useXxxStore()`**.
   - MetricsBar
   - MineButton
   - MiningChart
+- Flows
+  - MineBlockFlow
+  - TransactionDetailFlow
+- Drawers
+  - UserDrawer
 - Views
   - LoginView
   - RegisterView
@@ -406,6 +411,88 @@ interface MiningChartProps {
 
 ---
 
+## Flows
+
+Flows are multi-step modal overlays rendered directly inside views. They
+manage their own internal state and emit `close` + `complete` events. They
+never import stores directly; all domain data is passed via props.
+
+### MineBlockFlow
+
+**File:** `src/components/flows/MineBlockFlow.vue`
+**Purpose:** animated PoW simulation — shows nonce/hash progress in a
+terminal-style dark panel, fires `complete` when the block is "mined".
+
+**Props:**
+```ts
+interface MineBlockData {
+  nextHeight: number
+  pendingCount: number
+  prevHash: string
+}
+// received as: :data="mineData"
+```
+
+**Emits:** `close`, `complete`
+
+**Steps:** `0` ready → `1` mining (RAF loop, 8 attempts/frame) → `2` mined
+
+---
+
+### TransactionDetailFlow
+
+**File:** `src/components/flows/TransactionDetailFlow.vue`
+**Purpose:** full transaction detail overlay — from/to boxes, amount display,
+`.kvs` key-value grid, and a trace timeline that appends confirmation rows when
+`status === 'completed'`.
+
+**Props:**
+```ts
+interface TxDetailData {
+  tx: { id: string; sender: string; receiver: string; amount: number; currency: string; fee: number; size: number }
+  status: 'pending' | 'completed'
+  block?: number
+  confirmedAt?: string
+}
+// received as: :data="selectedTx"
+```
+
+**Emits:** `close`
+
+---
+
+## Drawers
+
+Drawers are slide-in panels anchored to the right edge of the viewport.
+They overlay content with a semi-transparent scrim and are dismissed via
+an Escape key listener, scrim click, or an explicit close button.
+
+### UserDrawer
+
+**File:** `src/components/drawers/UserDrawer.vue`
+**Purpose:** full user profile drawer for admin views — 5 tabs (overview /
+wallets / movements / kyc / audit), status banners for deleted/banned/frozen/
+pending_kyc states, and conditional action buttons (ban, unban, freeze,
+unfreeze, delete, restore, edit).
+
+**Exported types:**
+```ts
+interface DrawerUser { id: string; email: string; role: string; status: string; wallets: DrawerWallet[]; movements: DrawerMovement[]; auditLog: DrawerAuditEvent[] }
+interface DrawerWallet { id: string; currency: string; balance: number; status: string }
+interface DrawerMovement { id: string; type: string; amount: number; currency: string; ts: string }
+interface DrawerAuditEvent { id: string; action: string; actor: string; ts: string }
+type DrawerAction = 'ban' | 'unban' | 'freeze' | 'unfreeze' | 'delete' | 'restore' | 'edit'
+```
+
+**Props:** `user: DrawerUser | null`, `open: boolean`
+
+**Emits:** `close`, `action: [DrawerAction, DrawerUser]`
+
+**CSS:** `.scrim` (fixed overlay, opacity transition) + `.drawer` (480 px
+fixed right panel, `transform: translateX(100%)` → `translateX(0)`)
+
+---
+
 ## Views
 
 Views are route targets. They compose organisms and handle route params.
@@ -460,6 +547,8 @@ Views are route targets. They compose organisms and handle route params.
 
 **Route:** `/admin/users`
 **Purpose:** admin user management (edit, ban, soft delete, restore, roles).
+Opens `UserDrawer` on row click; action handler calls the corresponding
+ban/unban/softDelete/restore API and refreshes the list.
 
 **Props:** none.
 
@@ -468,7 +557,9 @@ Views are route targets. They compose organisms and handle route params.
 ### AdminWalletsView
 
 **Route:** `/admin/wallets`
-**Purpose:** list all wallets and freeze/unfreeze (ADMIN only).
+**Purpose:** list all wallets and freeze/unfreeze (ADMIN only). Phase 5f:
+bigstat row (Total / Activas / Congeladas / Inactivas), asset-pill first
+column, `.btn .btn-sm` header actions (Exportar, Congelar selección).
 
 **Props:** none.
 
@@ -489,7 +580,10 @@ pending mempool.
 ### ChainView
 
 **Route:** `/chain`
-**Purpose:** mining time chart plus full chain list.
+**Purpose:** Phase 5e — bigstat row (height, transactions, avg time, last
+hash) + two-column explorer (block list + block detail panel). Launches
+`MineBlockFlow` from a header button. Clicking a block row selects it in
+the detail panel.
 
 **Props:** none.
 
@@ -498,8 +592,9 @@ pending mempool.
 ### MempoolView
 
 **Route:** `/mempool`
-**Purpose:** pending mempool table plus confirmed history (loaded from
-`GET /api/v1/transactions`).
+**Purpose:** Phase 5e — bigstat row (pending, confirmed, total volume, avg
+fee) + clickable pending table (opens `TransactionDetailFlow`) + confirmed
+history table. Header button launches `MineBlockFlow`.
 
 **Props:** none.
 
@@ -508,7 +603,9 @@ pending mempool.
 ### NodesView
 
 **Route:** `/nodes`
-**Purpose:** `NodePanel` for peer registration and consensus resolve.
+**Purpose:** Phase 5e — bigstat row (peers, active, consensus status,
+longest chain) + peer table with status badges (deterministic from URL) +
+register peer input + resolve consensus with result banner.
 
 **Props:** none.
 
