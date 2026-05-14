@@ -34,7 +34,9 @@ const allGroups: NavGroup[] = [
     label: 'Operaciones',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: 'pi pi-home' },
-      { to: '/wallet',    label: 'Wallet',    icon: 'pi pi-wallet', requireAuth: true },
+      { to: '/wallet',    label: 'Wallet',    icon: 'pi pi-wallet',   requireAuth: true },
+      { to: '/p2p',       label: 'P2P',       icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
+      { to: '/exchange',  label: 'Exchange',  icon: 'pi pi-chart-line', requireAuth: true },
     ],
   },
   {
@@ -98,6 +100,8 @@ const routeLabels: Record<string, string> = {
   'exchange-rates':'Tasas',
   audit:           'Auditoría',
   compliance:      'Compliance',
+  p2p:             'P2P',
+  exchange:        'Exchange',
 }
 
 const breadcrumbs = computed(() =>
