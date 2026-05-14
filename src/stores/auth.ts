@@ -14,6 +14,8 @@ export interface AuthUser {
   username: string
   display_name: string
   roles: string[]
+  banned: boolean
+  created_at: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -91,6 +93,8 @@ export const useAuthStore = defineStore('auth', () => {
       username: profile.username,
       display_name: profile.display_name,
       roles: profile.roles,
+      banned: profile.banned,
+      created_at: profile.created_at,
     }
   }
 

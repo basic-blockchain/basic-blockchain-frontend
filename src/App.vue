@@ -5,6 +5,8 @@ import Toast from 'primevue/toast'
 import { useBlockchainWs } from '@/composables/useBlockchainWs'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
+import ProfileDrawer from '@/components/drawers/ProfileDrawer.vue'
+import MiningNotification from '@/components/organisms/MiningNotification.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,8 +14,11 @@ const { wsStatus } = useBlockchainWs()
 const auth = useAuthStore()
 const { theme, toggle: toggleTheme } = useTheme()
 const navOpen = ref(false)
+const showProfile = ref(false)
 
-watch(route, () => { navOpen.value = false })
+watch(route, () => {
+  navOpen.value = false
+})
 
 interface NavItem {
   to: string
@@ -34,52 +39,57 @@ const allGroups: NavGroup[] = [
     label: 'Operaciones',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: 'pi pi-home' },
-      { to: '/wallet',    label: 'Wallet',    icon: 'pi pi-wallet',   requireAuth: true },
-      { to: '/p2p',       label: 'P2P',       icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
-      { to: '/exchange',  label: 'Exchange',  icon: 'pi pi-chart-line', requireAuth: true },
+      { to: '/wallet', label: 'Wallet', icon: 'pi pi-wallet', requireAuth: true },
+      { to: '/p2p', label: 'P2P', icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
+      { to: '/exchange', label: 'Exchange', icon: 'pi pi-chart-line', requireAuth: true },
     ],
   },
   {
     label: 'Blockchain',
     items: [
-      { to: '/chain',      label: 'Chain',      icon: 'pi pi-link' },
-      { to: '/mempool',    label: 'Mempool',    icon: 'pi pi-inbox' },
-      { to: '/nodes',      label: 'Nodos',      icon: 'pi pi-sitemap' },
+      { to: '/chain', label: 'Chain', icon: 'pi pi-link' },
+      { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
+      { to: '/nodes', label: 'Nodos', icon: 'pi pi-sitemap' },
       { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
-      { to: '/health',     label: 'Health',     icon: 'pi pi-heart' },
+      { to: '/health', label: 'Health', icon: 'pi pi-heart' },
     ],
   },
   {
     label: 'Plataforma',
     requireRole: 'ADMIN',
     items: [
-      { to: '/admin',                label: 'Resumen',      icon: 'pi pi-chart-bar',  requireRole: 'ADMIN' },
-      { to: '/admin/users',          label: 'Usuarios',     icon: 'pi pi-users',      requireRole: 'ADMIN' },
-      { to: '/admin/wallets',        label: 'Wallets',      icon: 'pi pi-wallet',     requireRole: 'ADMIN' },
-      { to: '/admin/currencies',     label: 'Monedas',      icon: 'pi pi-globe',      requireRole: 'ADMIN' },
-      { to: '/admin/treasury',       label: 'Tesorería',    icon: 'pi pi-building',   requireRole: 'ADMIN' },
-      { to: '/admin/exchange-rates', label: 'Tasas',        icon: 'pi pi-sort-alt',   requireRole: 'ADMIN' },
-      { to: '/admin/audit',          label: 'Auditoría',    icon: 'pi pi-list',       requireRole: 'ADMIN' },
-      { to: '/admin/compliance',     label: 'Compliance',   icon: 'pi pi-shield',     requireRole: 'ADMIN' },
-      { to: '/admin/movements',      label: 'Movimientos',  icon: 'pi pi-arrows-h',   requireRole: 'ADMIN' },
-      { to: '/admin/sends',          label: 'Envíos',       icon: 'pi pi-send',       requireRole: 'ADMIN' },
-      { to: '/admin/settings',       label: 'Ajustes',      icon: 'pi pi-cog',        requireRole: 'ADMIN' },
+      { to: '/admin', label: 'Resumen', icon: 'pi pi-chart-bar', requireRole: 'ADMIN' },
+      { to: '/admin/users', label: 'Usuarios', icon: 'pi pi-users', requireRole: 'ADMIN' },
+      { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet', requireRole: 'ADMIN' },
+      { to: '/admin/currencies', label: 'Monedas', icon: 'pi pi-globe', requireRole: 'ADMIN' },
+      { to: '/admin/treasury', label: 'Tesorería', icon: 'pi pi-building', requireRole: 'ADMIN' },
+      { to: '/admin/exchange-rates', label: 'Tasas', icon: 'pi pi-sort-alt', requireRole: 'ADMIN' },
+      { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list', requireRole: 'ADMIN' },
+      { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield', requireRole: 'ADMIN' },
+      {
+        to: '/admin/movements',
+        label: 'Movimientos',
+        icon: 'pi pi-arrows-h',
+        requireRole: 'ADMIN',
+      },
+      { to: '/admin/sends', label: 'Envíos', icon: 'pi pi-send', requireRole: 'ADMIN' },
+      { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog', requireRole: 'ADMIN' },
     ],
   },
 ]
 
 const navGroups = computed(() =>
   allGroups
-    .filter(g => !g.requireRole || auth.hasRole(g.requireRole))
-    .map(g => ({
+    .filter((g) => !g.requireRole || auth.hasRole(g.requireRole))
+    .map((g) => ({
       ...g,
-      items: g.items.filter(item => {
+      items: g.items.filter((item) => {
         if (item.requireRole) return auth.hasRole(item.requireRole)
         if (item.requireAuth) return auth.isAuthenticated
         return true
       }),
     }))
-    .filter(g => g.items.length > 0)
+    .filter((g) => g.items.length > 0)
 )
 
 function isActive(to: string): boolean {
@@ -88,38 +98,36 @@ function isActive(to: string): boolean {
 }
 
 const routeLabels: Record<string, string> = {
-  dashboard:       'Dashboard',
-  chain:           'Chain',
-  mempool:         'Mempool',
-  nodes:           'Nodos',
-  validation:      'Validación',
-  health:          'Health',
-  wallet:          'Wallet',
-  admin:           'Plataforma',
-  users:           'Usuarios',
-  wallets:         'Wallets',
-  currencies:      'Monedas',
-  treasury:        'Tesorería',
-  'exchange-rates':'Tasas',
-  audit:           'Auditoría',
-  compliance:      'Compliance',
-  p2p:             'P2P',
-  exchange:        'Exchange',
-  movements:       'Movimientos',
-  sends:           'Envíos',
-  settings:        'Ajustes',
+  dashboard: 'Dashboard',
+  chain: 'Chain',
+  mempool: 'Mempool',
+  nodes: 'Nodos',
+  validation: 'Validación',
+  health: 'Health',
+  wallet: 'Wallet',
+  admin: 'Plataforma',
+  users: 'Usuarios',
+  wallets: 'Wallets',
+  currencies: 'Monedas',
+  treasury: 'Tesorería',
+  'exchange-rates': 'Tasas',
+  audit: 'Auditoría',
+  compliance: 'Compliance',
+  p2p: 'P2P',
+  exchange: 'Exchange',
+  movements: 'Movimientos',
+  sends: 'Envíos',
+  settings: 'Ajustes',
 }
 
 const breadcrumbs = computed(() =>
   route.path
     .split('/')
     .filter(Boolean)
-    .map(seg => ({ label: routeLabels[seg] ?? seg }))
+    .map((seg) => ({ label: routeLabels[seg] ?? seg }))
 )
 
-const isAuthRoute = computed(() =>
-  ['/login', '/register', '/activate'].includes(route.path)
-)
+const isAuthRoute = computed(() => ['/login', '/register', '/activate'].includes(route.path))
 
 async function logout() {
   auth.logout()
@@ -159,7 +167,12 @@ function avatarInitial(name: string): string {
     <div v-if="navOpen" class="nav-overlay" aria-hidden="true" @click="navOpen = false" />
 
     <!-- Sidebar -->
-    <aside id="sidebar-nav" class="sidebar" :class="{ open: navOpen }" aria-label="Navegación principal">
+    <aside
+      id="sidebar-nav"
+      class="sidebar"
+      :class="{ open: navOpen }"
+      aria-label="Navegación principal"
+    >
       <div class="sb-brand">
         <span class="sb-brand-mark" aria-hidden="true">C</span>
         <span>Cadena</span>
@@ -183,11 +196,15 @@ function avatarInitial(name: string): string {
       </nav>
 
       <div v-if="auth.isAuthenticated && auth.user" class="sb-foot">
-        <span class="sb-avatar" aria-hidden="true">{{ avatarInitial(auth.user.display_name) }}</span>
-        <div class="sb-foot-text">
-          <span class="sb-foot-name">{{ auth.user.display_name }}</span>
-          <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
-        </div>
+        <button class="sb-profile-btn" aria-label="Abrir perfil" @click="showProfile = true">
+          <span class="sb-avatar" aria-hidden="true">{{
+            avatarInitial(auth.user.display_name)
+          }}</span>
+          <div class="sb-foot-text">
+            <span class="sb-foot-name">{{ auth.user.display_name }}</span>
+            <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
+          </div>
+        </button>
         <button class="sb-logout" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
           <span class="pi pi-sign-out" aria-hidden="true" />
         </button>
@@ -237,6 +254,9 @@ function avatarInitial(name: string): string {
     </div>
 
     <Toast position="bottom-right" />
+    <MiningNotification />
+
+    <ProfileDrawer :user="auth.user" :open="showProfile" @close="showProfile = false" />
   </div>
 </template>
 
@@ -308,7 +328,9 @@ function avatarInitial(name: string): string {
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 .sb-link:hover {
   background: var(--hover);
@@ -375,6 +397,24 @@ function avatarInitial(name: string): string {
   color: var(--text-3);
 }
 
+.sb-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius);
+  text-align: left;
+  transition: background 0.12s;
+}
+.sb-profile-btn:hover {
+  background: var(--hover);
+}
+
 .sb-logout {
   background: none;
   border: none;
@@ -384,7 +424,9 @@ function avatarInitial(name: string): string {
   border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
-  transition: color 0.12s, background 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
   flex-shrink: 0;
 }
 .sb-logout:hover {
@@ -482,7 +524,10 @@ function avatarInitial(name: string): string {
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: color 0.12s, background 0.12s, border-color 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s,
+    border-color 0.12s;
   flex-shrink: 0;
 }
 .theme-toggle:hover {
