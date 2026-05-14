@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ── Cadena design tokens ───────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:             #faf9f6;
+  --surface:        #ffffff;
+  --surface-2:      #f5f4f0;
+  --hover:          #f1efe9;
+
+  /* Borders */
+  --border:         #e6e3db;
+  --border-strong:  #d6d3ca;
+
+  /* Text */
+  --text:           #1a1917;
+  --text-2:         #5d5b54;
+  --text-3:         #8e8b82;
+
+  /* Accent / brand */
+  --accent:         #2456e6;
+  --accent-soft:    #eaf0fe;
+  --accent-text:    #1d44b8;
+
+  /* Semantic */
+  --success:        #1f7a3a;
+  --success-soft:   #e6f4ea;
+  --warning:        #a8590b;
+  --warning-soft:   #fbecd5;
+  --danger:         #ad2820;
+  --danger-soft:    #fbe7e4;
+  --info:           #0a6e88;
+  --info-soft:      #e0f1f5;
+  --muted:          #6b6962;
+  --muted-soft:     #ecebe6;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20,18,12,0.04), 0 1px 1px rgba(20,18,12,0.02);
+  --shadow-md: 0 4px 16px rgba(20,18,12,0.06), 0 2px 4px rgba(20,18,12,0.04);
+  --shadow-lg: 0 24px 64px rgba(20,18,12,0.16), 0 8px 24px rgba(20,18,12,0.08);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  /* Typography */
+  --font-sans: "Geist", "Söhne", "Helvetica Neue", Helvetica, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Table row height */
+  --row-h: 44px;
+}
+
+html[data-density="compact"] {
+  --row-h: 34px;
+}
