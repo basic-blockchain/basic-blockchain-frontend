@@ -99,6 +99,8 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),
     },
+    { path: '/p2p',      name: 'p2p',      component: () => import('@/views/P2PView.vue'),      meta: { requireAuth: true } },
+    { path: '/exchange', name: 'exchange', component: () => import('@/views/ExchangeView.vue'),  meta: { requireAuth: true } },
     { path: '/chain', name: 'chain', component: () => import('@/views/ChainView.vue') },
     { path: '/mempool', name: 'mempool', component: () => import('@/views/MempoolView.vue') },
     { path: '/nodes', name: 'nodes', component: () => import('@/views/NodesView.vue') },
