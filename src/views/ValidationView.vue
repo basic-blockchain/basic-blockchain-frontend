@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import { useChainStore } from '@/stores/chain'
@@ -130,155 +129,151 @@ onMounted(async () => {
 
 <template>
   <div class="validation-view">
-    <div class="header-row">
-      <h1>Validation Center</h1>
-      <div class="header-actions">
-        <Button
-          label="Validate Chain"
-          icon="pi pi-check-circle"
-          :loading="loadingChainValidation"
+    <div class="page-h">
+      <div>
+        <h1>Centro de validación</h1>
+        <p>Verificación de integridad de la cadena, bloques y transacciones</p>
+      </div>
+      <div class="page-actions">
+        <button
+          class="btn-primary"
+          type="button"
+          :disabled="loadingChainValidation"
           @click="validateCurrentChain"
-        />
-        <Button
+        >
+          <span
+            class="pi"
+            :class="loadingChainValidation ? 'pi-spin pi-spinner' : 'pi-check-circle'"
+            aria-hidden="true"
+          />
+          Validar cadena
+        </button>
+        <button
           v-if="historyStore.total > 0"
-          label="Export History"
-          icon="pi pi-download"
-          severity="secondary"
+          class="btn-ghost"
+          type="button"
           @click="downloadHistory"
-        />
+        >
+          <span class="pi pi-download" aria-hidden="true" />
+          Exportar historial
+        </button>
       </div>
     </div>
 
-    <section class="panel chain-panel">
-      <h2>Chain Status</h2>
-      <p class="muted">
-        Backend endpoint: <strong>/valid</strong>
-      </p>
-      <div
-        class="result"
-        :class="chainValidation?.valid ? 'ok' : 'neutral'"
-      >
-        <span v-if="chainValidation">{{ chainValidation.message }}</span>
-        <span v-else>Run validation to verify chain integrity.</span>
+    <!-- Chain status -->
+    <section class="panel">
+      <div class="panel-h">Estado de la cadena</div>
+      <div class="chain-status-body">
+        <div
+          class="chain-result"
+          :class="chainValidation === null ? 'neutral' : chainValidation.valid ? 'ok' : 'fail'"
+        >
+          <span
+            class="pi"
+            :class="chainValidation?.valid ? 'pi-check-circle' : chainValidation ? 'pi-times-circle' : 'pi-circle'"
+            aria-hidden="true"
+          />
+          <span>
+            {{ chainValidation ? chainValidation.message : 'Ejecuta la validación para verificar la integridad de la cadena.' }}
+          </span>
+        </div>
+        <p class="endpoint-note">Endpoint: <code>/valid</code></p>
       </div>
     </section>
 
-    <div class="validation-grid">
+    <!-- Validation grid -->
+    <div class="val-grid">
+      <!-- Block validation -->
       <section class="panel">
-        <h2>Block Validation</h2>
-        <div class="form-row">
+        <div class="panel-h">Validación de bloque</div>
+        <div class="panel-body">
           <InputNumber
             v-model="blockForm.index"
-            placeholder="Block index"
+            placeholder="Índice de bloque"
             :min="1"
+            class="val-input"
           />
-        </div>
-        <div
-          v-if="selectedBlock"
-          class="result-list"
-        >
-          <div
-            v-for="check in blockChecks"
-            :key="check.label"
-            class="result-item"
-            :class="check.ok ? 'ok' : 'error'"
-          >
-            <i :class="check.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
-            <span>{{ check.label }}</span>
+          <div v-if="selectedBlock" class="check-list">
+            <div
+              v-for="check in blockChecks"
+              :key="check.label"
+              class="check-item"
+              :class="check.ok ? 'ok' : 'fail'"
+            >
+              <span class="pi" :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'" aria-hidden="true" />
+              <span>{{ check.label }}</span>
+            </div>
           </div>
+          <div v-else-if="blockNotFound" class="inline-alert fail">
+            <span class="pi pi-exclamation-triangle" aria-hidden="true" />
+            Bloque #{{ blockForm.index }} no existe (altura: {{ chainStore.length }}).
+          </div>
+          <p v-else class="hint">
+            Ingresa un índice (1–{{ chainStore.length || '?' }}) para inspeccionar el bloque.
+          </p>
         </div>
-        <div
-          v-else-if="blockNotFound"
-          class="result error-banner"
-        >
-          <i class="pi pi-exclamation-triangle" />
-          Block #{{ blockForm.index }} does not exist in the current chain (height: {{ chainStore.length }}).
-        </div>
-        <p
-          v-else
-          class="muted"
-        >
-          Enter a block index (1–{{ chainStore.length || '?' }}) to inspect its integrity.
-        </p>
       </section>
 
+      <!-- Node validation -->
       <section class="panel">
-        <h2>Node Validation</h2>
-        <div class="form-row">
+        <div class="panel-h">Validación de nodo</div>
+        <div class="panel-body">
           <InputText
             v-model="nodeForm.url"
             placeholder="http://peer:5000"
+            class="val-input"
           />
-        </div>
-        <div
-          v-if="nodeChecks.length > 0"
-          class="result-list"
-        >
-          <div
-            v-for="check in nodeChecks"
-            :key="check.label"
-            class="result-item"
-            :class="check.ok ? 'ok' : 'error'"
-          >
-            <i :class="check.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
-            <span>{{ check.label }}</span>
+          <div v-if="nodeChecks.length > 0" class="check-list">
+            <div
+              v-for="check in nodeChecks"
+              :key="check.label"
+              class="check-item"
+              :class="check.ok ? 'ok' : 'fail'"
+            >
+              <span class="pi" :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'" aria-hidden="true" />
+              <span>{{ check.label }}</span>
+            </div>
           </div>
+          <p v-else class="hint">Ingresa una URL para evaluar su formato y estado de registro.</p>
         </div>
-        <p
-          v-else
-          class="muted"
-        >
-          Type a node URL to evaluate format and registration state.
-        </p>
       </section>
 
+      <!-- TX validation -->
       <section class="panel tx-panel">
-        <h2>Transaction Validation</h2>
-        <div class="form-grid">
-          <InputText
-            v-model="txForm.sender"
-            placeholder="Sender"
-          />
-          <InputText
-            v-model="txForm.receiver"
-            placeholder="Receiver"
-          />
-          <InputNumber
-            v-model="txForm.amount"
-            placeholder="Amount"
-            :min-fraction-digits="0"
-            :max-fraction-digits="8"
-          />
-        </div>
-        <div
-          v-if="txHasInput"
-          class="result-list"
-        >
-          <div
-            v-for="check in txChecks"
-            :key="check.label"
-            class="result-item"
-            :class="check.ok ? 'ok' : 'error'"
-          >
-            <i :class="check.ok ? 'pi pi-check-circle' : 'pi pi-times-circle'" />
-            <span>{{ check.label }}</span>
+        <div class="panel-h">Validación de transacción</div>
+        <div class="panel-body">
+          <div class="tx-grid">
+            <InputText v-model="txForm.sender" placeholder="Sender" class="val-input" />
+            <InputText v-model="txForm.receiver" placeholder="Receiver" class="val-input" />
+            <InputNumber
+              v-model="txForm.amount"
+              placeholder="Amount"
+              :min-fraction-digits="0"
+              :max-fraction-digits="8"
+              class="val-input"
+            />
           </div>
+          <div v-if="txHasInput" class="check-list">
+            <div
+              v-for="check in txChecks"
+              :key="check.label"
+              class="check-item"
+              :class="check.ok ? 'ok' : 'fail'"
+            >
+              <span class="pi" :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'" aria-hidden="true" />
+              <span>{{ check.label }}</span>
+            </div>
+          </div>
+          <p v-else class="hint">Rellena sender, receiver y amount para validar las reglas de negocio.</p>
         </div>
-        <p
-          v-else
-          class="muted"
-        >
-          Fill sender, receiver and amount to dry-run transaction rules.
-        </p>
       </section>
     </div>
 
-    <section
-      v-if="historyStore.total > 0"
-      class="panel history-panel"
-    >
-      <div class="history-header">
-        <h2>Validation History <span class="count">{{ historyStore.total }}</span></h2>
+    <!-- Validation history -->
+    <section v-if="historyStore.total > 0" class="panel">
+      <div class="panel-h">
+        <span>Historial de validaciones</span>
+        <span class="count-badge sm">{{ historyStore.total }}</span>
       </div>
       <div class="history-list">
         <div
@@ -287,20 +282,21 @@ onMounted(async () => {
           class="history-item"
           :class="ev.status"
         >
-          <i
+          <span
             class="pi history-icon"
             :class="{
               'pi-check-circle': ev.status === 'valid',
               'pi-times-circle': ev.status === 'invalid',
               'pi-exclamation-triangle': ev.status === 'error',
             }"
+            aria-hidden="true"
           />
           <div class="history-body">
-            <span class="history-type">{{ ev.type }}</span>
-            <span class="history-target">{{ ev.target }}</span>
-            <span class="history-message">{{ ev.message }}</span>
+            <span class="ev-type">{{ ev.type }}</span>
+            <span class="ev-target">{{ ev.target }}</span>
+            <span class="ev-message">{{ ev.message }}</span>
           </div>
-          <span class="history-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+          <span class="ev-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
         </div>
       </div>
     </section>
@@ -311,189 +307,196 @@ onMounted(async () => {
 .validation-view {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 18px;
 }
 
-.header-row {
+/* Header */
+.page-h {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
+  gap: 24px;
 }
+.page-h h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.page-actions { display: flex; gap: 8px; }
 
-.header-actions {
+.btn-primary {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s;
+  font-family: var(--font-sans);
 }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-primary:not(:disabled):hover { opacity: 0.88; }
 
-.validation-grid {
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  font-family: var(--font-sans);
+}
+.btn-ghost:hover { background: var(--hover); color: var(--text); }
+
+/* Panels */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.panel-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.panel-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Chain status */
+.chain-status-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.chain-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+.chain-result.ok   { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+.chain-result.fail { border-color: var(--danger);  background: var(--danger-soft);  color: var(--danger);  }
+.chain-result .pi  { font-size: 15px; flex-shrink: 0; }
+.endpoint-note { font-size: 12px; color: var(--text-3); margin: 0; }
+.endpoint-note code { font-family: var(--font-mono); background: var(--surface-2); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); }
+
+/* Grid */
+.val-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
+.tx-panel { grid-column: 1 / -1; }
 
-.tx-panel {
-  grid-column: 1 / -1;
-}
-
-.form-row,
-.form-grid {
-  margin-top: 0.75rem;
-}
-
-.form-grid {
+/* Inputs */
+.val-input { width: 100%; }
+.tx-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
 }
 
-.result {
-  margin-top: 0.75rem;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-sm);
-  padding: 0.65rem 0.75rem;
-  color: var(--text-body);
-  background: var(--surface-soft);
-}
-
-.result.neutral {
-  border-color: #3a3c61;
-}
-
-.result.ok {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.12);
-  color: #86efac;
-}
-
-.result.error-banner {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
+/* Check lists */
+.check-list { display: flex; flex-direction: column; gap: 6px; }
+.check-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
 }
+.check-item.ok   { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+.check-item.fail { border-color: var(--danger);  background: var(--danger-soft);  color: var(--danger);  }
+.check-item .pi  { font-size: 13px; flex-shrink: 0; }
 
-.result-list {
-  margin-top: 0.9rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.result-item {
+.inline-alert {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.92rem;
-  border: 1px solid var(--surface-border);
-  background: var(--surface-soft);
-  border-radius: var(--radius-sm);
-  padding: 0.45rem 0.6rem;
+  gap: 8px;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
 }
+.inline-alert.fail { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
 
-.result-item.ok {
-  border-color: rgba(34, 197, 94, 0.35);
-  color: #86efac;
-}
+.hint { font-size: 13px; color: var(--text-3); margin: 0; }
 
-.result-item.error {
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
-}
-
-.muted {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.history-panel { margin-top: 0; }
-
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
+/* History */
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
   max-height: 320px;
   overflow-y: auto;
 }
-
 .history-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.88rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--surface-border);
-  background: var(--surface-soft);
+  gap: 10px;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
 }
-
-.history-item.valid { border-color: rgba(34, 197, 94, 0.3); }
-.history-item.invalid { border-color: rgba(239, 68, 68, 0.3); }
-.history-item.error { border-color: rgba(250, 204, 21, 0.3); }
-
-.history-icon { font-size: 0.95rem; flex-shrink: 0; }
-.history-item.valid .history-icon { color: #86efac; }
-.history-item.invalid .history-icon { color: #fca5a5; }
-.history-item.error .history-icon { color: #fde68a; }
-
-.history-body {
-  display: flex;
-  gap: 0.5rem;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.history-type {
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 6px;
-  border: 1px solid rgba(180, 169, 230, 0.3);
+.history-item:last-child { border-bottom: none; }
+.history-item.valid   { background: var(--success-soft); }
+.history-item.invalid { background: var(--danger-soft); }
+.history-item.error   { background: var(--warning-soft); }
+.history-icon { font-size: 14px; flex-shrink: 0; }
+.history-item.valid   .history-icon { color: var(--success); }
+.history-item.invalid .history-icon { color: var(--danger); }
+.history-item.error   .history-icon { color: var(--warning); }
+.history-body { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; align-items: center; }
+.ev-type {
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
+  background: var(--muted-soft);
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
+.ev-target { color: var(--text-2); }
+.ev-message { color: var(--text); }
+.ev-time { color: var(--text-3); font-size: 12px; margin-left: auto; flex-shrink: 0; }
 
-.history-target { color: var(--text-muted); }
-.history-message { color: var(--text-body); }
-.history-time { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; flex-shrink: 0; }
+.count-badge.sm { font-size: 11px; padding: 1px 7px; }
 
-.count {
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 0.8rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: 10px;
-  margin-left: 0.4rem;
-  border: 1px solid rgba(180, 169, 230, 0.32);
-}
-
-@media (max-width: 960px) {
-  .validation-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .header-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  .header-actions {
-    flex-wrap: wrap;
-  }
+@media (max-width: 900px) {
+  .val-grid  { grid-template-columns: 1fr; }
+  .tx-grid   { grid-template-columns: 1fr; }
+  .tx-panel  { grid-column: auto; }
+  .page-h    { flex-direction: column; align-items: flex-start; }
 }
 </style>
