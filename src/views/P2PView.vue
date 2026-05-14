@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import P2PBuyFlow from '@/components/flows/P2PBuyFlow.vue'
+import type { P2POffer } from '@/components/flows/P2PBuyFlow.vue'
 
 type Direction = 'sell' | 'buy'
 type TabKey = 'buy' | 'sell' | 'orders'
@@ -51,6 +53,24 @@ const displayOffers = computed<Offer[]>(() => {
 
 function avatarInitial(name: string): string {
   return name.charAt(0).toUpperCase()
+}
+
+const activeOffer = ref<P2POffer | null>(null)
+
+function openBuyFlow(offer: Offer) {
+  activeOffer.value = {
+    id: offer.id,
+    name: offer.name,
+    verified: offer.verified,
+    completed: offer.completed,
+    rate: offer.rate,
+    price: offer.price,
+    limitMin: parseFloat(offer.limitMin.replace(',', '')),
+    limitMax: parseFloat(offer.limitMax.replace(',', '')),
+    methods: offer.methods,
+    asset: offer.asset,
+    online: offer.online,
+  }
 }
 </script>
 
@@ -143,6 +163,7 @@ function avatarInitial(name: string): string {
           <button
             class="offer-cta"
             :class="activeTab === 'buy' ? 'cta-buy' : 'cta-sell'"
+            @click="openBuyFlow(offer)"
           >
             {{ activeTab === 'buy' ? 'Comprar' : 'Vender' }} {{ offer.asset }}
           </button>
@@ -150,6 +171,13 @@ function avatarInitial(name: string): string {
       </div>
     </template>
   </div>
+
+  <P2PBuyFlow
+    v-if="activeOffer"
+    :offer="activeOffer"
+    @close="activeOffer = null"
+    @complete="activeOffer = null"
+  />
 </template>
 
 <style scoped>

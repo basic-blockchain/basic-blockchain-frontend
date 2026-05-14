@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import ExchangeOrderFlow from '@/components/flows/ExchangeOrderFlow.vue'
+import type { OrderData } from '@/components/flows/ExchangeOrderFlow.vue'
 
 type OrderType = 'market' | 'limit' | 'stop'
 type Side = 'buy' | 'sell'
@@ -37,6 +39,19 @@ const percentButtons = ['25%', '50%', '75%', '100%']
 const ctaLabel = computed(() => {
   return `${tradeSide.value === 'buy' ? 'Comprar' : 'Vender'} ${tradeAmount.value} ${pair.value.split('/')[0]}`
 })
+
+const pendingOrder = ref<OrderData | null>(null)
+
+function openOrder() {
+  pendingOrder.value = {
+    side: tradeSide.value,
+    pair: pair.value,
+    price: '67,500.20',
+    amount: tradeAmount.value,
+    total: tradeTotal.value,
+    orderType: orderType.value === 'market' ? 'Mercado' : orderType.value === 'limit' ? 'Límite' : 'Stop',
+  }
+}
 
 interface Candle {
   x: number
@@ -207,13 +222,20 @@ const candles = computed<Candle[]>(() => {
           <button v-for="p in percentButtons" :key="p" class="pct-btn">{{ p }}</button>
         </div>
 
-        <button class="trade-cta" :class="tradeSide === 'buy' ? 'cta-buy' : 'cta-sell'">
+        <button class="trade-cta" :class="tradeSide === 'buy' ? 'cta-buy' : 'cta-sell'" @click="openOrder">
           {{ ctaLabel }}
         </button>
       </div>
 
     </div>
   </div>
+
+  <ExchangeOrderFlow
+    v-if="pendingOrder"
+    :data="pendingOrder"
+    @close="pendingOrder = null"
+    @complete="pendingOrder = null"
+  />
 </template>
 
 <style scoped>
