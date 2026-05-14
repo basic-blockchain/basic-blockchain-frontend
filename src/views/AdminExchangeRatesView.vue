@@ -1,31 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import {
-  listExchangeRates,
-  setExchangeRate,
-  syncExchangeRates,
-  type ExchangeRateRecord,
-} from '@/api/admin'
+import { listExchangeRates, setExchangeRate, syncExchangeRates, type ExchangeRateRecord } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
 
 const toast = useToast()
-
 const rates = ref<ExchangeRateRecord[]>([])
 const loading = ref(false)
 const syncing = ref(false)
 const error = ref('')
 
-const form = ref({
-  fromCurrency: 'NATIVE',
-  toCurrency: 'NATIVE',
-  rate: '',
-  feeRate: '0',
-})
-
-const syncForm = ref({
-  provider: 'BINANCE',
-  pairs: '',
-})
+const form = ref({ fromCurrency: 'NATIVE', toCurrency: 'NATIVE', rate: '', feeRate: '0' })
+const syncForm = ref({ provider: 'BINANCE', pairs: '' })
 
 async function load() {
   loading.value = true
@@ -43,91 +28,41 @@ async function load() {
 async function submit() {
   if (!form.value.fromCurrency || !form.value.toCurrency) return
   if (form.value.fromCurrency === form.value.toCurrency) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Invalid pair',
-      detail: 'Currencies must differ',
-      life: 3000,
-    })
+    toast.add({ severity: 'warn', summary: 'Par inválido', detail: 'Las monedas deben ser distintas', life: 3000 })
     return
   }
   const rate = Number(form.value.rate)
   if (!Number.isFinite(rate) || rate <= 0) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Invalid rate',
-      detail: 'Rate must be positive',
-      life: 3000,
-    })
+    toast.add({ severity: 'warn', summary: 'Tasa inválida', detail: 'La tasa debe ser positiva', life: 3000 })
     return
   }
   const feeRate = Number(form.value.feeRate || 0)
   if (!Number.isFinite(feeRate) || feeRate < 0 || feeRate > 1) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Invalid fee',
-      detail: 'Fee rate must be between 0 and 1',
-      life: 3000,
-    })
+    toast.add({ severity: 'warn', summary: 'Comisión inválida', detail: 'La comisión debe estar entre 0 y 1', life: 3000 })
     return
   }
-
   try {
-    await setExchangeRate(form.value.fromCurrency, form.value.toCurrency, {
-      rate,
-      fee_rate: feeRate,
-    })
-    toast.add({
-      severity: 'success',
-      summary: 'Rate updated',
-      detail: `${form.value.fromCurrency} → ${form.value.toCurrency}`,
-      life: 3000,
-    })
+    await setExchangeRate(form.value.fromCurrency, form.value.toCurrency, { rate, fee_rate: feeRate })
+    toast.add({ severity: 'success', summary: 'Tasa actualizada', detail: `${form.value.fromCurrency} → ${form.value.toCurrency}`, life: 3000 })
     await load()
   } catch (e: unknown) {
-    toast.add({
-      severity: 'error',
-      summary: 'Update failed',
-      detail: e instanceof Error ? e.message : 'Error',
-      life: 4000,
-    })
+    toast.add({ severity: 'error', summary: 'Error al actualizar', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
   }
 }
 
 async function runSync() {
-  const pairs = syncForm.value.pairs
-    .split(',')
-    .map((pair) => pair.trim())
-    .filter(Boolean)
+  const pairs = syncForm.value.pairs.split(',').map((p) => p.trim()).filter(Boolean)
   if (pairs.length === 0) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Missing pairs',
-      detail: 'Add one or more pairs like BTC/USDT',
-      life: 3000,
-    })
+    toast.add({ severity: 'warn', summary: 'Sin pares', detail: 'Añade uno o más pares como BTC/USDT', life: 3000 })
     return
   }
   syncing.value = true
   try {
-    await syncExchangeRates({
-      provider: syncForm.value.provider,
-      pairs,
-    })
-    toast.add({
-      severity: 'success',
-      summary: 'Sync complete',
-      detail: `${pairs.length} pair(s) updated`,
-      life: 3000,
-    })
+    await syncExchangeRates({ provider: syncForm.value.provider, pairs })
+    toast.add({ severity: 'success', summary: 'Sincronización completa', detail: `${pairs.length} par(es) actualizado(s)`, life: 3000 })
     await load()
   } catch (e: unknown) {
-    toast.add({
-      severity: 'error',
-      summary: 'Sync failed',
-      detail: e instanceof Error ? e.message : 'Error',
-      life: 4000,
-    })
+    toast.add({ severity: 'error', summary: 'Error de sincronización', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
   } finally {
     syncing.value = false
   }
@@ -137,234 +72,200 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="admin-exchange">
-    <div class="page-header">
-      <h1>Exchange Rates</h1>
-      <button class="btn-secondary" :disabled="loading" @click="load">Refresh</button>
+  <div class="exchange-view">
+    <div class="page-h">
+      <div>
+        <h1>Tasas de cambio</h1>
+        <p>Gestión manual y sincronización automática de tasas</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-sm" :disabled="loading" @click="load">
+          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+          <span>Refrescar</span>
+        </button>
+      </div>
     </div>
 
-    <section class="admin-section">
-      <h2 class="section-title">Sync exchange rates</h2>
-      <form class="rate-form" @submit.prevent="runSync">
-        <div class="form-row">
-          <div class="form-field">
-            <label class="field-label" for="provider">Provider</label>
-            <select id="provider" v-model="syncForm.provider" class="field-input">
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Pares activos</div>
+        <div class="vl">{{ rates.length }}</div>
+        <div class="ds">tasas vigentes</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Fuente BINANCE</div>
+        <div class="vl">{{ rates.filter(r => r.source === 'BINANCE').length }}</div>
+        <div class="ds">automáticas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Fuente MANUAL</div>
+        <div class="vl">{{ rates.filter(r => r.source === 'MANUAL').length }}</div>
+        <div class="ds">configuradas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Última actualización</div>
+        <div class="vl">{{ rates[0]?.updated_at?.slice(0, 16) ?? '—' }}</div>
+        <div class="ds">más reciente</div>
+      </div>
+    </div>
+
+    <div class="forms-grid">
+      <section class="flow-card form-card">
+        <div class="panel-h">Sincronizar desde proveedor</div>
+        <form class="panel-form" @submit.prevent="runSync">
+          <div class="field">
+            <label class="field-label" for="provider">Proveedor</label>
+            <select id="provider" v-model="syncForm.provider" class="field-select">
               <option value="BINANCE">Binance</option>
               <option value="CRYPTO_COM">Crypto.com</option>
             </select>
           </div>
-          <div class="form-field">
-            <label class="field-label" for="pairs">Pairs</label>
-            <input
-              id="pairs"
-              v-model="syncForm.pairs"
-              class="field-input"
-              placeholder="BTC/USDT,ETH/USDT"
-            />
+          <div class="field">
+            <label class="field-label" for="pairs">Pares</label>
+            <input id="pairs" v-model="syncForm.pairs" class="field-input" placeholder="BTC/USDT,ETH/USDT" />
           </div>
-        </div>
-        <button class="btn-secondary" type="submit" :disabled="syncing">Sync now</button>
-      </form>
-      <p class="helper-text">Pairs must match active currencies in the catalog.</p>
-    </section>
+          <div class="form-footer">
+            <button class="btn btn-primary" type="submit" :disabled="syncing">
+              <span v-if="syncing" class="pi pi-spin pi-spinner" aria-hidden="true" />
+              <i v-else class="pi pi-sync" />
+              <span>Sincronizar ahora</span>
+            </button>
+            <span class="hint">Los pares deben coincidir con las monedas activas del catálogo.</span>
+          </div>
+        </form>
+      </section>
 
-    <section class="admin-section">
-      <h2 class="section-title">Set exchange rate</h2>
-      <form class="rate-form" @submit.prevent="submit">
-        <div class="form-row">
-          <div class="form-field">
-            <label class="field-label" for="from">From</label>
-            <input id="from" v-model="form.fromCurrency" class="field-input" placeholder="USD" />
+      <section class="flow-card form-card">
+        <div class="panel-h">Tasa manual</div>
+        <form class="panel-form" @submit.prevent="submit">
+          <div class="form-row">
+            <div class="field">
+              <label class="field-label" for="from">Desde</label>
+              <input id="from" v-model="form.fromCurrency" class="field-input" placeholder="USD" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="to">Hacia</label>
+              <input id="to" v-model="form.toCurrency" class="field-input" placeholder="EUR" />
+            </div>
           </div>
-          <div class="form-field">
-            <label class="field-label" for="to">To</label>
-            <input id="to" v-model="form.toCurrency" class="field-input" placeholder="EUR" />
+          <div class="form-row">
+            <div class="field">
+              <label class="field-label" for="rate">Tasa</label>
+              <input id="rate" v-model="form.rate" class="field-input" type="number" min="0" step="any" placeholder="1.05" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="fee">Comisión</label>
+              <input id="fee" v-model="form.feeRate" class="field-input" type="number" min="0" max="1" step="0.000001" placeholder="0.01" />
+            </div>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label class="field-label" for="rate">Rate</label>
-            <input
-              id="rate"
-              v-model="form.rate"
-              class="field-input"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="1.05"
-            />
+          <div class="form-footer">
+            <button class="btn btn-primary" type="submit">
+              <i class="pi pi-save" />
+              <span>Guardar tasa</span>
+            </button>
+            <span class="hint">Las tasas manuales se almacenan con fuente MANUAL.</span>
           </div>
-          <div class="form-field">
-            <label class="field-label" for="fee">Fee rate</label>
-            <input
-              id="fee"
-              v-model="form.feeRate"
-              class="field-input"
-              type="number"
-              min="0"
-              max="1"
-              step="0.000001"
-              placeholder="0.01"
-            />
-          </div>
-        </div>
-        <button class="btn-primary" type="submit">Save rate</button>
-      </form>
-      <p class="helper-text">
-        Manual rates are stored with source MANUAL. Feed sync updates show provider sources.
-      </p>
-    </section>
+        </form>
+      </section>
+    </div>
 
-    <div v-if="error" class="error-banner">{{ error }}</div>
-    <div v-if="loading" class="loading">Loading…</div>
+    <div v-if="error" class="inline-alert danger">{{ error }}</div>
 
-    <table v-else class="rates-table">
-      <thead>
-        <tr>
-          <th>Pair</th>
-          <th>Rate</th>
-          <th>Fee</th>
-          <th>Source</th>
-          <th>Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="r in rates" :key="r.rate_id">
-          <td class="mono">{{ r.from_currency }} → {{ r.to_currency }}</td>
-          <td class="mono">{{ r.rate }}</td>
-          <td class="mono">{{ r.fee_rate }}</td>
-          <td class="mono">{{ r.source }}</td>
-          <td class="mono text-muted">{{ r.updated_at }}</td>
-        </tr>
-        <tr v-if="rates.length === 0 && !loading">
-          <td colspan="5" class="empty">No exchange rates yet.</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="section-h">Tasas vigentes</div>
+    <div class="flow-card">
+      <div v-if="loading" class="loading-row">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+      </div>
+      <table v-else class="tbl">
+        <thead>
+          <tr>
+            <th>Par</th>
+            <th>Tasa</th>
+            <th>Comisión</th>
+            <th>Fuente</th>
+            <th>Actualizado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in rates" :key="r.rate_id">
+            <td class="mono pair-cell">{{ r.from_currency }}<span class="arrow"> → </span>{{ r.to_currency }}</td>
+            <td class="mono">{{ r.rate }}</td>
+            <td class="mono">{{ r.fee_rate }}</td>
+            <td>
+              <span
+                class="bdg"
+                :style="r.source === 'MANUAL'
+                  ? 'background: var(--accent-soft); color: var(--accent-text)'
+                  : 'background: var(--success-soft); color: var(--success)'"
+              >
+                {{ r.source }}
+              </span>
+            </td>
+            <td class="mono text-dim">{{ r.updated_at }}</td>
+          </tr>
+          <tr v-if="rates.length === 0 && !loading">
+            <td colspan="5" class="empty-row">Sin tasas de cambio todavía.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.admin-exchange {
-  padding: 1.5rem;
+.exchange-view { display: flex; flex-direction: column; gap: 14px; }
+
+.page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
+.page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
+.page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.bigstat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.bigstat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
+.ds { font-size: 11.5px; color: var(--text-3); }
+
+.forms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.form-card { padding: 0; overflow: hidden; }
+
+.section-h { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+
+.panel-h {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border); background: var(--surface-2);
 }
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+.panel-form { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.field-input, .field-select {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--text); font-size: 13px; outline: none;
+  transition: border-color 0.12s; font-family: var(--font-sans); width: 100%; box-sizing: border-box;
 }
-.page-header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-.admin-section {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-soft);
-  margin-bottom: 1.5rem;
-}
-.section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-heading);
-  margin: 0 0 1rem;
-}
-.rate-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+.field-input:focus, .field-select:focus { border-color: var(--accent); }
+.hint { font-size: 12px; color: var(--text-3); }
+
+.inline-alert { padding: 10px 14px; border-radius: var(--radius); border: 1px solid; font-size: 13px; }
+.inline-alert.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; padding: 16px; }
+
+.mono { font-family: var(--font-mono); font-size: 12px; }
+.text-dim { color: var(--text-3); }
+.pair-cell { font-weight: 600; color: var(--text); }
+.arrow { color: var(--text-3); }
+.empty-row { padding: 24px; text-align: center; color: var(--text-3); }
+
+@media (max-width: 900px) {
+  .forms-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-.field-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-.field-input {
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 8px;
-  background: var(--surface-ground);
-  color: var(--text-body);
-  font-size: 0.9rem;
-}
-.btn-primary {
-  align-self: flex-start;
-  padding: 0.55rem 1rem;
-  background: var(--primary-color);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-secondary {
-  padding: 0.5rem 1.25rem;
-  background: var(--surface2, #2a2a3a);
-  color: var(--text, #eee);
-  border: 1px solid var(--border, #444);
-  border-radius: 0.375rem;
-  cursor: pointer;
-}
-.rates-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.rates-table th {
-  text-align: left;
-  padding: 0.5rem 1rem;
-  color: var(--text-muted, #888);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--border, #333);
-}
-.rates-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border, #222);
-}
-.mono {
-  font-family: monospace;
-  font-size: 0.85rem;
-}
-.text-muted {
-  color: var(--text-muted, #888);
-}
-.helper-text {
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-.loading,
-.empty {
-  padding: 2rem;
-  text-align: center;
-  color: var(--text-muted, #888);
-}
-.error-banner {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid #ef4444;
-  border-radius: 0.375rem;
-  padding: 0.75rem 1rem;
-  color: #ef4444;
-  margin-bottom: 1rem;
+  .page-h   { flex-direction: column; align-items: flex-start; }
+  .form-row { grid-template-columns: 1fr; }
+  .bigstat-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

@@ -1,0 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ── Cadena design tokens ───────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:             #faf9f6;
+  --surface:        #ffffff;
+  --surface-2:      #f5f4f0;
+  --hover:          #f1efe9;
+
+  /* Borders */
+  --border:         #e6e3db;
+  --border-strong:  #d6d3ca;
+
+  /* Text */
+  --text:           #1a1917;
+  --text-2:         #5d5b54;
+  --text-3:         #8e8b82;
+
+  /* Accent / brand */
+  --accent:         #2456e6;
+  --accent-soft:    #eaf0fe;
+  --accent-text:    #1d44b8;
+
+  /* Semantic */
+  --success:        #1f7a3a;
+  --success-soft:   #e6f4ea;
+  --warning:        #a8590b;
+  --warning-soft:   #fbecd5;
+  --danger:         #ad2820;
+  --danger-soft:    #fbe7e4;
+  --info:           #0a6e88;
+  --info-soft:      #e0f1f5;
+  --muted:          #6b6962;
+  --muted-soft:     #ecebe6;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20,18,12,0.04), 0 1px 1px rgba(20,18,12,0.02);
+  --shadow-md: 0 4px 16px rgba(20,18,12,0.06), 0 2px 4px rgba(20,18,12,0.04);
+  --shadow-lg: 0 24px 64px rgba(20,18,12,0.16), 0 8px 24px rgba(20,18,12,0.08);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  /* Typography */
+  --font-sans: "Geist", "Söhne", "Helvetica Neue", Helvetica, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Table row height */
+  --row-h: 44px;
+}
+
+html[data-density="compact"] {
+  --row-h: 34px;
+}
+
+/* ── Legacy variable aliases (backward compat with existing views) ───────── */
+:root {
+  /* Surfaces */
+  --bg-base:        var(--bg);
+  --bg-soft:        var(--surface-2);
+  --surface-soft:   var(--surface-2);
+  --surface-border: var(--border);
+
+  /* Sidebar (App.vue scoped styles now use sb-* classes; these cover any
+     view that still references the old --sidebar-* tokens directly) */
+  --sidebar-start:              var(--surface-2);
+  --sidebar-end:                var(--surface-2);
+  --sidebar-border:             var(--border);
+  --sidebar-title:              var(--text);
+  --sidebar-text:               var(--text-2);
+  --sidebar-link:               var(--text-2);
+  --sidebar-link-active-bg:     var(--accent-soft);
+  --sidebar-link-active-border: #c8d6f9;
+  --sidebar-link-active-text:   var(--accent-text);
+
+  /* Text */
+  --text-strong: var(--text);
+  --text-body:   var(--text-2);
+  --text-muted:  var(--text-3);
+
+  /* Brand / primary */
+  --primary:       var(--accent);
+  --primary-hover: var(--accent-text);
+  --primary-soft:  var(--accent-soft);
+  --primary-color: var(--accent);
+  --primary-alt:   var(--accent);
+  --primary-glow:  var(--accent-soft);
+  --secondary:     var(--text-3);
+
+  /* Semantic shortcuts */
+  --accent-ok:      var(--success);
+  --accent-warning: var(--warning);
+  --accent-error:   var(--danger);
+
+  /* Shadows / misc */
+  --shadow-soft: var(--shadow-md);
+  --focus-ring:  0 0 0 3px var(--accent-soft);
+}
+
+/* ── Dark theme ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:            #171513;
+  --surface:       #211f1c;
+  --surface-2:     #1c1a17;
+  --hover:         #2a2825;
+
+  --border:        #2e2c28;
+  --border-strong: #3a3834;
+
+  --text:          #f0ede8;
+  --text-2:        #b0aba2;
+  --text-3:        #6e6a62;
+
+  --accent:        #4472f0;
+  --accent-soft:   rgba(68,114,240,0.15);
+  --accent-text:   #7a9df5;
+
+  --success:       #34a85a;
+  --success-soft:  rgba(52,168,90,0.14);
+  --warning:       #d4760f;
+  --warning-soft:  rgba(212,118,15,0.14);
+  --danger:        #d94a3e;
+  --danger-soft:   rgba(217,74,62,0.14);
+  --info:          #1a9bbf;
+  --info-soft:     rgba(26,155,191,0.14);
+  --muted:         #8a8680;
+  --muted-soft:    rgba(138,134,128,0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2), 0 1px 1px rgba(0,0,0,0.14);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.28), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.48), 0 8px 24px rgba(0,0,0,0.32);
+
+  /* Legacy aliases — dark overrides */
+  --bg-base:        var(--bg);
+  --bg-soft:        var(--surface-2);
+  --surface-soft:   var(--surface-2);
+  --surface-border: var(--border);
+  --sidebar-start:  var(--surface-2);
+  --sidebar-end:    var(--surface-2);
+  --sidebar-border: var(--border);
+  --sidebar-title:  var(--text);
+  --text-strong:    var(--text);
+  --text-body:      var(--text-2);
+  --text-muted:     var(--text-3);
+  --primary:        var(--accent);
+  --primary-soft:   var(--accent-soft);
+}
