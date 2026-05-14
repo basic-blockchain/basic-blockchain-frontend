@@ -16,6 +16,13 @@ const creating = ref(false)
 
 const treasuryWallets = computed(() => wallets.value.filter((w) => w.wallet_type === 'TREASURY'))
 
+const totalTreasury = computed(() => treasuryWallets.value.length)
+const currencies_count = computed(() => new Set(treasuryWallets.value.map((w) => w.currency)).size)
+const totalNative = computed(() => {
+  const n = treasuryWallets.value.find((w) => w.currency === 'NATIVE')
+  return n ? Number(n.balance).toFixed(2) : '—'
+})
+
 async function load() {
   loading.value = true
   try {
@@ -68,14 +75,38 @@ function openDistribution() {
         <p>Wallets de reserva de la plataforma por moneda</p>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn-ghost" @click="openDistribution">
+        <button class="btn btn-ghost" @click="openDistribution">
           <span class="pi pi-send" aria-hidden="true" />
           Distribuir
         </button>
-        <button class="btn-ghost" :disabled="loading" @click="load">
+        <button class="btn btn-ghost" :disabled="loading" @click="load">
           <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
           Actualizar
         </button>
+      </div>
+    </div>
+
+    <!-- Treasury KPIs (bigstat) -->
+    <div class="bigstat-row">
+      <div class="bigstat">
+        <div class="lb">Wallets tesorería</div>
+        <div class="vl">{{ totalTreasury }}</div>
+        <div class="ds">wallets activas</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Monedas</div>
+        <div class="vl">{{ currencies_count }}</div>
+        <div class="ds">tipos distintos</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Balance NATIVE</div>
+        <div class="vl">{{ totalNative }}</div>
+        <div class="ds">NATIVE en reserva</div>
+      </div>
+      <div class="bigstat">
+        <div class="lb">Estado</div>
+        <div class="vl">{{ loading ? 'Cargando' : 'OK' }}</div>
+        <div class="ds">sincronizado</div>
       </div>
     </div>
 
@@ -89,7 +120,7 @@ function openDistribution() {
             <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }} · {{ c.name }}</option>
           </select>
         </div>
-        <button class="btn-primary" :disabled="creating" @click="createTreasury">
+        <button class="btn btn-primary" :disabled="creating" @click="createTreasury">
           <span v-if="creating" class="pi pi-spin pi-spinner" aria-hidden="true" />
           {{ creating ? 'Creando…' : 'Crear' }}
         </button>
@@ -105,7 +136,7 @@ function openDistribution() {
       <div v-if="loading" class="loading-row">
         <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <table v-else class="data-table">
+      <table v-else class="tbl">
         <thead>
           <tr>
             <th>Wallet ID</th>
@@ -146,24 +177,22 @@ function openDistribution() {
 .page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
 .page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
 
-.btn-ghost {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 13px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: background 0.12s, color 0.12s; font-family: var(--font-sans);
+/* Bigstat row (Phase 5 design system) */
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
-.btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
-.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+.bigstat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds { font-size: 11.5px; color: var(--text-3); }
 
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-.panel-h {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text-2);
-  text-transform: uppercase; letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border); background: var(--surface-2);
-}
-.panel-form { padding: 16px; }
-.inline-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
 .field-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
 .field-select {
@@ -173,36 +202,20 @@ function openDistribution() {
 }
 .field-select:focus { border-color: var(--accent); }
 
-.btn-primary {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px; background: var(--accent); color: #fff; border: none;
-  border-radius: var(--radius); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: opacity 0.12s; font-family: var(--font-sans);
-}
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { opacity: 0.88; }
-
-.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; padding: 16px; }
-
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th {
-  text-align: left; padding: 8px 14px; font-size: 11.5px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); background: var(--surface-2);
-}
-.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
-.data-table tr:last-child td { border-bottom: none; }
 .mono { font-family: var(--font-mono); font-size: 12px; }
 .text-dim { color: var(--text-3); }
-.empty-row { padding: 24px; text-align: center; color: var(--text-3); }
 
 .currency-badge {
   padding: 2px 8px; border-radius: 20px; font-size: 12px;
   font-weight: 600; background: var(--warning-soft); color: var(--warning);
   font-family: var(--font-mono);
 }
-.count-badge.sm { font-size: 11px; padding: 1px 7px; }
 
+@media (max-width: 900px) {
+  .bigstat-row { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 640px) {
   .page-h { flex-direction: column; align-items: flex-start; }
+  .bigstat-row { grid-template-columns: 1fr; }
 }
 </style>
