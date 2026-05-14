@@ -202,6 +202,15 @@ function openDistribution() {
 }
 .field-select:focus { border-color: var(--accent); }
 
+.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tbl th, .tbl td { text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.tbl th { font-size: 11.5px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface-2); }
+.tbl tr:last-child td { border-bottom: none; }
+.empty-row { text-align: center; color: var(--text-3); padding: 24px; }
+.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; padding: 16px; }
+.panel-form { padding: 16px; }
+.inline-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+
 .mono { font-family: var(--font-mono); font-size: 12px; }
 .text-dim { color: var(--text-3); }
 
