@@ -93,14 +93,14 @@ create_promotion_pr() {
   return "$status"
 }
 
-# Promotion chain:
+# Promotion chain (upward from develop):
+# develop -> qa
+# qa -> staging
+# staging -> production
 # production -> main
-# production -> staging
-# staging -> qa
-# qa -> develop
+create_promotion_pr develop qa
+create_promotion_pr qa staging
+create_promotion_pr staging production
 create_promotion_pr production main
-create_promotion_pr production staging
-create_promotion_pr staging qa
-create_promotion_pr qa develop
 
 echo "Promotion chain processing completed for ${ORG}/${REPO}."
