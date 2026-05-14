@@ -1,3 +1,50 @@
+# Promotion Strategy (Upward Flow)
+
+Resumen de la estrategia de promoción upward (develop → main) y cómo mantener gates de seguridad mientras se permite la autopromoción de un único desarrollador.
+
+Principios clave
+
+- Flujo upward: `develop` → `qa` → `staging` → `production` → `main`.
+- Autopromoción permitida: `required_approving_review_count` = 0 en ramas protegidas para permitir auto-merge cuando CI pasa.
+- Seguridad: mantener `required_status_checks`, `required_conversation_resolution` y deshabilitar `allow_force_pushes`.
+
+Arquitectura de promoción
+
+- Los PRs de promoción se generan automáticamente por `scripts/devsecops_promotion_chain.sh`.
+- Requisitos para que un PR se mergee automáticamente:
+  - CI: todas las comprobaciones requeridas deben pasar.
+  - Conversaciones resueltas.
+
+Operaciones del equipo
+
+- Crear feature desde `develop`.
+- Abrir PR a `develop` y esperar que CI pase.
+- Mergear (self-merge) cuando CI pase.
+- Ejecutar la cadena de promoción: `bash scripts/devsecops_promotion_chain.sh basic-blockchain basic-blockchain-frontend`.
+
+Notas de implementación
+
+- Se agregó un check de idempotencia en `.github/workflows/release.yml` para saltar la creación de un release si ya existe.
+- Para sincronizar las protecciones de rama desde archivos JSON, usar `scripts/bootstrap_branch_protections.sh`.
+
+Comandos útiles
+
+```
+# Dry-run de la cadena de promoción
+DRY_RUN=true bash scripts/devsecops_promotion_chain.sh basic-blockchain basic-blockchain-frontend
+
+# Aplicar protecciones (preview)
+bash scripts/bootstrap_branch_protections.sh basic-blockchain basic-blockchain-frontend --dry-run
+
+# Aplicar protecciones (live)
+GH_BIN="/c/Program Files/GitHub CLI/gh.exe" \
+  bash scripts/bootstrap_branch_protections.sh basic-blockchain basic-blockchain-frontend
+```
+
+Razonamiento de diseño
+
+- Permitimos autopromoción para flujos de un sólo desarrollador manteniendo puertas de calidad automatizadas (CI + resolución de conversaciones).
+
 # DevSecOps Promotion Strategy — Upward Flow
 
 ## Overview
@@ -27,19 +74,20 @@ develop ──► qa ──► staging ──► production ──► main
 
 ### Flow Explanation
 
-| Stage | Purpose | CI Gates | Auto-Merge |
-|-------|---------|----------|-----------|
-| `develop` | Integration branch for features | ✅ Required | ✅ Yes (0 reviewers) |
-| `qa` | QA validation environment | ✅ Required | ✅ Yes (0 reviewers) |
-| `staging` | Pre-production environment | ✅ Required | ✅ Yes (0 reviewers) |
-| `production` | Production-ready code | ✅ Required | ✅ Yes (0 reviewers) |
-| `main` | Release tag target | ✅ Required | ✅ Yes (0 reviewers) |
+| Stage        | Purpose                         | CI Gates    | Auto-Merge           |
+| ------------ | ------------------------------- | ----------- | -------------------- |
+| `develop`    | Integration branch for features | ✅ Required | ✅ Yes (0 reviewers) |
+| `qa`         | QA validation environment       | ✅ Required | ✅ Yes (0 reviewers) |
+| `staging`    | Pre-production environment      | ✅ Required | ✅ Yes (0 reviewers) |
+| `production` | Production-ready code           | ✅ Required | ✅ Yes (0 reviewers) |
+| `main`       | Release tag target              | ✅ Required | ✅ Yes (0 reviewers) |
 
 ## Implementation
 
 ### Scripts
 
 #### `devsecops_promotion_chain.sh`
+
 Creates promotion PRs in upward direction. Run after merging to develop:
 
 ```bash
@@ -47,11 +95,13 @@ bash scripts/devsecops_promotion_chain.sh basic-blockchain basic-blockchain-fron
 ```
 
 **Dry-run mode** (test without creating PRs):
+
 ```bash
 DRY_RUN=true bash scripts/devsecops_promotion_chain.sh basic-blockchain basic-blockchain-frontend
 ```
 
 #### `bootstrap_branch_protections.sh`
+
 Applies branch protections from JSON configuration files:
 
 ```bash
@@ -74,6 +124,7 @@ Protection rules are defined in JSON files checked into version control:
 - `protection_production_frontend.json` — production branch rules (if exists)
 
 Each file specifies:
+
 - **Required status checks** (CI must pass)
 - **Required conversation resolution** (discussions must be resolved before merge)
 - **Dismiss stale reviews** (outdated reviews auto-dismissed on new commits)
@@ -127,6 +178,7 @@ bash scripts/devsecops_promotion_chain.sh basic-blockchain basic-blockchain-fron
 ## Comparison: Before vs After
 
 ### Before (External Reviewer Required)
+
 ```
 Feature → develop (PR) ✋ BLOCKED (waiting for external reviewer)
          └─ CI passed ✅
@@ -135,6 +187,7 @@ Feature → develop (PR) ✋ BLOCKED (waiting for external reviewer)
 ```
 
 ### After (Auto-Merge with CI Gates)
+
 ```
 Feature → develop (PR) ✅ AUTO-MERGES (CI passed + no blockers)
          ├─ CI passed ✅
@@ -148,27 +201,31 @@ develop → qa → staging → production → main
 
 ## Safety Guarantees
 
-| Guarantee | Mechanism |
-|-----------|-----------|
-| **No bad code** | Mandatory CI/CD checks must pass |
-| **Discussion enforced** | Conversation resolution required |
-| **History protected** | No force-push allowed |
-| **Audit trail** | Every PR/commit in GitHub |
-| **Linear progression** | Promotion always upward (no back-merges) |
-| **No accidental push** | Branch protections enforced by GitHub API |
+| Guarantee               | Mechanism                                 |
+| ----------------------- | ----------------------------------------- |
+| **No bad code**         | Mandatory CI/CD checks must pass          |
+| **Discussion enforced** | Conversation resolution required          |
+| **History protected**   | No force-push allowed                     |
+| **Audit trail**         | Every PR/commit in GitHub                 |
+| **Linear progression**  | Promotion always upward (no back-merges)  |
+| **No accidental push**  | Branch protections enforced by GitHub API |
 
 ## Troubleshooting
 
 ### PR Creation Fails: "No commits between..."
+
 This is normal. It means the source branch has no new commits compared to the target. The script handles this gracefully and skips that promotion step.
 
 ### PR Won't Auto-Merge
+
 Check:
+
 1. CI status — must be ✅ green
 2. Conversation resolution — all comments must have replies
 3. Protection rules — verify JSON files are current
 
 ### Need to Override Protection
+
 Only GitHub organization admins can override branch protections. Contact your DevOps team.
 
 ## Related Documentation
