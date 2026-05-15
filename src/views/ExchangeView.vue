@@ -33,7 +33,6 @@ const asks = [
 ]
 
 const timeFrames: TimeFrame[] = ['1m', '5m', '15m', '1H', '4H', '1D']
-
 const percentButtons = ['25%', '50%', '75%', '100%']
 
 const ctaLabel = computed(() => {
@@ -87,32 +86,32 @@ const candles = computed<Candle[]>(() => {
 
 <template>
   <div class="exchange-view">
-    <!-- Header row -->
-    <div class="exchange-header">
+    <!-- Page header (Phase 5: .page-h) -->
+    <div class="page-h">
       <div class="pair-info">
         <div class="pair-mark" aria-hidden="true">N</div>
         <h1>{{ pair }}</h1>
       </div>
       <div class="ticker-stats">
         <div class="ticker-stat">
-          <span class="ticker-lbl">Último</span>
-          <span class="ticker-val success">{{ ticker.last }}</span>
+          <span class="lb">Último</span>
+          <span class="vl success">{{ ticker.last }}</span>
         </div>
         <div class="ticker-stat">
-          <span class="ticker-lbl">24h %</span>
-          <span class="ticker-val success">{{ ticker.change24h }}</span>
+          <span class="lb">24h %</span>
+          <span class="vl success">{{ ticker.change24h }}</span>
         </div>
         <div class="ticker-stat">
-          <span class="ticker-lbl">Volumen</span>
-          <span class="ticker-val">{{ ticker.volume }}</span>
+          <span class="lb">Volumen</span>
+          <span class="vl">{{ ticker.volume }}</span>
         </div>
         <div class="ticker-stat">
-          <span class="ticker-lbl">Máx 24h</span>
-          <span class="ticker-val">{{ ticker.high24h }}</span>
+          <span class="lb">Máx 24h</span>
+          <span class="vl">{{ ticker.high24h }}</span>
         </div>
         <div class="ticker-stat">
-          <span class="ticker-lbl">Mín 24h</span>
-          <span class="ticker-val">{{ ticker.low24h }}</span>
+          <span class="lb">Mín 24h</span>
+          <span class="vl">{{ ticker.low24h }}</span>
         </div>
       </div>
     </div>
@@ -120,14 +119,14 @@ const candles = computed<Candle[]>(() => {
     <!-- Three-column body -->
     <div class="exchange-body">
 
-      <!-- Chart -->
-      <div class="chart-panel">
-        <div class="chart-toolbar">
-          <div class="tf-tabs">
+      <!-- Chart panel -->
+      <section class="panel chart-panel">
+        <div class="panel-h">
+          <div class="tabs">
             <button
               v-for="tf in timeFrames"
               :key="tf"
-              class="tf-btn"
+              class="tab"
               :class="{ active: timeFrame === tf }"
               @click="timeFrame = tf"
             >{{ tf }}</button>
@@ -151,11 +150,11 @@ const candles = computed<Candle[]>(() => {
             </g>
           </svg>
         </div>
-      </div>
+      </section>
 
-      <!-- Order book -->
-      <div class="orderbook-panel">
-        <div class="ob-header">Libro de órdenes</div>
+      <!-- Order book panel -->
+      <section class="panel orderbook-panel">
+        <div class="panel-h"><span>Libro de órdenes</span></div>
         <div class="ob-cols">
           <span>Precio (USDT)</span>
           <span class="right">{{ pair.split('/')[0] }}</span>
@@ -182,39 +181,45 @@ const candles = computed<Candle[]>(() => {
             <span class="mono right muted">{{ Math.round((r[0] as number) * (r[1] as number)).toLocaleString('en-US') }}</span>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Trade panel -->
-      <div class="trade-panel">
+      <section class="panel trade-panel">
         <div class="trade-sides">
           <button class="trade-side buy" :class="{ active: tradeSide === 'buy' }" @click="tradeSide = 'buy'">Comprar</button>
           <button class="trade-side sell" :class="{ active: tradeSide === 'sell' }" @click="tradeSide = 'sell'">Vender</button>
         </div>
 
-        <div class="trade-order-types">
-          <button v-for="t in ['market', 'limit', 'stop'] as OrderType[]" :key="t" class="ot-btn" :class="{ active: orderType === t }" @click="orderType = t">
+        <div class="tabs">
+          <button
+            v-for="t in (['market', 'limit', 'stop'] as OrderType[])"
+            :key="t"
+            class="tab"
+            :class="{ active: orderType === t }"
+            @click="orderType = t"
+          >
             {{ t === 'market' ? 'Mercado' : t === 'limit' ? 'Límite' : 'Stop' }}
           </button>
         </div>
 
-        <div class="trade-fld">
-          <label>Disponible</label>
-          <div class="trade-avail mono">12,420.50 USDT</div>
+        <div class="field">
+          <label class="field-label">Disponible</label>
+          <div class="field-static mono">12,420.50 USDT</div>
         </div>
 
-        <div class="trade-fld">
-          <label :for="`trade-amount`">Cantidad</label>
-          <div class="trade-input-wrap">
-            <input id="trade-amount" v-model="tradeAmount" class="trade-input mono" />
-            <span class="trade-input-unit">{{ pair.split('/')[0] }}</span>
+        <div class="field">
+          <label class="field-label" for="trade-amount">Cantidad</label>
+          <div class="field-input-wrap">
+            <input id="trade-amount" v-model="tradeAmount" class="field-input mono">
+            <span class="field-input-unit">{{ pair.split('/')[0] }}</span>
           </div>
         </div>
 
-        <div class="trade-fld">
-          <label :for="`trade-total`">Total</label>
-          <div class="trade-input-wrap">
-            <input id="trade-total" v-model="tradeTotal" class="trade-input mono" />
-            <span class="trade-input-unit">{{ pair.split('/')[1] }}</span>
+        <div class="field">
+          <label class="field-label" for="trade-total">Total</label>
+          <div class="field-input-wrap">
+            <input id="trade-total" v-model="tradeTotal" class="field-input mono">
+            <span class="field-input-unit">{{ pair.split('/')[1] }}</span>
           </div>
         </div>
 
@@ -225,7 +230,7 @@ const candles = computed<Candle[]>(() => {
         <button class="trade-cta" :class="tradeSide === 'buy' ? 'cta-buy' : 'cta-sell'" @click="openOrder">
           {{ ctaLabel }}
         </button>
-      </div>
+      </section>
 
     </div>
   </div>
@@ -241,8 +246,14 @@ const candles = computed<Candle[]>(() => {
 <style scoped>
 .exchange-view { display: flex; flex-direction: column; gap: 14px; }
 
-/* Header */
-.exchange-header { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+/* Phase 5 page header */
+.page-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
 .pair-info { display: flex; align-items: center; gap: 10px; }
 .pair-mark {
   width: 30px; height: 30px; border-radius: 50%;
@@ -250,15 +261,15 @@ const candles = computed<Candle[]>(() => {
   display: grid; place-items: center;
   color: #faf9f6; font-weight: 700; font-size: 11px; flex-shrink: 0;
 }
-.pair-info h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); margin: 0; }
+.page-h h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); margin: 0; }
 
 .ticker-stats { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .ticker-stat { display: flex; flex-direction: column; gap: 1px; }
-.ticker-lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); }
-.ticker-val { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
-.ticker-val.success { color: var(--success); }
+.lb { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); }
+.vl { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+.vl.success { color: var(--success); }
 
-/* Body layout */
+/* 3-column body */
 .exchange-body {
   display: grid;
   grid-template-columns: 1fr 260px 220px;
@@ -266,54 +277,49 @@ const candles = computed<Candle[]>(() => {
   min-height: 400px;
 }
 
-/* Chart panel */
-.chart-panel {
+/* Phase 5 panel (override global padding for header + body layout) */
+.panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  padding: 0;
   overflow: hidden;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
 }
 
-.chart-toolbar {
+.panel-h {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  gap: 8px;
 }
 
-.tf-tabs { display: flex; gap: 2px; }
-.tf-btn {
-  padding: 4px 8px; font-size: 11.5px; font-weight: 500;
+/* Tabs (timeframes + order type) */
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.tab {
+  padding: 4px 10px; font-size: 11.5px; font-weight: 500;
   border: 1px solid transparent; border-radius: var(--radius-sm);
   background: transparent; color: var(--text-2);
-  cursor: pointer; font-family: var(--font-sans); transition: background 0.1s, color 0.1s;
+  cursor: pointer; font-family: var(--font-sans);
+  transition: background 0.1s, color 0.1s;
 }
-.tf-btn:hover { background: var(--hover); color: var(--text); }
-.tf-btn.active { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab.active { background: var(--surface); color: var(--text); border-color: var(--border); }
 
+/* Chart */
 .chart-wrap { flex: 1; padding: 10px 14px; }
 .chart-svg { width: 100%; height: 220px; }
 .chart-grid-line { stroke: var(--border); stroke-dasharray: 2 4; }
 
 /* Order book */
-.orderbook-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.ob-header {
-  padding: 10px 14px;
-  font-size: 12px; font-weight: 600; color: var(--text);
-  border-bottom: 1px solid var(--border);
-}
-
 .ob-cols {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -323,7 +329,6 @@ const candles = computed<Candle[]>(() => {
   text-transform: uppercase; letter-spacing: 0.04em;
   border-bottom: 1px solid var(--border);
 }
-
 .ob-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -331,7 +336,6 @@ const candles = computed<Candle[]>(() => {
   padding: 4px 14px;
   font-size: 11.5px;
 }
-
 .buy-price  { color: var(--success); }
 .sell-price { color: var(--danger); }
 
@@ -344,7 +348,6 @@ const candles = computed<Candle[]>(() => {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-
 .ob-mid-price { font-size: 15px; font-weight: 700; color: var(--success); }
 .ob-mid-sub   { font-size: 11px; color: var(--text-3); }
 
@@ -353,70 +356,71 @@ const candles = computed<Candle[]>(() => {
 .muted { color: var(--text-3); }
 
 /* Trade panel */
-.trade-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.trade-panel { padding: 14px; gap: 10px; }
+.trade-panel > * + * { margin-top: 10px; }
 
-.trade-sides { display: grid; grid-template-columns: 1fr 1fr; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.trade-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
 .trade-side {
-  padding: 7px; font-size: 12.5px; font-weight: 600;
-  background: transparent; border: none; cursor: pointer;
-  font-family: var(--font-sans); transition: background 0.12s, color 0.12s;
+  padding: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.12s, color 0.12s;
   color: var(--text-2);
 }
 .trade-side.buy.active  { background: var(--success); color: #fff; }
 .trade-side.sell.active { background: var(--danger);  color: #fff; }
 .trade-side:not(.active):hover { background: var(--hover); }
 
-.trade-order-types { display: flex; gap: 4px; }
-.ot-btn {
-  flex: 1; padding: 5px; font-size: 11.5px; font-weight: 500;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: transparent; color: var(--text-2); cursor: pointer;
-  font-family: var(--font-sans); transition: background 0.1s, color 0.1s;
-}
-.ot-btn:hover { background: var(--hover); color: var(--text); }
-.ot-btn.active { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
-
-.trade-fld { display: flex; flex-direction: column; gap: 3px; }
-.trade-fld label { font-size: 11.5px; font-weight: 500; color: var(--text-2); }
-
-.trade-avail {
-  font-size: 12.5px; padding: 7px 10px;
-  background: var(--surface-2); border-radius: var(--radius);
-  border: 1px solid var(--border); color: var(--text);
+/* Phase 5 form fields */
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field-label { font-size: 11.5px; font-weight: 500; color: var(--text-2); }
+.field-static {
+  font-size: 12.5px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
-.trade-input-wrap { position: relative; }
-.trade-input {
+.field-input-wrap { position: relative; }
+.field-input {
   width: 100%; box-sizing: border-box;
   padding: 7px 38px 7px 10px;
   border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface-2); color: var(--text);
-  font-size: 12.5px; font-family: var(--font-mono);
+  font-size: 12.5px; font-family: var(--font-sans);
   outline: none; transition: border-color 0.12s;
 }
-.trade-input:focus { border-color: var(--accent); }
-.trade-input-unit {
+.field-input.mono { font-family: var(--font-mono); }
+.field-input:focus { border-color: var(--accent); }
+.field-input-unit {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
   font-size: 10.5px; color: var(--text-3);
 }
 
+/* Percent shortcuts */
 .pct-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .pct-btn {
   padding: 4px; font-size: 11px; font-weight: 500;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--surface-2); color: var(--text-2);
-  cursor: pointer; font-family: var(--font-sans); transition: background 0.1s, color 0.1s;
+  cursor: pointer; font-family: var(--font-sans);
+  transition: background 0.1s, color 0.1s;
 }
 .pct-btn:hover { background: var(--hover); color: var(--text); }
 
+/* Trade CTA — buy/sell variants on .btn shape */
 .trade-cta {
   width: 100%; height: 34px; border-radius: var(--radius);
   font-size: 13px; font-weight: 600; font-family: var(--font-sans);
@@ -427,6 +431,12 @@ const candles = computed<Candle[]>(() => {
 .cta-sell { background: var(--danger);  color: #fff; }
 .trade-cta:hover { opacity: 0.88; }
 
-@media (max-width: 1100px) { .exchange-body { grid-template-columns: 1fr 240px; } .trade-panel { display: none; } }
-@media (max-width: 760px)  { .exchange-body { grid-template-columns: 1fr; } .orderbook-panel { display: none; } }
+@media (max-width: 1100px) {
+  .exchange-body { grid-template-columns: 1fr 240px; }
+  .trade-panel   { display: none; }
+}
+@media (max-width: 760px) {
+  .exchange-body    { grid-template-columns: 1fr; }
+  .orderbook-panel  { display: none; }
+}
 </style>
