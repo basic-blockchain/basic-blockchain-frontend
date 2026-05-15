@@ -257,13 +257,15 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
     />
   </div>
 
-  <ConfirmUserModal
-    v-if="confirmModal"
-    :action="confirmModal.action"
-    :user="confirmModal.target"
-    @close="confirmModal = null"
-    @confirm="handleConfirm"
-  />
+  <Teleport to="body">
+    <ConfirmUserModal
+      v-if="confirmModal"
+      :action="confirmModal.action"
+      :user="confirmModal.target"
+      @close="confirmModal = null"
+      @confirm="handleConfirm"
+    />
+  </Teleport>
 </template>
 
 <style scoped>
