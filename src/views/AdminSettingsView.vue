@@ -40,8 +40,8 @@ function saveGeneral() {
 }
 
 function toggleChanged(toggle: typeof operationToggles.value[0]) {
-  const label = toggle.value ? 'activado' : 'desactivado'
-  toast.add({ severity: 'info', summary: toggle.label, detail: `${toggle.label} ${label}`, life: 2500 })
+  const state = toggle.value ? 'activado' : 'desactivado'
+  toast.add({ severity: 'info', summary: toggle.label, detail: `${toggle.label} ${state}`, life: 2500 })
 }
 </script>
 
@@ -73,8 +73,8 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
 
         <!-- General -->
         <template v-if="activeSection === 'general'">
-          <div class="settings-panel">
-            <div class="settings-panel-h">
+          <section class="panel">
+            <div class="panel-h">
               <div>
                 <h3>Información general</h3>
                 <p>Nombre, dominios y entorno operativo.</p>
@@ -82,43 +82,45 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
               <button class="btn btn-primary" @click="saveGeneral">Guardar cambios</button>
             </div>
 
-            <div class="fld">
-              <label for="name">Nombre comercial</label>
-              <input id="name" v-model="generalForm.name" class="field-input" />
-            </div>
-            <div class="fld-row">
-              <div class="fld">
-                <label for="legal-name">Razón social</label>
-                <input id="legal-name" v-model="generalForm.legalName" class="field-input" />
+            <div class="panel-body">
+              <div class="field">
+                <label class="field-label" for="name">Nombre comercial</label>
+                <input id="name" v-model="generalForm.name" class="field-input">
               </div>
-              <div class="fld">
-                <label for="tax-id">CUIT / Tax ID</label>
-                <input id="tax-id" v-model="generalForm.taxId" class="field-input mono" placeholder="30-XXXXXXXX-3" />
+              <div class="field-row">
+                <div class="field">
+                  <label class="field-label" for="legal-name">Razón social</label>
+                  <input id="legal-name" v-model="generalForm.legalName" class="field-input">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="tax-id">CUIT / Tax ID</label>
+                  <input id="tax-id" v-model="generalForm.taxId" class="field-input mono" placeholder="30-XXXXXXXX-3">
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="field-label" for="support-email">Email de soporte</label>
+                  <input id="support-email" v-model="generalForm.supportEmail" class="field-input" placeholder="soporte@cadena.app" type="email">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="domain">Dominio</label>
+                  <input id="domain" v-model="generalForm.domain" class="field-input" placeholder="app.cadena.app">
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="timezone">Zona horaria</label>
+                <select id="timezone" v-model="generalForm.timezone" class="field-input">
+                  <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires (ART, UTC-3)</option>
+                  <option value="America/Mexico_City">America/Mexico_City (CST, UTC-6)</option>
+                  <option value="America/Bogota">America/Bogota (COT, UTC-5)</option>
+                  <option value="UTC">UTC</option>
+                </select>
               </div>
             </div>
-            <div class="fld-row">
-              <div class="fld">
-                <label for="support-email">Email de soporte</label>
-                <input id="support-email" v-model="generalForm.supportEmail" class="field-input" placeholder="soporte@cadena.app" type="email" />
-              </div>
-              <div class="fld">
-                <label for="domain">Dominio</label>
-                <input id="domain" v-model="generalForm.domain" class="field-input" placeholder="app.cadena.app" />
-              </div>
-            </div>
-            <div class="fld">
-              <label for="timezone">Zona horaria</label>
-              <select id="timezone" v-model="generalForm.timezone" class="field-input">
-                <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires (ART, UTC-3)</option>
-                <option value="America/Mexico_City">America/Mexico_City (CST, UTC-6)</option>
-                <option value="America/Bogota">America/Bogota (COT, UTC-5)</option>
-                <option value="UTC">UTC</option>
-              </select>
-            </div>
-          </div>
+          </section>
 
-          <div class="settings-panel">
-            <div class="settings-panel-h-simple">
+          <section class="panel">
+            <div class="panel-h">
               <h3>Modo de operación</h3>
             </div>
             <div
@@ -138,24 +140,24 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
                   type="checkbox"
                   class="toggle-input"
                   @change="toggleChanged(toggle)"
-                />
+                >
                 <span class="toggle-track">
                   <span class="toggle-thumb" />
                 </span>
               </label>
             </div>
-          </div>
+          </section>
         </template>
 
         <!-- Placeholder for other sections -->
         <template v-else>
-          <div class="settings-panel settings-placeholder">
+          <section class="panel placeholder">
             <div class="placeholder-icon">
               <span class="pi pi-cog" aria-hidden="true" />
             </div>
             <p class="placeholder-label">{{ sections.find((s) => s.key === activeSection)?.label }}</p>
             <p class="placeholder-sub">Esta sección estará disponible próximamente.</p>
-          </div>
+          </section>
         </template>
 
       </div>
@@ -207,38 +209,41 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
 .settings-nav-item:hover { background: var(--hover); color: var(--text); }
 .settings-nav-item.active { background: var(--surface-2); color: var(--text); font-weight: 600; }
 
-/* Panels */
 .settings-content { display: flex; flex-direction: column; gap: 14px; }
 
-.settings-panel {
+/* Phase 5 panel (overrides global .panel padding for header + body layout) */
+.panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  padding: 0;
   overflow: hidden;
+  box-shadow: none;
 }
 
-.settings-panel-h {
+.panel-h {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 16px 20px 14px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  gap: 12px;
+}
+.panel-h h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text); }
+.panel-h p  { font-size: 12px; color: var(--text-2); margin: 4px 0 0; }
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 18px;
 }
 
-.settings-panel-h h3 { font-size: 15px; font-weight: 600; margin: 0; color: var(--text); }
-.settings-panel-h p  { font-size: 12.5px; color: var(--text-2); margin: 4px 0 0; }
-.settings-panel-h-simple { padding: 12px 20px; border-bottom: 1px solid var(--border); }
-.settings-panel-h-simple h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text); }
-
 /* Form fields */
-.fld { display: flex; flex-direction: column; gap: 4px; padding: 10px 20px 2px; }
-.fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-.fld-row .fld { padding: 10px 10px 2px; }
-.fld-row .fld:first-child { padding-left: 20px; }
-.fld-row .fld:last-child  { padding-right: 20px; }
-
-.fld label { font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 2px; }
-
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
 .field-input {
   padding: 7px 10px;
   border: 1px solid var(--border);
@@ -270,10 +275,8 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
 .toggle-label { font-weight: 500; font-size: 13px; color: var(--text); }
 .toggle-desc  { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
 
-/* Custom toggle switch */
 .toggle-switch { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
 .toggle-input { position: absolute; opacity: 0; width: 0; height: 0; }
-
 .toggle-track {
   position: relative;
   width: 36px; height: 20px;
@@ -283,7 +286,6 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
   display: block;
 }
 .toggle-input:checked + .toggle-track { background: var(--accent); }
-
 .toggle-thumb {
   position: absolute;
   top: 2px; left: 2px;
@@ -296,7 +298,7 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
 .toggle-input:checked + .toggle-track .toggle-thumb { left: 18px; }
 
 /* Placeholder */
-.settings-placeholder {
+.placeholder {
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; min-height: 200px; gap: 8px; padding: 40px;
 }
@@ -307,7 +309,6 @@ function toggleChanged(toggle: typeof operationToggles.value[0]) {
 @media (max-width: 760px) {
   .settings-layout { grid-template-columns: 1fr; }
   .settings-nav { flex-direction: row; flex-wrap: wrap; }
-  .fld-row { grid-template-columns: 1fr; }
-  .fld-row .fld { padding: 8px 20px 2px; }
+  .field-row { grid-template-columns: 1fr; }
 }
 </style>
