@@ -9,6 +9,9 @@ export interface AdminUser {
   banned: boolean
   deleted_at: string | null
   created_at: string
+  country: string | null
+  kyc_level: 'L0' | 'L1' | 'L2' | 'L3'
+  last_active: string | null
 }
 
 export type WalletType = 'USER' | 'TREASURY' | 'FEE'
