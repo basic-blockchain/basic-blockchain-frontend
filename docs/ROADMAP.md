@@ -43,6 +43,26 @@ Order inside "Backlog" is recommended but not binding.
 | AdminView, AdminAuditView, AdminTreasuryView, HealthView, ValidationView | already compliant — no PR needed | — |
 | `docs/DESIGN.md` design-system reference | done | #163 |
 
+### Phase 5b — Users table redesign
+
+**Goal**: bring `AdminUsersView` in line with the Screenshot_438 reference
+(KPI strip, filter chips, rich rows, pagination).
+
+| Step | Status | PR |
+| --- | --- | --- |
+| Backend: extend `UserRecord` with `country`, `kyc_level`, `last_active`, `created_at` + migration V018 + endpoint serialization | done | simulator#183 |
+| Frontend: 4-KPI bigstat row, filter chips (Todos / Activos / KYC / Congelados / Baneados), search + KYC + País filters, "Mostrar eliminados" toggle, avatar + KYC badge + country flag columns, pagination footer | done | #190 |
+
+**Carry-overs** (documented in the PR bodies):
+- Inline role-chip toggles removed from the table; re-wiring role
+  management into the `UserDrawer` is a follow-up — `UserDrawer` needs
+  new `DrawerAction` variants for `grant_role` / `revoke_role`.
+- "Saldo bajo gestión" still sums raw native balances without FX. Real
+  USD aggregation lands when admin endpoints expose exchange rates
+  (Phase 6e dependency).
+- Column selector ("Columnas" button in Screenshot_438) deferred; the
+  responsive media queries already drop columns at 1100/760px.
+
 ### Phase 6a — Wallet UX
 
 **Goal**: per-currency wallet cards + per-card actions on `WalletView`.
@@ -61,6 +81,26 @@ Order inside "Backlog" is recommended but not binding.
 
 - Status: done (PR #148).
 
+### Phase 6d — Drawer hydration (UserDrawer + WalletDrawer)
+
+**Goal**: replace hardcoded empty arrays in the admin drawers with real
+fetched data; add a parallel `WalletDrawer` for per-wallet detail.
+
+| Sub-phase | Step | Status | PR |
+| --- | --- | --- | --- |
+| 6d.1 | `UserDrawer`: real wallets (filtered from `listAllWallets`), movements (mempool feeds filtered by user public keys), audit (`listAuditLog target_id=userId`) | done | #173 |
+| 6d.2 | `WalletDrawer`: new component with Resumen / Movimientos / Auditoría tabs; `AdminWalletsView` row click integration; freeze/unfreeze from drawer header | done | #182 |
+
+**Carry-overs** (documented in the PR bodies):
+- Cross-navigation from the `UserDrawer` Wallets tab into the
+  `WalletDrawer` not wired — follow-up.
+- `balanceUsd` / `amountUsd` still best-effort (raw native balance, no
+  FX) — same caveat as Phase 5b. Lands with exchange-rate enrichment.
+- `Movement.type` limited to `deposit` / `withdraw` until P2P /
+  Exchange flows produce structured movement records.
+- KYC / phone / country / 2FA in `UserDrawer` are placeholders; real
+  KYC arrives with Phase 6g.
+
 ### Admin Users hotfix batch (May 2026)
 
 **Goal**: ban modal visible, real totals in `ConfirmUserModal`, drawer
@@ -74,38 +114,31 @@ ISO timestamp on soft-delete.
 
 ### Repo plumbing (May 2026)
 
-- Coverage gate temporarily lowered to 65% to unblock the Phase 5/6d
-  batch — PR #164. **Debt**: restore to 80% once `stores/mining.ts`,
+- Coverage gate temporarily lowered to 65% to unblock the Phase 5 / 6d /
+  5b batch — PR #164. **Debt**: restore to 80% once `stores/mining.ts`,
   `stores/wallet.ts`, `domain/validation.ts` are covered.
-- Promotion chain run end-to-end on both repos after the batch landed
+- Promotion chain run end-to-end on both repos for every batch
   (develop → qa → staging → production → main).
+- Old PR #159 (`feat/admin-users-redesign` → main) closed with
+  justification; its content was redistributed across #160 (hotfix),
+  #173 / #182 (Phase 6d) and #190 (Phase 5b table).
+- Untracked artifacts (`propuesta_refactorizacion/`,
+  `MINING_FIX_SUMMARY.md`) archived on the `provisional/local-artifacts`
+  branch — kept on origin as a design-reference snapshot, not merged
+  to develop.
 
 ---
 
 ## 3. In flight
 
-### Phase 6d.1 — UserDrawer real data (frontend)
+*(nothing — the batch from May 2026 is fully landed.)*
 
-**Goal**: replace hardcoded empty arrays in `UserDrawer` with real
-wallets / movements / audit hydrated at open time.
-
-- Status: in flight — PR #173 open.
-- Caveats documented in the PR body: `balanceUsd` is best-effort
-  (no FX conversion), `Movement.type` limited to `deposit/withdraw`
-  until P2P / Exchange flows surface structured movement records.
+When the next phase opens, this section gets the corresponding PR
+references and an honest list of what's still open.
 
 ---
 
 ## 4. Next (committed scope)
-
-### Phase 6d.2 — WalletDrawer (frontend)
-
-**Goal**: per-wallet detail drawer (Resumen / Movimientos / Auditoría),
-opened from `AdminWalletsView` rows or the `UserDrawer` Wallets tab.
-
-- Status: next after 6d.1 merges.
-- Notes: no new backend endpoints needed — movements filtered client-side
-  by `public_key`, audit by `target_id`.
 
 ### Phase 6e — Dashboard enrichment (`AdminView`)
 
@@ -114,27 +147,33 @@ volume chart (30D / 90D / 1A), asset composition bars, "Eventos críticos
 hoy" feed, "Top movimientos del día" table, trend pills (`+X% vs prev
 week`).
 
-- Status: next.
-- Requires **new backend endpoints**:
+- Status: next — committed but not started.
+- **Requires new backend endpoints**:
   - Time-series volume aggregation (`GET /admin/volume?range=30d`).
   - Severity-tagged audit recent (`GET /admin/audit?severity=critical&since=24h`).
   - Top movements with USD value (depends on FX rates exposed).
   - User/wallet trend deltas vs previous period (`GET /admin/stats?compare=7d`).
-- Out of scope of Phase 5 because content > styling.
+- Unblocks "Saldo bajo gestión" real USD aggregation in the rest of
+  the admin views (Phase 5b / 6d.1 / 6d.2 all carry the same caveat).
 
-### Phase 5b — Users table redesign
+### Role management in `UserDrawer`
 
-**Goal**: apply Screenshot_438.png reference to `AdminUsersView` table:
-4-KPI bigstat row (Total / Activos / Restringidos / Saldo bajo gestión),
-filter chips (Todos / Activos / KYC / Congelados / Baneados), columns
-(KYC / País / Wallets / Saldo / Última actividad / Registro), pagination,
-search, filter dropdowns (KYC, País), "Mostrar eliminados" toggle, column
-selector.
+**Goal**: surface ADMIN / OPERATOR / VIEWER toggles inside the user
+detail drawer to replace the inline chips removed in Phase 5b.
 
-- Status: backlog → next after 6d.
-- Notes: supersedes the old PR #159 (closed; valuable parts ported here).
-- Backend gaps: `kyc_level`, `country`, `last_active` not yet on
-  `GET /admin/users` payload. Phase 5b will define and request them.
+- Status: next — small.
+- Touch points: `UserDrawer` (add a Roles section under Resumen tab),
+  `DrawerAction` enum (add `grant_role` / `revoke_role`),
+  `AdminUsersView.handleDrawerAction` mapping.
+
+### Cross-navigation: `UserDrawer` → `WalletDrawer`
+
+**Goal**: clicking a wallet row in the `UserDrawer` Wallets tab opens
+the `WalletDrawer` (mounted at the view level) instead of being inert.
+
+- Status: next — small.
+- Touch points: `UserDrawer` emits a `view-wallet` event,
+  `AdminUsersView` listens and opens its own `WalletDrawer` instance.
 
 ---
 
@@ -144,17 +183,29 @@ selector.
 
 - Re-cover `stores/mining.ts`, `stores/wallet.ts`, `domain/validation.ts`.
 - Revert `vitest.config.ts` threshold from 65 to 80.
-- Owner: lands naturally with Phase 6d.2 (touches `wallet.ts`) and a
-  small dedicated PR for `mining.ts` + `validation.ts`.
+- Owner: lands naturally with the role-management follow-up (touches
+  `wallet.ts`) and a small dedicated PR for `mining.ts` + `validation.ts`.
 
 ### Backend: fix simulator promotion script direction
 
 - `basic-blockchain-simulator/scripts/devsecops_promotion_chain.sh`
-  lines 101-104 are downward (production → main, production →
-  staging, staging → qa, qa → develop) but
+  lines 101-104 are downward (`production → main`, `production →
+  staging`, `staging → qa`, `qa → develop`) but
   `docs/devsecops/PROMOTION_STRATEGY.md` describes upward flow.
 - Flip to match: `develop → qa`, `qa → staging`, `staging → production`,
   `production → main`. Frontend script is already correct.
+- Until this lands, the simulator promotion chain is run manually
+  (`gh pr create` per step) — see the "Repo plumbing" notes above.
+
+### Backend: resilient PG SELECT on missing columns
+
+- After PR simulator#183 the PG adapter SELECTs `country`, `kyc_level`,
+  `last_active`, `created_at` even on databases that have not yet run
+  migration V018, which produces a 500 on `/admin/users`.
+- Fix: try the extended SELECT, fall back to the legacy SELECT when a
+  `column does not exist` error fires. ~20 lines + a regression test.
+- Workaround in the meantime: run `python migrations/migrate.py` after
+  pulling.
 
 ### Phase 6f — Notifications + global search
 
@@ -165,7 +216,17 @@ search (currently decorative).
 
 **Goal**: user can view their KYC level and upload documents from their
 own session (not just admin review). Pairs with backend KYC endpoints
-(currently mocked in `UserDrawer.kyc`).
+(currently mocked in `UserDrawer.kyc` and the `users.kyc_level` column
+added by V018 sits at `'L0'` for every existing row until this flow
+ships).
+
+### Auth flow: populate `last_active` and `country`
+
+- `users.last_active` and `users.country` exist in the schema (V018)
+  but no write path sets them yet.
+- Login + sensitive actions should bump `last_active`; signup should
+  collect `country` (frontend picker + backend storage).
+- Small enough to live alongside Phase 6g or as its own PR.
 
 ### Phase 7 — Interactive iteration ("Cadena v2")
 
@@ -200,6 +261,14 @@ contributors do not re-litigate them.
 - **Documentation does not need its own promotion chain step.** `docs/*`
   changes land on develop and ride the chain to main with the rest of
   the batch.
+- **Inline role chips on the Users table were dropped in Phase 5b.**
+  Role mutation moves into the `UserDrawer` (see §4) instead of
+  cluttering every row. The functions `grantRole` / `revokeRole` stay
+  in `@/api/admin` — only the view-level import was removed.
+- **Schema migrations are mandatory after pulling.** V018 added four
+  columns the PG adapter selects unconditionally. Pull → migrate →
+  restart is the documented order. A resilient-SELECT fallback is on
+  the backlog for environments where this is impractical.
 
 ---
 
@@ -208,10 +277,14 @@ contributors do not re-litigate them.
 | Repo | PR | Title | Status |
 | --- | --- | --- | --- |
 | simulator | #171 | fix(admin): `deleted_at` + ISO timestamp | merged |
+| simulator | #183 | feat(admin): enriched user profile fields (Phase 5b backend) | merged |
 | frontend | #160 | fix(admin-users): visible confirm modal + real totals | merged |
 | frontend | #161 | refactor(admin-settings): Phase 5 alignment | merged |
 | frontend | #162 | refactor(exchange): Phase 5 wrap | merged |
 | frontend | #163 | docs: DESIGN.md | merged |
 | frontend | #164 | chore(ci): coverage threshold 80→65 (temporary) | merged |
-| frontend | #173 | feat(admin-users): hydrate UserDrawer (Phase 6d.1) | open |
-| frontend | #159 | feat(admin-users): redesign list view | superseded by #160 + 6d.1 + Phase 5b — close |
+| frontend | #173 | feat(admin-users): hydrate UserDrawer (Phase 6d.1) | merged |
+| frontend | #174 | docs: ROADMAP.md initial | merged |
+| frontend | #182 | feat(admin-wallets): WalletDrawer (Phase 6d.2) | merged |
+| frontend | #190 | feat(admin-users): Phase 5b table redesign | merged |
+| frontend | #159 | feat(admin-users): redesign list view | closed — superseded by #160 + #173 + #190 |
