@@ -1,14 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { listAllWallets, freezeWallet, unfreezeWallet, type WalletAdminRecord } from '@/api/admin'
+import {
+  listAllWallets, listAuditLog, freezeWallet, unfreezeWallet,
+  type WalletAdminRecord,
+} from '@/api/admin'
+import { getConfirmed, getPending } from '@/api/mempool'
 import HashChip from '@/components/atoms/HashChip.vue'
 import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
+import WalletDrawer, {
+  type DrawerWallet, type DrawerWalletMovement, type DrawerWalletAuditEvent,
+  type WalletDrawerAction,
+} from '@/components/drawers/WalletDrawer.vue'
 
 const wallets = ref<WalletAdminRecord[]>([])
 const loading = ref(false)
 const error = ref('')
 const filterUser = ref('')
 const filterFrozen = ref<'all' | 'frozen' | 'active'>('all')
+
+const drawer = ref<DrawerWallet | null>(null)
+const drawerOpen = ref(false)
+const drawerLoading = ref(false)
 
 async function load() {
   loading.value = true
@@ -43,6 +55,76 @@ async function toggleFreeze(w: WalletAdminRecord) {
 function parseBalance(balance: string): number {
   const value = Number(balance)
   return Number.isFinite(value) ? value : 0
+}
+
+async function openDrawer(w: WalletAdminRecord) {
+  drawer.value = { wallet: w, movements: [], audit: [] }
+  drawerOpen.value = true
+  drawerLoading.value = true
+  const targetKey = w.public_key
+  const walletId = w.wallet_id
+
+  try {
+    const [pendingRes, confirmedRes, auditRes] = await Promise.all([
+      getPending(),
+      getConfirmed(),
+      listAuditLog({ target_id: walletId, limit: 50 }),
+    ])
+
+    const movements: DrawerWalletMovement[] = []
+    pendingRes.transactions
+      .filter((t) => t.sender === targetKey || t.receiver === targetKey)
+      .forEach((t, i) => {
+        const direction: 'in' | 'out' = t.receiver === targetKey ? 'in' : 'out'
+        movements.push({
+          id: `p-${i}-${t.sender.slice(0, 6)}`,
+          direction,
+          counterparty: direction === 'in' ? t.sender : t.receiver,
+          amount: String(t.amount),
+          amountUsd: Number(t.amount) || 0,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        })
+      })
+    confirmedRes.transactions
+      .filter((t) => t.sender === targetKey || t.receiver === targetKey)
+      .forEach((t, i) => {
+        const direction: 'in' | 'out' = t.receiver === targetKey ? 'in' : 'out'
+        movements.push({
+          id: `c-${i}-${t.sender.slice(0, 6)}`,
+          direction,
+          counterparty: direction === 'in' ? t.sender : t.receiver,
+          amount: String(t.amount),
+          amountUsd: Number(t.amount) || 0,
+          status: 'completed',
+          createdAt: t.blockTimestamp,
+        })
+      })
+
+    const audit: DrawerWalletAuditEvent[] = auditRes.entries.map((e) => ({
+      id: e.id,
+      action: e.action,
+      meta: Object.keys(e.details ?? {}).length ? JSON.stringify(e.details) : '',
+      actor: e.actor_id,
+      at: e.created_at,
+    }))
+
+    if (drawer.value && drawer.value.wallet.wallet_id === walletId) {
+      drawer.value = { wallet: w, movements, audit }
+    }
+  } catch {
+    /* keep skeleton */
+  } finally {
+    if (drawer.value?.wallet.wallet_id === walletId) drawerLoading.value = false
+  }
+}
+
+async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminRecord) {
+  if (action === 'freeze') await freezeWallet(w.wallet_id)
+  else await unfreezeWallet(w.wallet_id)
+  drawerOpen.value = false
+  drawer.value = null
+  await load()
 }
 </script>
 
@@ -122,9 +204,9 @@ function parseBalance(balance: string): number {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="w in filtered" :key="w.wallet_id" :class="{ 'row-muted': w.frozen }">
+          <tr v-for="w in filtered" :key="w.wallet_id" :class="{ 'row-muted': w.frozen }" style="cursor:pointer" @click="openDrawer(w)">
             <td><span class="asset-pill">{{ w.currency }}</span></td>
-            <td class="mono"><HashChip :hash="w.wallet_id" :length="16" label="wallet id" /></td>
+            <td class="mono" @click.stop><HashChip :hash="w.wallet_id" :length="16" label="wallet id" /></td>
             <td>
               <span class="display-name">{{ w.display_name }}</span>
               <span class="username"> @{{ w.username }}</span>
@@ -133,13 +215,13 @@ function parseBalance(balance: string): number {
             <td>
               <span class="type-badge" :class="`type-${w.wallet_type.toLowerCase()}`">{{ w.wallet_type }}</span>
             </td>
-            <td class="mono text-dim"><HashChip :hash="w.public_key" :length="14" label="public key" /></td>
+            <td class="mono text-dim" @click.stop><HashChip :hash="w.public_key" :length="14" label="public key" /></td>
             <td>
               <span class="status-dot" :class="w.frozen ? 'frozen' : 'active'">
                 {{ w.frozen ? 'Congelada' : 'Activa' }}
               </span>
             </td>
-            <td>
+            <td @click.stop>
               <button class="btn-sm" :class="w.frozen ? 'btn-success' : 'btn-info'" @click="toggleFreeze(w)">
                 {{ w.frozen ? 'Descongelar' : 'Congelar' }}
               </button>
@@ -151,6 +233,14 @@ function parseBalance(balance: string): number {
         </tbody>
       </table>
     </div>
+
+    <WalletDrawer
+      :data="drawer"
+      :open="drawerOpen"
+      :loading="drawerLoading"
+      @close="drawerOpen = false"
+      @action="([action, wallet]) => handleDrawerAction(action, wallet)"
+    />
   </div>
 </template>
 
