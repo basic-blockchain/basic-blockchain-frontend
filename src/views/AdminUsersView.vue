@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import {
-  listUsers, banUser, unbanUser, softDeleteUser, restoreUser, updateUser,
-  grantRole, revokeRole, type AdminUser,
+  listUsers, listAllWallets, banUser, unbanUser, softDeleteUser, restoreUser,
+  updateUser, grantRole, revokeRole,
+  type AdminUser, type WalletAdminRecord,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
 import UserDrawer, { type DrawerUser, type DrawerAction } from '@/components/drawers/UserDrawer.vue'
@@ -11,36 +12,51 @@ import type { UserAction, ConfirmUserTarget } from '@/components/modals/ConfirmU
 
 const auth = useAuthStore()
 const users = ref<AdminUser[]>([])
+const wallets = ref<WalletAdminRecord[]>([])
 const loading = ref(false)
 const error = ref('')
 
 const editTarget = ref<AdminUser | null>(null)
 const editForm = ref({ display_name: '', email: '' })
-const deleteTarget = ref<AdminUser | null>(null)
 
-const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget } | null>(null)
+const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget; userId: string } | null>(null)
+
+function userTotals(userId: string): { walletCount: number; totalUsd: number } {
+  let walletCount = 0
+  let totalUsd = 0
+  for (const w of wallets.value) {
+    if (w.user_id !== userId) continue
+    walletCount += 1
+    const n = Number(w.balance)
+    if (Number.isFinite(n)) totalUsd += n
+  }
+  return { walletCount, totalUsd }
+}
 
 function openConfirm(u: AdminUser, action: UserAction) {
+  const totals = userTotals(u.user_id)
   confirmModal.value = {
     action,
+    userId: u.user_id,
     target: {
       fullName: u.display_name,
       email: u.email ?? u.username,
-      walletCount: 1,
-      totalUsd: 0,
+      walletCount: totals.walletCount,
+      totalUsd: totals.totalUsd,
     },
   }
 }
 
 async function handleConfirm(payload: { action: UserAction }) {
   if (!confirmModal.value) return
-  const u = users.value.find((x) => x.display_name === confirmModal.value!.target.fullName)
+  const u = users.value.find((x) => x.user_id === confirmModal.value!.userId)
   if (!u) { confirmModal.value = null; return }
   try {
     if (payload.action === 'ban') await banUser(u.user_id)
     else if (payload.action === 'unban') await unbanUser(u.user_id)
     else if (payload.action === 'delete') await softDeleteUser(u.user_id)
     else if (payload.action === 'restore') await restoreUser(u.user_id)
+    drawerOpen.value = false
     await load()
   } catch { /* handled by existing error display */ }
   confirmModal.value = null
@@ -50,8 +66,9 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await listUsers()
-    users.value = res.users
+    const [usersRes, walletsRes] = await Promise.all([listUsers(), listAllWallets()])
+    users.value = usersRes.users
+    wallets.value = walletsRes.wallets
   } catch (e: unknown) {
     error.value = String(e)
   } finally {
@@ -84,13 +101,6 @@ async function submitEdit() {
   await load()
 }
 
-async function executeDelete() {
-  if (!deleteTarget.value) return
-  await softDeleteUser(deleteTarget.value.user_id)
-  deleteTarget.value = null
-  await load()
-}
-
 const ROLES = ['ADMIN', 'OPERATOR', 'VIEWER']
 async function toggleRole(u: AdminUser, role: string) {
   if (u.roles.includes(role)) await revokeRole(u.user_id, role)
@@ -105,6 +115,7 @@ const drawerOpen = ref(false)
 
 function toDrawerUser(u: AdminUser): DrawerUser {
   const status = u.deleted_at ? 'deleted' : u.banned ? 'banned' : 'active'
+  const totals = userTotals(u.user_id)
   return {
     id: u.user_id,
     fullName: u.display_name,
@@ -117,7 +128,7 @@ function toDrawerUser(u: AdminUser): DrawerUser {
     status,
     createdAt: u.created_at ?? new Date().toISOString(),
     lastActive: u.created_at ?? new Date().toISOString(),
-    totalUsd: 0,
+    totalUsd: totals.totalUsd,
     wallets: [],
     movements: [],
     audit: [],
@@ -130,15 +141,26 @@ function openDrawer(u: AdminUser) {
   drawerOpen.value = true
 }
 
-async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
+const DRAWER_TO_CONFIRM: Partial<Record<DrawerAction, UserAction>> = {
+  ban: 'ban',
+  unban: 'unban',
+  delete: 'delete',
+  restore: 'restore',
+  freeze: 'freeze',
+  unfreeze: 'unfreeze',
+}
+
+function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
+  if (action === 'edit') {
+    const u = users.value.find((x) => x.user_id === user.id)
+    if (u) openEdit(u)
+    return
+  }
+  const mapped = DRAWER_TO_CONFIRM[action]
+  if (!mapped) return
   const u = users.value.find((x) => x.user_id === user.id)
   if (!u) return
-  if (action === 'ban') await banUser(u.user_id)
-  else if (action === 'unban') await unbanUser(u.user_id)
-  else if (action === 'delete') await softDeleteUser(u.user_id)
-  else if (action === 'restore') await restoreUser(u.user_id, true)
-  drawerOpen.value = false
-  await load()
+  openConfirm(u, mapped)
 }
 </script>
 
@@ -231,20 +253,6 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
         <div class="modal-actions">
           <button class="btn-ghost" @click="closeEdit">Cancelar</button>
           <button class="btn-primary" @click="submitEdit">Guardar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete confirm modal -->
-    <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
-      <div class="modal modal-danger">
-        <div class="modal-h">¿Eliminar a @{{ deleteTarget.username }}?</div>
-        <div class="modal-body">
-          <p class="modal-text">Es una eliminación suave. Todas las wallets quedarán congeladas. El usuario puede restaurarse después.</p>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-ghost" @click="deleteTarget = null">Cancelar</button>
-          <button class="btn-danger" @click="executeDelete">Confirmar eliminación</button>
         </div>
       </div>
     </div>
