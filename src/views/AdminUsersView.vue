@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import {
-  listUsers, listAllWallets, banUser, unbanUser, softDeleteUser, restoreUser,
-  updateUser, grantRole, revokeRole,
-  type AdminUser, type WalletAdminRecord,
+  listUsers, listAllWallets, listAuditLog, banUser, unbanUser, softDeleteUser,
+  restoreUser, updateUser, grantRole, revokeRole,
+  type AdminUser, type WalletAdminRecord, type AuditEntry,
 } from '@/api/admin'
+import { getConfirmed, getPending } from '@/api/mempool'
+import type { Transaction, ConfirmedTransaction } from '@/domain/transaction'
 import { useAuthStore } from '@/stores/auth'
-import UserDrawer, { type DrawerUser, type DrawerAction } from '@/components/drawers/UserDrawer.vue'
+import UserDrawer, {
+  type DrawerUser, type DrawerAction, type DrawerWallet,
+  type DrawerMovement, type DrawerAuditEvent,
+} from '@/components/drawers/UserDrawer.vue'
 import ConfirmUserModal from '@/components/modals/ConfirmUserModal.vue'
 import type { UserAction, ConfirmUserTarget } from '@/components/modals/ConfirmUserModal.vue'
 
@@ -112,10 +117,60 @@ const isSelf = (u: AdminUser) => u.user_id === auth.user?.user_id
 
 const drawerUser = ref<DrawerUser | null>(null)
 const drawerOpen = ref(false)
+const drawerLoading = ref(false)
+
+function userWalletsOf(userId: string): WalletAdminRecord[] {
+  return wallets.value.filter((w) => w.user_id === userId)
+}
+
+function toDrawerWallets(records: WalletAdminRecord[]): DrawerWallet[] {
+  return records.map((w) => ({
+    id: w.wallet_id,
+    asset: w.currency,
+    network: w.currency,
+    address: w.public_key,
+    balance: w.balance,
+    balanceUsd: Number(w.balance) || 0,
+    status: w.frozen ? 'frozen' : 'active',
+    createdAt: '',
+  }))
+}
+
+function toDrawerMovement(
+  tx: Transaction | ConfirmedTransaction,
+  userAddrs: Set<string>,
+  addrCurrency: Map<string, string>,
+  status: 'completed' | 'pending',
+  idx: number,
+): DrawerMovement {
+  const isOutgoing = userAddrs.has(tx.sender)
+  const asset = addrCurrency.get(tx.sender) ?? addrCurrency.get(tx.receiver) ?? '—'
+  const createdAt = 'blockTimestamp' in tx ? tx.blockTimestamp : new Date().toISOString()
+  return {
+    id: `${status}-${idx}-${tx.sender.slice(0, 6)}-${tx.receiver.slice(0, 6)}`,
+    type: isOutgoing ? 'withdraw' : 'deposit',
+    asset,
+    amount: String(tx.amount),
+    amountUsd: Number(tx.amount) || 0,
+    status,
+    createdAt,
+  }
+}
+
+function toDrawerAudit(entries: AuditEntry[]): DrawerAuditEvent[] {
+  return entries.map((e) => ({
+    id: e.id,
+    action: e.action,
+    meta: Object.keys(e.details ?? {}).length ? JSON.stringify(e.details) : '',
+    actor: e.actor_id,
+    at: e.created_at,
+  }))
+}
 
 function toDrawerUser(u: AdminUser): DrawerUser {
   const status = u.deleted_at ? 'deleted' : u.banned ? 'banned' : 'active'
   const totals = userTotals(u.user_id)
+  const userWallets = toDrawerWallets(userWalletsOf(u.user_id))
   return {
     id: u.user_id,
     fullName: u.display_name,
@@ -129,16 +184,50 @@ function toDrawerUser(u: AdminUser): DrawerUser {
     createdAt: u.created_at ?? new Date().toISOString(),
     lastActive: u.created_at ?? new Date().toISOString(),
     totalUsd: totals.totalUsd,
-    wallets: [],
+    wallets: userWallets,
     movements: [],
     audit: [],
-    flags: {},
+    flags: { deletedAt: u.deleted_at ?? undefined },
   }
 }
 
-function openDrawer(u: AdminUser) {
+async function openDrawer(u: AdminUser) {
   drawerUser.value = toDrawerUser(u)
   drawerOpen.value = true
+  drawerLoading.value = true
+  const targetId = u.user_id
+
+  const userAddrs = new Set(userWalletsOf(targetId).map((w) => w.public_key))
+  const addrCurrency = new Map<string, string>()
+  for (const w of wallets.value) addrCurrency.set(w.public_key, w.currency)
+
+  try {
+    const [auditRes, pendingRes, confirmedRes] = await Promise.all([
+      listAuditLog({ target_id: targetId, limit: 50 }),
+      getPending(),
+      getConfirmed(),
+    ])
+
+    const pendingMovements = pendingRes.transactions
+      .filter((t) => userAddrs.has(t.sender) || userAddrs.has(t.receiver))
+      .map((t, i) => toDrawerMovement(t, userAddrs, addrCurrency, 'pending', i))
+
+    const confirmedMovements = confirmedRes.transactions
+      .filter((t) => userAddrs.has(t.sender) || userAddrs.has(t.receiver))
+      .map((t, i) => toDrawerMovement(t, userAddrs, addrCurrency, 'completed', i))
+
+    if (drawerUser.value && drawerUser.value.id === targetId) {
+      drawerUser.value = {
+        ...drawerUser.value,
+        movements: [...pendingMovements, ...confirmedMovements],
+        audit: toDrawerAudit(auditRes.entries),
+      }
+    }
+  } catch {
+    /* leave the skeleton; downstream UI handles empty arrays */
+  } finally {
+    if (drawerUser.value?.id === targetId) drawerLoading.value = false
+  }
 }
 
 const DRAWER_TO_CONFIRM: Partial<Record<DrawerAction, UserAction>> = {
