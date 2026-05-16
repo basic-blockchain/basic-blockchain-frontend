@@ -55,6 +55,7 @@ const NAV: NavEntry[] = [
   { to: '/admin/treasury', label: 'Admin · Tesorería', requireRole: 'ADMIN' },
   { to: '/admin/exchange-rates', label: 'Admin · Tasas', requireRole: 'ADMIN' },
   { to: '/admin/audit', label: 'Admin · Auditoría', requireRole: 'ADMIN' },
+  { to: '/admin/kyc', label: 'Admin · KYC', requireRole: 'ADMIN' },
   { to: '/admin/compliance', label: 'Admin · Compliance', requireRole: 'ADMIN' },
   { to: '/admin/movements', label: 'Admin · Movimientos', requireRole: 'ADMIN' },
   { to: '/admin/sends', label: 'Admin · Envíos', requireRole: 'ADMIN' },
