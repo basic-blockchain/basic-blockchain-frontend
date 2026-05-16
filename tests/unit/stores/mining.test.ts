@@ -131,11 +131,8 @@ describe('useMiningStore', () => {
     const metrics = useMetricsStore()
     metrics.metrics = {
       chainHeight: 11,
-      pendingCount: 0,
-      mempoolBytes: 0,
-      averageBlockTimeSeconds: 0,
-      difficulty: 0,
-      lastBlockTimestamp: null,
+      pendingTransactions: 0,
+      avgMineTimeSeconds: null,
     }
     vi.spyOn(metrics, 'fetchAll').mockResolvedValue()
     const mempool = useMempoolStore()
