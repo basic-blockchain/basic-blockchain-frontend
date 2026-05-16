@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import type { AuthUser } from '@/stores/auth'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { AuthUser, KycLevel } from '@/stores/auth'
+import {
+  getKycStatus, uploadKycDocument, submitKycReview,
+  type KycDocumentKey, type KycDocumentRecord, type KycDocumentStatus,
+} from '@/api/kyc'
 
 const props = defineProps<{ user: AuthUser | null; open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -47,16 +51,188 @@ const KYC_LEVELS = [
   { level: 'L3', name: 'Completa',      desc: 'Fuente de fondos verificada. Sin límites.' },
 ]
 
-const KYC_DOCS = [
-  { key: 'dni',     label: 'DNI / Pasaporte' },
-  { key: 'selfie',  label: 'Selfie con documento' },
-  { key: 'address', label: 'Comprobante de domicilio' },
-  { key: 'funds',   label: 'Fuente de fondos' },
+interface KycDocMeta { key: KycDocumentKey; label: string; minLevel: KycLevel }
+const KYC_DOCS: KycDocMeta[] = [
+  { key: 'dni',     label: 'DNI / Pasaporte',          minLevel: 'L1' },
+  { key: 'selfie',  label: 'Selfie con documento',     minLevel: 'L1' },
+  { key: 'address', label: 'Comprobante de domicilio', minLevel: 'L2' },
+  { key: 'funds',   label: 'Fuente de fondos',         minLevel: 'L3' },
 ]
 
-// Hardcoded L0 — backend has no KYC endpoint for regular users
-const kycLevel = 'L0'
-const currentKyc = computed(() => KYC_LEVELS.find((l) => l.level === kycLevel) ?? KYC_LEVELS[0])
+const LEVEL_ORDER: KycLevel[] = ['L0', 'L1', 'L2', 'L3']
+
+// ── KYC state (Phase 6g) ────────────────────────────────────────────────────
+// Source of truth is the backend (GET /me/kyc/status). Until it lands, we
+// persist per-user state in localStorage so the user-facing flow works
+// end-to-end locally. Backend-or-fallback is decided per call via try/catch.
+
+const kycLevel = ref<KycLevel>('L0')
+const documents = ref<Record<KycDocumentKey, KycDocumentRecord>>(emptyDocs())
+const pendingReview = ref<KycLevel | null>(null)
+const uploadingDoc = ref<KycDocumentKey | null>(null)
+const submitting = ref(false)
+const kycError = ref<string>('')
+
+function emptyDocs(): Record<KycDocumentKey, KycDocumentRecord> {
+  return {
+    dni:     { key: 'dni',     status: 'missing' },
+    selfie:  { key: 'selfie',  status: 'missing' },
+    address: { key: 'address', status: 'missing' },
+    funds:   { key: 'funds',   status: 'missing' },
+  }
+}
+
+function storageKey(userId: string): string { return `kyc:state:${userId}` }
+
+function loadLocal(userId: string) {
+  const raw = localStorage.getItem(storageKey(userId))
+  if (!raw) { documents.value = emptyDocs(); pendingReview.value = null; return }
+  try {
+    const parsed = JSON.parse(raw) as {
+      documents?: Record<KycDocumentKey, KycDocumentRecord>
+      pendingReview?: KycLevel | null
+      level?: KycLevel
+    }
+    documents.value = { ...emptyDocs(), ...(parsed.documents ?? {}) }
+    pendingReview.value = parsed.pendingReview ?? null
+    if (parsed.level) kycLevel.value = parsed.level
+  } catch {
+    documents.value = emptyDocs()
+    pendingReview.value = null
+  }
+}
+
+function persistLocal() {
+  if (!props.user) return
+  localStorage.setItem(storageKey(props.user.user_id), JSON.stringify({
+    documents: documents.value,
+    pendingReview: pendingReview.value,
+    level: kycLevel.value,
+  }))
+}
+
+async function refreshKyc() {
+  if (!props.user) return
+  kycLevel.value = props.user.kyc_level ?? 'L0'
+  loadLocal(props.user.user_id)
+  try {
+    const remote = await getKycStatus()
+    kycLevel.value = remote.level
+    const merged: Record<KycDocumentKey, KycDocumentRecord> = emptyDocs()
+    for (const d of remote.documents) merged[d.key] = d
+    documents.value = merged
+    pendingReview.value = remote.pending_review ?? null
+    persistLocal()
+  } catch {
+    /* backend not wired yet — local state already loaded above */
+  }
+}
+
+watch(() => [props.open, props.user?.user_id], ([isOpen]) => {
+  if (isOpen && tab.value === 'kyc') refreshKyc()
+})
+
+watch(tab, (t) => { if (t === 'kyc') refreshKyc() })
+
+const fileInputs: Partial<Record<KycDocumentKey, HTMLInputElement | null>> = {}
+function setFileRef(key: KycDocumentKey, el: unknown) {
+  fileInputs[key] = (el as HTMLInputElement | null) ?? null
+}
+function triggerUpload(key: KycDocumentKey) { fileInputs[key]?.click() }
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      resolve(result.split(',')[1] ?? '')
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onFileSelected(key: KycDocumentKey, ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  uploadingDoc.value = key
+  kycError.value = ''
+  try {
+    const data = await fileToBase64(file)
+    let record: KycDocumentRecord
+    try {
+      record = await uploadKycDocument({
+        key, filename: file.name, content_type: file.type, data,
+      })
+    } catch {
+      record = { key, status: 'uploaded', uploaded_at: new Date().toISOString() }
+    }
+    documents.value = { ...documents.value, [key]: record }
+    persistLocal()
+  } catch (e: unknown) {
+    kycError.value = e instanceof Error ? e.message : 'Error subiendo el documento.'
+  } finally {
+    uploadingDoc.value = null
+    input.value = ''
+  }
+}
+
+function docsNeededFor(level: KycLevel): KycDocMeta[] {
+  const cap = LEVEL_ORDER.indexOf(level)
+  return KYC_DOCS.filter((d) => LEVEL_ORDER.indexOf(d.minLevel) <= cap)
+}
+
+function nextLevel(level: KycLevel): KycLevel | null {
+  const idx = LEVEL_ORDER.indexOf(level)
+  return idx < LEVEL_ORDER.length - 1 ? LEVEL_ORDER[idx + 1] : null
+}
+
+const target = computed<KycLevel | null>(() => nextLevel(kycLevel.value))
+
+const canSubmitReview = computed(() => {
+  if (!target.value || pendingReview.value) return false
+  return docsNeededFor(target.value).every((d) =>
+    ['uploaded', 'pending_review', 'verified'].includes(documents.value[d.key].status),
+  )
+})
+
+async function onSubmitReview() {
+  if (!target.value || !canSubmitReview.value) return
+  submitting.value = true
+  kycError.value = ''
+  try {
+    try {
+      const remote = await submitKycReview(target.value)
+      kycLevel.value = remote.level
+      pendingReview.value = remote.pending_review ?? target.value
+    } catch {
+      pendingReview.value = target.value
+      const updated = { ...documents.value }
+      for (const d of docsNeededFor(target.value)) {
+        if (updated[d.key].status === 'uploaded') {
+          updated[d.key] = { ...updated[d.key], status: 'pending_review' }
+        }
+      }
+      documents.value = updated
+    }
+    persistLocal()
+  } finally {
+    submitting.value = false
+  }
+}
+
+const currentKyc = computed(
+  () => KYC_LEVELS.find((l) => l.level === kycLevel.value) ?? KYC_LEVELS[0],
+)
+
+function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
+  if (s === 'verified')       return { cls: 'bdg-active',       label: 'Verificado' }
+  if (s === 'pending_review') return { cls: 'bdg-pending_kyc',  label: 'En revisión' }
+  if (s === 'uploaded')       return { cls: 'bdg-info',         label: 'Subido' }
+  if (s === 'rejected')       return { cls: 'bdg-banned',       label: 'Rechazado' }
+  return { cls: 'bdg-deleted', label: 'Sin enviar' }
+}
 </script>
 
 <template>
@@ -89,6 +265,16 @@ const currentKyc = computed(() => KYC_LEVELS.find((l) => l.level === kycLevel) ?
         <button class="drawer-tab" :class="{ active: tab === 'kyc' }" @click="tab = 'kyc'">
           KYC <span class="tab-badge">{{ kycLevel }}</span>
         </button>
+        <!-- doc upload hidden file inputs -->
+        <input
+          v-for="doc in KYC_DOCS"
+          :key="`f-${doc.key}`"
+          :ref="(el) => setFileRef(doc.key, el)"
+          type="file"
+          accept="image/*,application/pdf"
+          style="display:none"
+          @change="onFileSelected(doc.key, $event)"
+        />
       </nav>
 
       <div class="drawer-body">
@@ -154,6 +340,10 @@ const currentKyc = computed(() => KYC_LEVELS.find((l) => l.level === kycLevel) ?
             </div>
           </div>
 
+          <div v-if="pendingReview" class="kyc-banner pending">
+            Revisión pendiente para nivel {{ pendingReview }}. Te avisaremos cuando se complete.
+          </div>
+
           <div class="kyc-levels">
             <div
               v-for="lvl in KYC_LEVELS"
@@ -176,12 +366,45 @@ const currentKyc = computed(() => KYC_LEVELS.find((l) => l.level === kycLevel) ?
             <div
               v-for="(doc, i) in KYC_DOCS"
               :key="doc.key"
-              class="kv-row"
+              class="kv-row doc-row"
               :class="{ 'no-border': i === KYC_DOCS.length - 1 }"
             >
-              <span class="kv-label">{{ doc.label }}</span>
-              <span class="bdg bdg-deleted xs">Sin enviar</span>
+              <div class="doc-meta">
+                <span class="kv-label doc-label">{{ doc.label }}</span>
+                <span class="doc-min">Requerido desde {{ doc.minLevel }}</span>
+              </div>
+              <span class="bdg xs" :class="statusBadge(documents[doc.key].status).cls">
+                {{ statusBadge(documents[doc.key].status).label }}
+              </span>
+              <button
+                class="btn btn-sm"
+                :disabled="uploadingDoc !== null || pendingReview !== null"
+                @click="triggerUpload(doc.key)"
+              >
+                <span v-if="uploadingDoc === doc.key" class="pi pi-spin pi-spinner" aria-hidden="true" />
+                <template v-else-if="documents[doc.key].status === 'missing'">Subir</template>
+                <template v-else>Reemplazar</template>
+              </button>
             </div>
+          </div>
+
+          <div v-if="kycError" class="kyc-banner danger">{{ kycError }}</div>
+
+          <div v-if="target" class="kyc-submit">
+            <div class="kyc-submit-info">
+              <div class="kyc-submit-title">Solicitar nivel {{ target }}</div>
+              <div class="kyc-submit-desc">
+                Subí los documentos requeridos y enviá tu solicitud a revisión.
+              </div>
+            </div>
+            <button
+              class="btn btn-primary"
+              :disabled="!canSubmitReview || submitting"
+              @click="onSubmitReview"
+            >
+              <span v-if="submitting" class="pi pi-spin pi-spinner" aria-hidden="true" />
+              <template v-else>Enviar a revisión</template>
+            </button>
           </div>
         </template>
 
@@ -421,6 +644,44 @@ const currentKyc = computed(() => KYC_LEVELS.find((l) => l.level === kycLevel) ?
 }
 .kyc-level-name { color: var(--text); }
 .kyc-level-row.current .kyc-level-name { font-weight: 600; }
+
+/* KYC documents + review */
+.doc-row { gap: 10px; }
+.doc-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.doc-label { width: auto; }
+.doc-min {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.kyc-banner {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+}
+.kyc-banner.pending {
+  background: var(--info-soft, #eff6ff);
+  color: var(--info, #1d4ed8);
+  border: 1px solid color-mix(in srgb, var(--info, #1d4ed8) 30%, transparent);
+}
+.kyc-banner.danger {
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.kyc-submit {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+.kyc-submit-info { flex: 1; min-width: 0; }
+.kyc-submit-title { font-weight: 600; font-size: 13px; }
+.kyc-submit-desc { font-size: 11.5px; color: var(--text-2); margin-top: 3px; }
 
 @media (max-width: 480px) {
   .drawer { width: 100%; }
