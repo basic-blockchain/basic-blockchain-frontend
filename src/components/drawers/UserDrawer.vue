@@ -62,6 +62,7 @@ const props = defineProps<{ user: DrawerUser | null; open: boolean }>()
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'action', payload: [DrawerAction, DrawerUser, string?]): void
+  (e: 'view-wallet', walletId: string): void
 }>()
 
 type TabKey = 'overview' | 'wallets' | 'movements' | 'kyc' | 'audit'
@@ -440,13 +441,14 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
             <div
               v-for="(w, i) in user.wallets"
               :key="w.id"
+              class="wallet-row"
               :style="{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 14px',
                 borderBottom: i === user.wallets.length - 1 ? 'none' : '1px solid var(--border)',
               }"
+              role="button"
+              tabindex="0"
+              @click="emit('view-wallet', w.id)"
+              @keydown.enter="emit('view-wallet', w.id)"
             >
               <div
                 style="width:28px; height:28px; border-radius:6px; background:var(--accent-soft); color:var(--accent-text); font-size:11px; font-weight:700; display:grid; place-items:center;"
@@ -468,8 +470,12 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
                 <div class="mono" style="font-weight:500;">{{ w.balance }} {{ w.asset }}</div>
                 <div style="color:var(--text-3); font-size:11px;">≈ ${{ w.balanceUsd.toLocaleString() }}</div>
               </div>
-              <button class="btn btn-sm btn-icon btn-ghost" aria-label="More">
-                <i class="pi pi-ellipsis-h"></i>
+              <button
+                class="btn btn-sm btn-icon btn-ghost"
+                aria-label="Ver detalle de wallet"
+                @click.stop="emit('view-wallet', w.id)"
+              >
+                <i class="pi pi-chevron-right"></i>
               </button>
             </div>
           </div>
@@ -736,6 +742,19 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
   display: flex;
   gap: 4px;
   margin-bottom: 12px;
+}
+.wallet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.wallet-row:hover,
+.wallet-row:focus-visible {
+  background: var(--surface-2);
+  outline: none;
 }
 .roles-card {
   border: 1px solid var(--border);

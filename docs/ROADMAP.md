@@ -92,8 +92,9 @@ fetched data; add a parallel `WalletDrawer` for per-wallet detail.
 | 6d.2 | `WalletDrawer`: new component with Resumen / Movimientos / Auditoría tabs; `AdminWalletsView` row click integration; freeze/unfreeze from drawer header | done | #182 |
 
 **Carry-overs** (documented in the PR bodies):
-- Cross-navigation from the `UserDrawer` Wallets tab into the
-  `WalletDrawer` not wired — follow-up.
+- ~~Cross-navigation from the `UserDrawer` Wallets tab into the
+  `WalletDrawer` not wired — follow-up.~~ Landed in Phase 6d.4
+  (see below).
 - `balanceUsd` / `amountUsd` still best-effort (raw native balance, no
   FX) — same caveat as Phase 5b. Lands with exchange-rate enrichment.
 - `Movement.type` limited to `deposit` / `withdraw` until P2P /
@@ -116,6 +117,24 @@ Phase 5b table.
   side and a confirmation step adds friction without safety value.
 - "Roles" section is hidden for `deleted` users (replaced by a dashed
   notice).
+
+### Phase 6d.4 — Cross-navigation `UserDrawer` → `WalletDrawer`
+
+**Goal**: clicking a wallet row in the `UserDrawer` Wallets tab opens
+the `WalletDrawer` mounted at the `AdminUsersView` level, instead of
+being inert.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| `UserDrawer` emits `view-wallet` from clickable wallet rows; `AdminUsersView` mounts its own `WalletDrawer` instance, hydrates movements + audit from the same pending/confirmed/audit pipeline used by `AdminWalletsView`, and routes freeze/unfreeze actions back through the admin API | done | _TBD_ |
+
+**Notes**:
+- The wallet-loading pipeline is replicated rather than extracted into
+  a composable for this PR — the surface is small (~70 lines) and a
+  shared composable can land naturally with a future drawer iteration.
+- `WalletDrawer` stacks on top of `UserDrawer` via z-index (its own
+  scrim covers the user drawer). Closing the wallet drawer reveals
+  the user drawer underneath.
 
 ### Admin Users hotfix batch (May 2026)
 
@@ -171,15 +190,6 @@ week`).
   - User/wallet trend deltas vs previous period (`GET /admin/stats?compare=7d`).
 - Unblocks "Saldo bajo gestión" real USD aggregation in the rest of
   the admin views (Phase 5b / 6d.1 / 6d.2 all carry the same caveat).
-
-### Cross-navigation: `UserDrawer` → `WalletDrawer`
-
-**Goal**: clicking a wallet row in the `UserDrawer` Wallets tab opens
-the `WalletDrawer` (mounted at the view level) instead of being inert.
-
-- Status: next — small.
-- Touch points: `UserDrawer` emits a `view-wallet` event,
-  `AdminUsersView` listens and opens its own `WalletDrawer` instance.
 
 ---
 
