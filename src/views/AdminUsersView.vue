@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import {
   listUsers, listAllWallets, listAuditLog, banUser, unbanUser, softDeleteUser,
-  restoreUser, updateUser,
+  restoreUser, updateUser, grantRole, revokeRole,
   type AdminUser, type WalletAdminRecord, type AuditEntry,
 } from '@/api/admin'
 import { getConfirmed, getPending } from '@/api/mempool'
@@ -318,6 +318,7 @@ function toDrawerUser(u: AdminUser): DrawerUser {
     phone: '—',
     country: { name: '—', code: '—', flag: '🌐' },
     role: u.roles?.includes('ADMIN') ? 'admin' : u.roles?.includes('OPERATOR') ? 'staff' : 'user',
+    roles: u.roles ?? [],
     twoFA: false,
     kyc: 'L1',
     status,
@@ -379,10 +380,23 @@ const DRAWER_TO_CONFIRM: Partial<Record<DrawerAction, UserAction>> = {
   unfreeze: 'unfreeze',
 }
 
-function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
+async function handleDrawerAction(action: DrawerAction, user: DrawerUser, role?: string) {
   if (action === 'edit') {
     const u = users.value.find((x) => x.user_id === user.id)
     if (u) openEdit(u)
+    return
+  }
+  if (action === 'grant_role' || action === 'revoke_role') {
+    if (!role) return
+    try {
+      if (action === 'grant_role') await grantRole(user.id, role)
+      else await revokeRole(user.id, role)
+      await load()
+      const refreshed = users.value.find((x) => x.user_id === user.id)
+      if (refreshed && drawerOpen.value) drawerUser.value = toDrawerUser(refreshed)
+    } catch (e: unknown) {
+      error.value = String(e)
+    }
     return
   }
   const mapped = DRAWER_TO_CONFIRM[action]
@@ -577,7 +591,7 @@ function handleDrawerAction(action: DrawerAction, user: DrawerUser) {
       :user="drawerUser"
       :open="drawerOpen"
       @close="drawerOpen = false"
-      @action="([action, user]) => handleDrawerAction(action, user)"
+      @action="([action, user, role]) => handleDrawerAction(action, user, role)"
     />
   </div>
 
