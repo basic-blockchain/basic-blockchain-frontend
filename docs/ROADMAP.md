@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-16 (Phase 6f)
+Last updated: 2026-05-16 (Phase 6g)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -158,6 +158,32 @@ Phase 6 diagnostic.
 - The palette indexes only `listUsers` + `listAllWallets` (admin); a
   full search across mempool / confirmed txs is a future iteration.
 
+### Phase 6g — KYC user flow (frontend base)
+
+**Goal**: end users can see their current KYC level, upload required
+documents, and request promotion to the next level — without
+admin involvement. Phase 6g lays the **base layer**; the future
+redesign iteration (or its skip) decides on top of this concrete
+surface.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| `AuthUser.kyc_level` optional + threaded through `MeResponse` and `_setUser`; exported top-level `KycLevel` type | done | _TBD_ |
+| `src/api/kyc.ts` — typed contract for `GET /me/kyc/status`, `POST /me/kyc/documents`, `POST /me/kyc/review` (`KycDocumentRecord`, `KycStatusResponse`, `UploadKycDocumentPayload`) | done | _TBD_ |
+| `ProfileDrawer` KYC tab — real document upload (file input + base64 + status badge), review submission CTA, pending banner, per-user `localStorage` fallback when backend returns 404 | done | _TBD_ |
+
+**Notes / follow-ups**:
+- The three endpoints listed in `src/api/kyc.ts` are **not wired
+  server-side** yet. The client falls back to `localStorage` keyed by
+  `user_id` so the flow is exercisable locally. When the backend
+  ships, the swap is purely server-side — call sites stay the same
+  and the `catch` fallback can be dropped.
+- `users.kyc_level` (V018) currently sits at `'L0'` for every existing
+  row and `/auth/me` does not return it. The optional shape on the
+  client absorbs that mismatch gracefully.
+- Auth-flow follow-up (backlog): populate `last_active` and `country`
+  on login / signup — pairs naturally with the KYC backend PR.
+
 ### Admin Users hotfix batch (May 2026)
 
 **Goal**: ban modal visible, real totals in `ConfirmUserModal`, drawer
@@ -245,13 +271,12 @@ week`).
 - Workaround in the meantime: run `python migrations/migrate.py` after
   pulling.
 
-### Phase 6g — KYC flow for end users
+### Backend follow-up: KYC user endpoints
 
-**Goal**: user can view their KYC level and upload documents from their
-own session (not just admin review). Pairs with backend KYC endpoints
-(currently mocked in `UserDrawer.kyc` and the `users.kyc_level` column
-added by V018 sits at `'L0'` for every existing row until this flow
-ships).
+**Goal**: implement the three endpoints documented in
+`src/api/kyc.ts` (`GET /me/kyc/status`, `POST /me/kyc/documents`,
+`POST /me/kyc/review`) and surface `kyc_level` on `/auth/me`. Once
+landed, drop the `localStorage` fallback inside `ProfileDrawer`.
 
 ### Auth flow: populate `last_active` and `country`
 
