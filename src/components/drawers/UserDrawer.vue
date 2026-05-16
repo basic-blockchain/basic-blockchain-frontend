@@ -38,6 +38,7 @@ export interface DrawerUser {
   phone: string
   country: { name: string; code: string; flag: string }
   role: 'user' | 'staff' | 'admin'
+  roles: string[]
   twoFA: boolean
   kyc: 'L0' | 'L1' | 'L2' | 'L3'
   status: 'active' | 'banned' | 'frozen' | 'pending_kyc' | 'deleted'
@@ -50,12 +51,17 @@ export interface DrawerUser {
   flags: { banReason?: string; freezeReason?: string; deletedAt?: string }
 }
 
-export type DrawerAction = 'ban' | 'unban' | 'freeze' | 'unfreeze' | 'delete' | 'restore' | 'edit'
+export type DrawerAction =
+  | 'ban' | 'unban' | 'freeze' | 'unfreeze' | 'delete' | 'restore' | 'edit'
+  | 'grant_role' | 'revoke_role'
+
+const MANAGEABLE_ROLES = ['ADMIN', 'OPERATOR', 'VIEWER'] as const
+type ManageableRole = (typeof MANAGEABLE_ROLES)[number]
 
 const props = defineProps<{ user: DrawerUser | null; open: boolean }>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'action', payload: [DrawerAction, DrawerUser]): void
+  (e: 'action', payload: [DrawerAction, DrawerUser, string?]): void
 }>()
 
 type TabKey = 'overview' | 'wallets' | 'movements' | 'kyc' | 'audit'
@@ -105,6 +111,22 @@ function statusBadge(s: DrawerUser['status']) {
 
 function emitAction(a: DrawerAction) {
   if (props.user) emit('action', [a, props.user])
+}
+
+function hasRole(role: ManageableRole): boolean {
+  return props.user?.roles?.includes(role) ?? false
+}
+
+function toggleRole(role: ManageableRole) {
+  if (!props.user) return
+  const action: DrawerAction = hasRole(role) ? 'revoke_role' : 'grant_role'
+  emit('action', [action, props.user, role])
+}
+
+const roleMeta: Record<ManageableRole, { label: string; desc: string }> = {
+  ADMIN: { label: 'Administrador', desc: 'Acceso total a la plataforma y gestión de usuarios.' },
+  OPERATOR: { label: 'Operador', desc: 'Gestión de transacciones, exchange y operaciones diarias.' },
+  VIEWER: { label: 'Solo lectura', desc: 'Acceso a paneles e informes sin permisos de mutación.' },
 }
 
 function copyId() {
@@ -377,6 +399,38 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
               </div>
               <div style="font-size:11px; color:var(--text-3); margin-top:2px;">P2P + Exchange</div>
             </div>
+          </div>
+
+          <div class="section-h">Roles</div>
+          <div
+            v-if="user.status !== 'deleted'"
+            class="roles-card"
+          >
+            <div
+              v-for="(role, i) in MANAGEABLE_ROLES"
+              :key="role"
+              class="role-row"
+              :class="{ last: i === MANAGEABLE_ROLES.length - 1 }"
+            >
+              <div class="role-meta">
+                <div class="role-label">
+                  <span class="mono role-code">{{ role }}</span>
+                  <span class="role-name">{{ roleMeta[role].label }}</span>
+                  <span v-if="hasRole(role)" class="bdg bdg-active">Activo</span>
+                </div>
+                <div class="role-desc">{{ roleMeta[role].desc }}</div>
+              </div>
+              <button
+                class="btn btn-sm"
+                :class="hasRole(role) ? 'btn-danger' : ''"
+                @click="toggleRole(role)"
+              >
+                {{ hasRole(role) ? 'Revocar' : 'Otorgar' }}
+              </button>
+            </div>
+          </div>
+          <div v-else class="roles-disabled">
+            Los roles no se pueden gestionar para un usuario eliminado.
           </div>
         </template>
 
@@ -682,5 +736,54 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
   display: flex;
   gap: 4px;
   margin-bottom: 12px;
+}
+.roles-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.role-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.role-row.last {
+  border-bottom: none;
+}
+.role-meta {
+  flex: 1;
+  min-width: 0;
+}
+.role-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.role-code {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+}
+.role-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.role-desc {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.roles-disabled {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-bottom: 16px;
 }
 </style>
