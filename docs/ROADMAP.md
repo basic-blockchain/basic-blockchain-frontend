@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-16
+Last updated: 2026-05-16 (Phase 6f)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -136,6 +136,28 @@ being inert.
   scrim covers the user drawer). Closing the wallet drawer reveals
   the user drawer underneath.
 
+### Phase 6f — NotificationCenter + global search (⌘K)
+
+**Goal**: replace the decorative topbar search and add a working
+notification surface — the two gaps documented in the original
+Phase 6 diagnostic.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| `NotificationCenter` (bell + dropdown) reading from `listAuditLog` (admin) and the chain store (new blocks for all users), severity inferred from the action verb; unread-count badge driven by `localStorage`-persisted `lastSeenAt` / `lastSeenBlock`; "Marcar leídas" + "Ver auditoría completa" CTAs | done | _TBD_ |
+| `CommandPalette` (⌘K / Ctrl+K) with grouped results — Navegación (sidebar entries filtered by auth/role), Bloques (chain store match by index/merkleRoot), Usuarios + Wallets (admin only, lazy-loaded on first open). Keyboard nav ↑↓/Enter/Esc | done | _TBD_ |
+| Topbar wiring: the inert `<input>` becomes a `<button>` that opens the palette; the bell sits to its right; global `keydown` listener catches ⌘K/Ctrl+K | done | _TBD_ |
+
+**Notes / follow-ups**:
+- The notification feed is derived from `audit` entries + chain events.
+  When Phase 6e ships a `GET /admin/audit?severity=critical&since=24h`
+  endpoint, `NotificationCenter` will swap its source without changing
+  the dropdown's shape.
+- Severity classification lives client-side (`severityFromAction`) and
+  will be replaced by the backend `severity` field when available.
+- The palette indexes only `listUsers` + `listAllWallets` (admin); a
+  full search across mempool / confirmed txs is a future iteration.
+
 ### Admin Users hotfix batch (May 2026)
 
 **Goal**: ban modal visible, real totals in `ConfirmUserModal`, drawer
@@ -222,11 +244,6 @@ week`).
   `column does not exist` error fires. ~20 lines + a regression test.
 - Workaround in the meantime: run `python migrations/migrate.py` after
   pulling.
-
-### Phase 6f — Notifications + global search
-
-**Goal**: bell + `NotificationCenter` in topbar, working `⌘K` global
-search (currently decorative).
 
 ### Phase 6g — KYC flow for end users
 
