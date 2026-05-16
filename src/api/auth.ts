@@ -24,6 +24,7 @@ export interface MeResponse {
   roles: string[]
   banned: boolean
   created_at: string
+  kyc_level?: 'L0' | 'L1' | 'L2' | 'L3'
 }
 
 export async function register(username: string, displayName: string): Promise<RegisterResponse> {
