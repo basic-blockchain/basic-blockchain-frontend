@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -54,9 +54,9 @@ Order inside "Backlog" is recommended but not binding.
 | Frontend: 4-KPI bigstat row, filter chips (Todos / Activos / KYC / Congelados / Baneados), search + KYC + País filters, "Mostrar eliminados" toggle, avatar + KYC badge + country flag columns, pagination footer | done | #190 |
 
 **Carry-overs** (documented in the PR bodies):
-- Inline role-chip toggles removed from the table; re-wiring role
-  management into the `UserDrawer` is a follow-up — `UserDrawer` needs
-  new `DrawerAction` variants for `grant_role` / `revoke_role`.
+- ~~Inline role-chip toggles removed from the table; re-wiring role
+  management into the `UserDrawer` is a follow-up.~~ Landed in
+  Phase 6d.3 (see below).
 - "Saldo bajo gestión" still sums raw native balances without FX. Real
   USD aggregation lands when admin endpoints expose exchange rates
   (Phase 6e dependency).
@@ -100,6 +100,22 @@ fetched data; add a parallel `WalletDrawer` for per-wallet detail.
   Exchange flows produce structured movement records.
 - KYC / phone / country / 2FA in `UserDrawer` are placeholders; real
   KYC arrives with Phase 6g.
+
+### Phase 6d.3 — Role management in `UserDrawer`
+
+**Goal**: restore ADMIN / OPERATOR / VIEWER toggles inside the user
+detail drawer, replacing the inline role chips removed from the
+Phase 5b table.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| Extend `DrawerUser` with raw `roles: string[]`, add `grant_role` / `revoke_role` to `DrawerAction`, surface a `Roles` section under the Resumen tab (one row per manageable role with Otorgar/Revocar button), wire `grantRole` / `revokeRole` via `handleDrawerAction` with optimistic reload | done | _TBD_ |
+
+**Notes**:
+- Role mutations bypass `ConfirmUserModal` — they are idempotent server
+  side and a confirmation step adds friction without safety value.
+- "Roles" section is hidden for `deleted` users (replaced by a dashed
+  notice).
 
 ### Admin Users hotfix batch (May 2026)
 
@@ -155,16 +171,6 @@ week`).
   - User/wallet trend deltas vs previous period (`GET /admin/stats?compare=7d`).
 - Unblocks "Saldo bajo gestión" real USD aggregation in the rest of
   the admin views (Phase 5b / 6d.1 / 6d.2 all carry the same caveat).
-
-### Role management in `UserDrawer`
-
-**Goal**: surface ADMIN / OPERATOR / VIEWER toggles inside the user
-detail drawer to replace the inline chips removed in Phase 5b.
-
-- Status: next — small.
-- Touch points: `UserDrawer` (add a Roles section under Resumen tab),
-  `DrawerAction` enum (add `grant_role` / `revoke_role`),
-  `AdminUsersView.handleDrawerAction` mapping.
 
 ### Cross-navigation: `UserDrawer` → `WalletDrawer`
 
