@@ -62,9 +62,10 @@ const KYC_DOCS: KycDocMeta[] = [
 const LEVEL_ORDER: KycLevel[] = ['L0', 'L1', 'L2', 'L3']
 
 // ── KYC state (Phase 6g) ────────────────────────────────────────────────────
-// Source of truth is the backend (GET /me/kyc/status). Until it lands, we
-// persist per-user state in localStorage so the user-facing flow works
-// end-to-end locally. Backend-or-fallback is decided per call via try/catch.
+// Source of truth is the backend (GET /me/kyc/status). The earlier
+// localStorage fallback was removed once the simulator shipped the
+// /me/kyc/* endpoints; errors now surface in `kycError` instead of
+// silently writing to localStorage.
 
 const kycLevel = ref<KycLevel>('L0')
 const documents = ref<Record<KycDocumentKey, KycDocumentRecord>>(emptyDocs())
@@ -82,39 +83,9 @@ function emptyDocs(): Record<KycDocumentKey, KycDocumentRecord> {
   }
 }
 
-function storageKey(userId: string): string { return `kyc:state:${userId}` }
-
-function loadLocal(userId: string) {
-  const raw = localStorage.getItem(storageKey(userId))
-  if (!raw) { documents.value = emptyDocs(); pendingReview.value = null; return }
-  try {
-    const parsed = JSON.parse(raw) as {
-      documents?: Record<KycDocumentKey, KycDocumentRecord>
-      pendingReview?: KycLevel | null
-      level?: KycLevel
-    }
-    documents.value = { ...emptyDocs(), ...(parsed.documents ?? {}) }
-    pendingReview.value = parsed.pendingReview ?? null
-    if (parsed.level) kycLevel.value = parsed.level
-  } catch {
-    documents.value = emptyDocs()
-    pendingReview.value = null
-  }
-}
-
-function persistLocal() {
-  if (!props.user) return
-  localStorage.setItem(storageKey(props.user.user_id), JSON.stringify({
-    documents: documents.value,
-    pendingReview: pendingReview.value,
-    level: kycLevel.value,
-  }))
-}
-
 async function refreshKyc() {
   if (!props.user) return
-  kycLevel.value = props.user.kyc_level ?? 'L0'
-  loadLocal(props.user.user_id)
+  kycError.value = ''
   try {
     const remote = await getKycStatus()
     kycLevel.value = remote.level
@@ -122,9 +93,11 @@ async function refreshKyc() {
     for (const d of remote.documents) merged[d.key] = d
     documents.value = merged
     pendingReview.value = remote.pending_review ?? null
-    persistLocal()
-  } catch {
-    /* backend not wired yet — local state already loaded above */
+  } catch (e: unknown) {
+    kycError.value = e instanceof Error ? e.message : 'No se pudo cargar el estado KYC.'
+    kycLevel.value = props.user.kyc_level ?? 'L0'
+    documents.value = emptyDocs()
+    pendingReview.value = null
   }
 }
 
@@ -160,16 +133,10 @@ async function onFileSelected(key: KycDocumentKey, ev: Event) {
   kycError.value = ''
   try {
     const data = await fileToBase64(file)
-    let record: KycDocumentRecord
-    try {
-      record = await uploadKycDocument({
-        key, filename: file.name, content_type: file.type, data,
-      })
-    } catch {
-      record = { key, status: 'uploaded', uploaded_at: new Date().toISOString() }
-    }
+    const record = await uploadKycDocument({
+      key, filename: file.name, content_type: file.type, data,
+    })
     documents.value = { ...documents.value, [key]: record }
-    persistLocal()
   } catch (e: unknown) {
     kycError.value = e instanceof Error ? e.message : 'Error subiendo el documento.'
   } finally {
@@ -202,21 +169,14 @@ async function onSubmitReview() {
   submitting.value = true
   kycError.value = ''
   try {
-    try {
-      const remote = await submitKycReview(target.value)
-      kycLevel.value = remote.level
-      pendingReview.value = remote.pending_review ?? target.value
-    } catch {
-      pendingReview.value = target.value
-      const updated = { ...documents.value }
-      for (const d of docsNeededFor(target.value)) {
-        if (updated[d.key].status === 'uploaded') {
-          updated[d.key] = { ...updated[d.key], status: 'pending_review' }
-        }
-      }
-      documents.value = updated
-    }
-    persistLocal()
+    const remote = await submitKycReview(target.value)
+    kycLevel.value = remote.level
+    pendingReview.value = remote.pending_review ?? target.value
+    const merged: Record<KycDocumentKey, KycDocumentRecord> = emptyDocs()
+    for (const d of remote.documents) merged[d.key] = d
+    documents.value = merged
+  } catch (e: unknown) {
+    kycError.value = e instanceof Error ? e.message : 'No se pudo enviar a revisión.'
   } finally {
     submitting.value = false
   }
