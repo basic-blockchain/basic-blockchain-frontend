@@ -11,6 +11,12 @@ import UserDrawer, {
   type DrawerUser, type DrawerAction, type DrawerWallet,
   type DrawerMovement, type DrawerAuditEvent,
 } from '@/components/drawers/UserDrawer.vue'
+import WalletDrawer, {
+  type DrawerWallet as WalletDrawerData,
+  type DrawerWalletMovement, type DrawerWalletAuditEvent,
+  type WalletDrawerAction,
+} from '@/components/drawers/WalletDrawer.vue'
+import { freezeWallet, unfreezeWallet } from '@/api/admin'
 import ConfirmUserModal from '@/components/modals/ConfirmUserModal.vue'
 import type { UserAction, ConfirmUserTarget } from '@/components/modals/ConfirmUserModal.vue'
 
@@ -259,6 +265,10 @@ const drawerUser = ref<DrawerUser | null>(null)
 const drawerOpen = ref(false)
 const drawerLoading = ref(false)
 
+const walletDrawer = ref<WalletDrawerData | null>(null)
+const walletDrawerOpen = ref(false)
+const walletDrawerLoading = ref(false)
+
 function userWalletsOf(userId: string): WalletAdminRecord[] {
   return wallets.value.filter((w) => w.user_id === userId)
 }
@@ -404,6 +414,77 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser, role?:
   const u = users.value.find((x) => x.user_id === user.id)
   if (!u) return
   openConfirm(u, mapped)
+}
+
+async function openWalletDrawer(walletId: string) {
+  const w = wallets.value.find((x) => x.wallet_id === walletId)
+  if (!w) return
+  walletDrawer.value = { wallet: w, movements: [], audit: [] }
+  walletDrawerOpen.value = true
+  walletDrawerLoading.value = true
+  const targetKey = w.public_key
+
+  try {
+    const [pendingRes, confirmedRes, auditRes] = await Promise.all([
+      getPending(),
+      getConfirmed(),
+      listAuditLog({ target_id: walletId, limit: 50 }),
+    ])
+
+    const movements: DrawerWalletMovement[] = []
+    pendingRes.transactions
+      .filter((t) => t.sender === targetKey || t.receiver === targetKey)
+      .forEach((t, i) => {
+        const direction: 'in' | 'out' = t.receiver === targetKey ? 'in' : 'out'
+        movements.push({
+          id: `p-${i}-${t.sender.slice(0, 6)}`,
+          direction,
+          counterparty: direction === 'in' ? t.sender : t.receiver,
+          amount: String(t.amount),
+          amountUsd: Number(t.amount) || 0,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        })
+      })
+    confirmedRes.transactions
+      .filter((t) => t.sender === targetKey || t.receiver === targetKey)
+      .forEach((t, i) => {
+        const direction: 'in' | 'out' = t.receiver === targetKey ? 'in' : 'out'
+        movements.push({
+          id: `c-${i}-${t.sender.slice(0, 6)}`,
+          direction,
+          counterparty: direction === 'in' ? t.sender : t.receiver,
+          amount: String(t.amount),
+          amountUsd: Number(t.amount) || 0,
+          status: 'completed',
+          createdAt: t.blockTimestamp,
+        })
+      })
+
+    const audit: DrawerWalletAuditEvent[] = auditRes.entries.map((e) => ({
+      id: e.id,
+      action: e.action,
+      meta: Object.keys(e.details ?? {}).length ? JSON.stringify(e.details) : '',
+      actor: e.actor_id,
+      at: e.created_at,
+    }))
+
+    if (walletDrawer.value && walletDrawer.value.wallet.wallet_id === walletId) {
+      walletDrawer.value = { wallet: w, movements, audit }
+    }
+  } catch {
+    /* keep skeleton */
+  } finally {
+    if (walletDrawer.value?.wallet.wallet_id === walletId) walletDrawerLoading.value = false
+  }
+}
+
+async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdminRecord) {
+  if (action === 'freeze') await freezeWallet(w.wallet_id)
+  else await unfreezeWallet(w.wallet_id)
+  walletDrawerOpen.value = false
+  walletDrawer.value = null
+  await load()
 }
 </script>
 
@@ -592,6 +673,14 @@ async function handleDrawerAction(action: DrawerAction, user: DrawerUser, role?:
       :open="drawerOpen"
       @close="drawerOpen = false"
       @action="([action, user, role]) => handleDrawerAction(action, user, role)"
+      @view-wallet="openWalletDrawer"
+    />
+    <WalletDrawer
+      :data="walletDrawer"
+      :open="walletDrawerOpen"
+      :loading="walletDrawerLoading"
+      @close="walletDrawerOpen = false"
+      @action="([action, wallet]) => handleWalletDrawerAction(action, wallet)"
     />
   </div>
 
