@@ -9,6 +9,8 @@ interface StoredAuth {
   user?: AuthUser
 }
 
+export type KycLevel = 'L0' | 'L1' | 'L2' | 'L3'
+
 export interface AuthUser {
   user_id: string
   username: string
@@ -16,6 +18,7 @@ export interface AuthUser {
   roles: string[]
   banned: boolean
   created_at: string
+  kyc_level?: KycLevel
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -95,6 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
       roles: profile.roles,
       banned: profile.banned,
       created_at: profile.created_at,
+      kyc_level: profile.kyc_level,
     }
   }
 
