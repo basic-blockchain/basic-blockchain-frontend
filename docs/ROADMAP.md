@@ -269,20 +269,35 @@ week`).
 - Workaround in the meantime: run `python migrations/migrate.py` after
   pulling.
 
-### Backend follow-up: KYC admin review
+### Backend follow-up: KYC admin review — **DONE** (Phase 6g-admin, simulator)
 
-**Goal**: admin can list users with `kyc_pending_review` set, approve
-or reject each pending document, and (on full approval) bump
-`users.kyc_level` to the requested target. Frontend will need a new
-admin route (`/admin/kyc` or a section under `/admin/users`)
-consuming a new `GET /admin/kyc/pending` and per-doc `POST
-/admin/kyc/documents/<id>/approve|reject`, plus a final `POST
-/admin/users/<id>/kyc/promote` that clears `kyc_pending_review` and
-sets `kyc_level`.
+**Status**: backend landed. The simulator exposes the four routes under
+`/api/v1/admin/kyc/*` gated by the new `REVIEW_KYC` permission (ADMIN
+baseline):
 
-Until this lands, a user who submits a review stays in
-`pending_review` indefinitely — the UI banner correctly reflects
-"pendiente" but no operator can clear it.
+- `GET  /admin/kyc/pending` — users with `kyc_pending_review` set,
+  oldest submission first; each row carries the same per-doc public
+  shape as `/me/kyc/status`.
+- `POST /admin/kyc/users/<user_id>/documents/<doc_key>/approve` — flip
+  one document to `status: 'verified'`.
+- `POST /admin/kyc/users/<user_id>/documents/<doc_key>/reject`
+  `{reason}` — flip to `rejected`, store the reason, and abort the
+  whole review (`kyc_pending_review` + `kyc_submitted_at` cleared) so
+  the user can re-upload.
+- `POST /admin/kyc/users/<user_id>/promote` — promote to the current
+  `pending_review` target iff every required document is verified;
+  fails with `KYC_NOT_ALL_DOCUMENTS_VERIFIED` otherwise.
+
+Audit emits `KYC_DOCUMENT_APPROVED`, `KYC_DOCUMENT_REJECTED` and
+`KYC_LEVEL_PROMOTED`. Contract is documented in
+`basic-blockchain-simulator docs/api-reference.md` (§ "KYC admin
+review") and rules BR-KY-09..16 in business-rules.md.
+
+**Frontend follow-up (open)**: extend `src/api/kyc.ts` with
+`getPendingKycReviews()`, `approveKycDocument()`,
+`rejectKycDocument()`, `promoteKycLevel()` and add an
+`AdminKycView` (or "KYC pendientes" tab inside `AdminUsersView`)
+consuming them. Tracked as its own Phase 6h ticket.
 
 ### Auth flow: populate `last_active` and `country`
 
