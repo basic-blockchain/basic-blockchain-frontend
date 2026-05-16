@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-16 (Phase 6g)
+Last updated: 2026-05-16 (Coverage restored)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -197,9 +197,13 @@ ISO timestamp on soft-delete.
 
 ### Repo plumbing (May 2026)
 
-- Coverage gate temporarily lowered to 65% to unblock the Phase 5 / 6d /
-  5b batch — PR #164. **Debt**: restore to 80% once `stores/mining.ts`,
-  `stores/wallet.ts`, `domain/validation.ts` are covered.
+- ~~Coverage gate temporarily lowered to 65% to unblock the Phase 5 / 6d /
+  5b batch — PR #164.~~ Restored to 80% after the
+  Phase 6g batch — `stores/wallet.ts` and `stores/mining.ts` reached
+  100% local coverage; `domain/validation.ts` is type-only and is
+  excluded from the include set (same treatment as `domain/metrics.ts`
+  and `domain/node.ts`). Current global numbers: 95.76% lines / 91.58%
+  branches / 93.93% functions.
 - Promotion chain run end-to-end on both repos for every batch
   (develop → qa → staging → production → main).
 - Old PR #159 (`feat/admin-users-redesign` → main) closed with
@@ -242,13 +246,6 @@ week`).
 ---
 
 ## 5. Backlog (later)
-
-### Backend: coverage restoration
-
-- Re-cover `stores/mining.ts`, `stores/wallet.ts`, `domain/validation.ts`.
-- Revert `vitest.config.ts` threshold from 65 to 80.
-- Owner: lands naturally with the role-management follow-up (touches
-  `wallet.ts`) and a small dedicated PR for `mining.ts` + `validation.ts`.
 
 ### Backend: fix simulator promotion script direction
 
