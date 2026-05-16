@@ -7,6 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import ProfileDrawer from '@/components/drawers/ProfileDrawer.vue'
 import MiningNotification from '@/components/organisms/MiningNotification.vue'
+import NotificationCenter from '@/components/topbar/NotificationCenter.vue'
+import CommandPalette from '@/components/topbar/CommandPalette.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +17,19 @@ const auth = useAuthStore()
 const { theme, toggle: toggleTheme } = useTheme()
 const navOpen = ref(false)
 const showProfile = ref(false)
+const showPalette = ref(false)
+
+function onGlobalKey(e: KeyboardEvent) {
+  const isCmdK = (e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')
+  if (isCmdK) {
+    e.preventDefault()
+    showPalette.value = true
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', onGlobalKey)
+}
 
 watch(route, () => {
   navOpen.value = false
@@ -241,11 +256,17 @@ function avatarInitial(name: string): string {
         >
           <span class="pi" :class="theme === 'dark' ? 'pi-sun' : 'pi-moon'" aria-hidden="true" />
         </button>
-        <div class="topbar-search" role="search">
+        <button
+          class="topbar-search"
+          type="button"
+          aria-label="Abrir búsqueda global"
+          @click="showPalette = true"
+        >
           <span class="pi pi-search" aria-hidden="true" />
-          <input placeholder="Buscar…" aria-label="Buscar en la plataforma" />
+          <span class="topbar-search-placeholder">Buscar…</span>
           <kbd class="topbar-kbd">⌘K</kbd>
-        </div>
+        </button>
+        <NotificationCenter />
       </header>
 
       <main id="main-content" class="page-content" tabindex="-1">
@@ -257,6 +278,7 @@ function avatarInitial(name: string): string {
     <MiningNotification />
 
     <ProfileDrawer :user="auth.user" :open="showProfile" @close="showProfile = false" />
+    <CommandPalette :open="showPalette" @close="showPalette = false" />
   </div>
 </template>
 
@@ -502,16 +524,13 @@ function avatarInitial(name: string): string {
   width: 280px;
   color: var(--text-3);
   font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
 }
-.topbar-search input {
-  border: 0;
-  outline: 0;
-  background: transparent;
+.topbar-search:hover { background: var(--hover, var(--surface-2)); }
+.topbar-search-placeholder {
   flex: 1;
-  font: inherit;
-  color: var(--text);
-}
-.topbar-search input::placeholder {
   color: var(--text-3);
 }
 .theme-toggle {
