@@ -293,11 +293,17 @@ Audit emits `KYC_DOCUMENT_APPROVED`, `KYC_DOCUMENT_REJECTED` and
 `basic-blockchain-simulator docs/api-reference.md` (§ "KYC admin
 review") and rules BR-KY-09..16 in business-rules.md.
 
-**Frontend follow-up (open)**: extend `src/api/kyc.ts` with
-`getPendingKycReviews()`, `approveKycDocument()`,
-`rejectKycDocument()`, `promoteKycLevel()` and add an
-`AdminKycView` (or "KYC pendientes" tab inside `AdminUsersView`)
-consuming them. Tracked as its own Phase 6h ticket.
+**Frontend follow-up — DONE (Phase 6h)**:
+- `src/api/kyc.ts` exports `getPendingKycReviews()`,
+  `approveKycDocument()`, `rejectKycDocument()`, `promoteKycLevel()`
+  plus the `PendingKycReview` / `PromoteKycResponse` types.
+- New `src/views/AdminKycView.vue` renders the queue as one card per
+  user with a per-doc grid (DNI / Selfie / Domicilio / Fondos):
+  approve / reject (with inline reason field) buttons per document
+  and a "Promover a Lx" footer button gated on every required doc
+  reaching `verified`. Reachable at `/admin/kyc`, surfaced in the
+  sidebar nav (Plataforma · KYC) and the command palette
+  (Admin · KYC).
 
 ### Auth flow: populate `last_active` and `country`
 
