@@ -389,11 +389,17 @@ preserve scroll position.
 Existing drawers (see `src/components/drawers/`):
 
 - **`UserDrawer`** — admin's detail panel for one user (tabs:
-  Resumen / Wallets / Movimientos / KYC / Auditoría).
+  Resumen / Wallets / Movimientos / KYC / Auditoría). Resumen
+  carries a Roles section (Phase 6d.3) and the Wallets tab emits
+  `view-wallet` for cross-navigation into `WalletDrawer`
+  (Phase 6d.4).
+- **`WalletDrawer`** — per-wallet detail (Resumen / Movimientos /
+  Auditoría), opened from `AdminWalletsView` row clicks and
+  stacked on top of `UserDrawer` when launched via the cross-nav
+  hook.
 - **`ProfileDrawer`** — the user's own profile (Identidad / KYC) opened
-  from the sidebar avatar.
-
-Pending: **`WalletDrawer`** (per-wallet detail) — Phase 6d.
+  from the sidebar avatar. KYC tab consumes `/me/kyc/*` and supports
+  document upload + review submission end-to-end (Phase 6g).
 
 ### When to use a drawer vs a modal
 

@@ -472,24 +472,125 @@ an Escape key listener, scrim click, or an explicit close button.
 **File:** `src/components/drawers/UserDrawer.vue`
 **Purpose:** full user profile drawer for admin views — 5 tabs (overview /
 wallets / movements / kyc / audit), status banners for deleted/banned/frozen/
-pending_kyc states, and conditional action buttons (ban, unban, freeze,
-unfreeze, delete, restore, edit).
+pending_kyc states, conditional action buttons (ban, unban, freeze,
+unfreeze, delete, restore, edit), a **Roles section** (Phase 6d.3) with
+ADMIN / OPERATOR / VIEWER toggles, and a **cross-navigation hook**
+(Phase 6d.4) so a wallet row click emits `view-wallet` for the parent
+view to open a `WalletDrawer`.
 
 **Exported types:**
 ```ts
-interface DrawerUser { id: string; email: string; role: string; status: string; wallets: DrawerWallet[]; movements: DrawerMovement[]; auditLog: DrawerAuditEvent[] }
-interface DrawerWallet { id: string; currency: string; balance: number; status: string }
-interface DrawerMovement { id: string; type: string; amount: number; currency: string; ts: string }
-interface DrawerAuditEvent { id: string; action: string; actor: string; ts: string }
-type DrawerAction = 'ban' | 'unban' | 'freeze' | 'unfreeze' | 'delete' | 'restore' | 'edit'
+interface DrawerUser {
+  id: string; fullName: string; email: string; phone: string
+  country: { name: string; code: string; flag: string }
+  role: 'user' | 'staff' | 'admin'
+  roles: string[]                       // raw RBAC roles, drives the Roles section
+  twoFA: boolean
+  kyc: 'L0' | 'L1' | 'L2' | 'L3'
+  status: 'active' | 'banned' | 'frozen' | 'pending_kyc' | 'deleted'
+  wallets: DrawerWallet[]
+  movements: DrawerMovement[]
+  audit: DrawerAuditEvent[]
+  flags: { banReason?: string; freezeReason?: string; deletedAt?: string }
+  // ...identity fields
+}
+type DrawerAction =
+  | 'ban' | 'unban' | 'freeze' | 'unfreeze' | 'delete' | 'restore' | 'edit'
+  | 'grant_role' | 'revoke_role'
 ```
 
 **Props:** `user: DrawerUser | null`, `open: boolean`
 
-**Emits:** `close`, `action: [DrawerAction, DrawerUser]`
+**Emits:**
+- `close`
+- `action: [DrawerAction, DrawerUser, string?]` — third element carries
+  the role name for `grant_role` / `revoke_role`
+- `view-wallet: string` — `wallet_id` of the clicked wallet row
 
 **CSS:** `.scrim` (fixed overlay, opacity transition) + `.drawer` (480 px
-fixed right panel, `transform: translateX(100%)` → `translateX(0)`)
+fixed right panel, `transform: translateX(100%)` → `translateX(0)`),
+`.roles-card` / `.role-row` / `.wallet-row` (Phase 6d.3 / 6d.4)
+
+### WalletDrawer
+
+**File:** `src/components/drawers/WalletDrawer.vue`
+**Purpose:** per-wallet detail drawer with three tabs (Resumen,
+Movimientos, Auditoría). Used from `AdminWalletsView` (row click) and
+from `AdminUsersView` via the `UserDrawer` cross-navigation hook.
+Header surfaces a single action: Freeze / Unfreeze.
+
+**Exported types:**
+```ts
+interface DrawerWalletMovement {
+  id: string
+  direction: 'in' | 'out'
+  counterparty: string
+  amount: string
+  amountUsd: number
+  status: 'completed' | 'pending' | 'failed'
+  createdAt: string
+}
+interface DrawerWalletAuditEvent { id: string; action: string; meta: string; actor: string; at: string }
+interface DrawerWallet { wallet: WalletAdminRecord; movements: DrawerWalletMovement[]; audit: DrawerWalletAuditEvent[] }
+type WalletDrawerAction = 'freeze' | 'unfreeze'
+```
+
+**Props:** `data: DrawerWallet | null`, `open: boolean`, `loading?: boolean`
+
+**Emits:** `close`, `action: [WalletDrawerAction, WalletAdminRecord]`
+
+### ProfileDrawer
+
+**File:** `src/components/drawers/ProfileDrawer.vue`
+**Purpose:** the **user's own** profile drawer (opened from the
+sidebar avatar). Two tabs: Identidad (read-only profile + roles
+display) and **KYC** (Phase 6g): current level card, level ladder
+with current/past badges, per-document upload + status row, and a
+"Solicitar nivel X" CTA gated on the required document set.
+
+**Data source:** `GET /me/kyc/status` (loaded on open + tab switch);
+uploads go through `POST /me/kyc/documents` (base64 payload);
+review submission through `POST /me/kyc/review`. The current KYC
+level is sourced from `auth.user.kyc_level` (filled by `/auth/me`).
+**No localStorage cache** — the backend is the source of truth.
+
+**Props:** `user: AuthUser | null`, `open: boolean`
+
+**Emits:** `close`
+
+## Topbar
+
+The topbar lives in `src/App.vue` and hosts two interactive components
+introduced by Phase 6f:
+
+### NotificationCenter
+
+**File:** `src/components/topbar/NotificationCenter.vue`
+**Purpose:** bell with unread-count badge and a dropdown listing
+recent chain events (new blocks, visible to everyone) merged with
+admin audit entries (`listAuditLog`, polled every 30s when the user
+is admin). Severity is inferred client-side from the action verb
+(`severityFromAction`) and the unread count is computed against
+`localStorage`-persisted `notif:lastSeenAt` / `notif:lastSeenBlock`.
+
+**Props:** none (self-contained, reads `useAuthStore` + `useChainStore`).
+
+### CommandPalette (⌘K)
+
+**File:** `src/components/topbar/CommandPalette.vue`
+**Purpose:** Teleport-mounted modal palette that always shows
+Navegación entries filtered by the auth store. With `query.length >= 2`
+it also matches against chain blocks (by `index` / `merkleRoot` prefix)
+and — for admins, after a lazy load — `AdminUser` and
+`WalletAdminRecord` rows. Keyboard nav: ↑↓ / Enter / Esc.
+
+**Props:** `open: boolean`
+
+**Emits:** `close`
+
+**Trigger surface:** topbar `.topbar-search` button **and** a global
+`window.keydown` listener in `App.vue` that captures `Cmd+K` /
+`Ctrl+K` with `preventDefault` (so the browser binding is bypassed).
 
 ---
 
