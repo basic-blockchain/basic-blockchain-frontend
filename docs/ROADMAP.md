@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-16 (Coverage restored)
+Last updated: 2026-05-16 (Phase 6g backend + cleanup)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -170,19 +170,20 @@ surface.
 | --- | --- | --- |
 | `AuthUser.kyc_level` optional + threaded through `MeResponse` and `_setUser`; exported top-level `KycLevel` type | done | _TBD_ |
 | `src/api/kyc.ts` — typed contract for `GET /me/kyc/status`, `POST /me/kyc/documents`, `POST /me/kyc/review` (`KycDocumentRecord`, `KycStatusResponse`, `UploadKycDocumentPayload`) | done | _TBD_ |
-| `ProfileDrawer` KYC tab — real document upload (file input + base64 + status badge), review submission CTA, pending banner, per-user `localStorage` fallback when backend returns 404 | done | _TBD_ |
+| `ProfileDrawer` KYC tab — real document upload (file input + base64 + status badge), review submission CTA, pending banner | done | _TBD_ |
+| **Backend (simulator)**: `/me/kyc/status` · `/me/kyc/documents` · `/me/kyc/review` + `kyc_level` on `/auth/me` (V019 migration, audit events) | done | simulator#191 |
+| Cleanup: drop the `localStorage` fallback in `ProfileDrawer` now that the backend is the source of truth | done | _TBD_ |
 
 **Notes / follow-ups**:
-- The three endpoints listed in `src/api/kyc.ts` are **not wired
-  server-side** yet. The client falls back to `localStorage` keyed by
-  `user_id` so the flow is exercisable locally. When the backend
-  ships, the swap is purely server-side — call sites stay the same
-  and the `catch` fallback can be dropped.
-- `users.kyc_level` (V018) currently sits at `'L0'` for every existing
-  row and `/auth/me` does not return it. The optional shape on the
-  client absorbs that mismatch gracefully.
+- `users.kyc_level` is now returned by `/auth/me` and the client picks
+  it up through `AuthUser.kyc_level`. Existing rows still default to
+  `'L0'` until they complete a review.
 - Auth-flow follow-up (backlog): populate `last_active` and `country`
-  on login / signup — pairs naturally with the KYC backend PR.
+  on login / signup — pairs naturally with the next backend phase.
+- Admin-side KYC review (approve / reject) is **not yet implemented**
+  server-side. Until it lands, a user who submits a review stays in
+  `pending_review` indefinitely. See "Backend follow-up: KYC admin
+  review" in §5 Backlog.
 
 ### Admin Users hotfix batch (May 2026)
 
@@ -268,12 +269,20 @@ week`).
 - Workaround in the meantime: run `python migrations/migrate.py` after
   pulling.
 
-### Backend follow-up: KYC user endpoints
+### Backend follow-up: KYC admin review
 
-**Goal**: implement the three endpoints documented in
-`src/api/kyc.ts` (`GET /me/kyc/status`, `POST /me/kyc/documents`,
-`POST /me/kyc/review`) and surface `kyc_level` on `/auth/me`. Once
-landed, drop the `localStorage` fallback inside `ProfileDrawer`.
+**Goal**: admin can list users with `kyc_pending_review` set, approve
+or reject each pending document, and (on full approval) bump
+`users.kyc_level` to the requested target. Frontend will need a new
+admin route (`/admin/kyc` or a section under `/admin/users`)
+consuming a new `GET /admin/kyc/pending` and per-doc `POST
+/admin/kyc/documents/<id>/approve|reject`, plus a final `POST
+/admin/users/<id>/kyc/promote` that clears `kyc_pending_review` and
+sets `kyc_level`.
+
+Until this lands, a user who submits a review stays in
+`pending_review` indefinitely — the UI banner correctly reflects
+"pendiente" but no operator can clear it.
 
 ### Auth flow: populate `last_active` and `country`
 
