@@ -80,6 +80,7 @@ const allGroups: NavGroup[] = [
       { to: '/admin/treasury', label: 'Tesorería', icon: 'pi pi-building', requireRole: 'ADMIN' },
       { to: '/admin/exchange-rates', label: 'Tasas', icon: 'pi pi-sort-alt', requireRole: 'ADMIN' },
       { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list', requireRole: 'ADMIN' },
+      { to: '/admin/kyc', label: 'KYC', icon: 'pi pi-id-card', requireRole: 'ADMIN' },
       { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield', requireRole: 'ADMIN' },
       {
         to: '/admin/movements',

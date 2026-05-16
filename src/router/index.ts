@@ -71,6 +71,12 @@ const router = createRouter({
       meta: { requireRole: 'ADMIN' },
     },
     {
+      path: '/admin/kyc',
+      name: 'admin-kyc',
+      component: () => import('@/views/AdminKycView.vue'),
+      meta: { requireRole: 'ADMIN' },
+    },
+    {
       path: '/admin/compliance',
       name: 'admin-compliance',
       component: () => import('@/views/AdminComplianceView.vue'),
