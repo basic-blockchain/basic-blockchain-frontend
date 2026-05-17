@@ -13,6 +13,8 @@ import WalletDrawer, {
 } from '@/components/drawers/WalletDrawer.vue'
 
 const wallets = ref<WalletAdminRecord[]>([])
+const totalBalanceUsd = ref('0')
+const unpricedCurrencies = ref<string[]>([])
 const loading = ref(false)
 const error = ref('')
 const filterUser = ref('')
@@ -28,11 +30,19 @@ async function load() {
   try {
     const res = await listAllWallets()
     wallets.value = res.wallets
+    totalBalanceUsd.value = res.total_balance_usd
+    unpricedCurrencies.value = res.unpriced_currencies
   } catch (e: unknown) {
     error.value = String(e)
   } finally {
     loading.value = false
   }
+}
+
+function formatUsd(value: string | number): string {
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return '—'
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 }
 
 onMounted(load)
@@ -168,9 +178,15 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
         <div class="ds">bloqueadas</div>
       </div>
       <div class="bigstat">
-        <div class="lb">Inactivas</div>
-        <div class="vl">0</div>
-        <div class="ds">sin actividad</div>
+        <div class="lb">Saldo bajo gestión</div>
+        <div class="vl">${{ formatUsd(totalBalanceUsd) }}</div>
+        <div class="ds">
+          <template v-if="unpricedCurrencies.length">
+            <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
+            ({{ unpricedCurrencies.join(', ') }})
+          </template>
+          <template v-else>USD agregado</template>
+        </div>
       </div>
     </div>
 
@@ -197,6 +213,7 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
             <th>Wallet ID</th>
             <th>Usuario</th>
             <th>Balance</th>
+            <th>USD</th>
             <th>Tipo</th>
             <th>Clave pública</th>
             <th>Estado</th>
@@ -212,6 +229,10 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
               <span class="username"> @{{ w.username }}</span>
             </td>
             <td class="mono"><AmountDisplay :amount="parseBalance(w.balance)" :precision="8" :unit="w.currency" /></td>
+            <td class="mono usd-cell">
+              <template v-if="w.balance_usd !== null">${{ formatUsd(w.balance_usd) }}</template>
+              <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
+            </td>
             <td>
               <span class="type-badge" :class="`type-${w.wallet_type.toLowerCase()}`">{{ w.wallet_type }}</span>
             </td>
@@ -257,6 +278,10 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
 .lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
 .ds { font-size: 11.5px; color: var(--text-3); }
+.ds .unpriced { color: var(--warning); font-weight: 500; }
+
+.usd-cell { font-variant-numeric: tabular-nums; }
+.usd-missing { color: var(--text-3); }
 
 .asset-pill {
   display: inline-flex; align-items: center; justify-content: center;
