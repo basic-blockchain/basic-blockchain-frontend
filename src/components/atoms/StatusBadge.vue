@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Deprecated in favour of BaseBadge (`tone × variant × dot`). Consolidation
+// lands in Phase 7.7 alongside the HealthView migration; keep using this
+// component until then for parity with the v1 health chrome.
 defineProps<{ status: 'ok' | 'degraded' | 'error' | 'n/a' }>()
 </script>
 

@@ -1,64 +1,122 @@
 <script setup lang="ts">
-defineProps<{
-  status: 'active' | 'pending_kyc' | 'frozen' | 'banned' | 'deleted' | 'staff' | 'ok' | 'degraded' | 'error'
-}>()
+import { computed } from 'vue'
+
+type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent'
+type Variant = 'soft' | 'outline'
+
+interface Props {
+  tone?: Tone
+  variant?: Variant
+  dot?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  tone: 'neutral',
+  variant: 'soft',
+  dot: undefined,
+})
+
+const dotEnabled = computed(() =>
+  props.dot === undefined ? props.variant === 'soft' : props.dot,
+)
+
+const rootClasses = computed(() => [
+  'base-bdg',
+  `base-bdg--${props.tone}`,
+  `base-bdg--${props.variant}`,
+  { 'base-bdg--dot': dotEnabled.value },
+])
 </script>
 
 <template>
-  <span class="bdg" :class="`bdg-${status}`" role="status" :aria-label="status">
-    <slot>{{ status }}</slot>
+  <span :class="rootClasses">
+    <slot />
   </span>
 </template>
 
 <style scoped>
-.bdg {
+.base-bdg {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
-  font-weight: 500;
   padding: 2px 7px 2px 6px;
-  border-radius: 999px;
-  line-height: 1.5;
+  border-radius: var(--radius-pill);
+  font: 500 11px/1.5 var(--font-sans);
   white-space: nowrap;
 }
-.bdg::before {
-  content: "";
+
+.base-bdg:not(.base-bdg--dot) {
+  padding: 2px 7px;
+}
+
+.base-bdg--dot::before {
+  content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  background: currentColor;
 }
 
-.bdg-active        { background: var(--success-soft); color: var(--success); }
-.bdg-active::before { background: var(--success); }
-
-.bdg-pending_kyc        { background: var(--warning-soft); color: var(--warning); }
-.bdg-pending_kyc::before { background: var(--warning); }
-
-.bdg-frozen        { background: var(--info-soft); color: var(--info); }
-.bdg-frozen::before { background: var(--info); }
-
-.bdg-banned        { background: var(--danger-soft); color: var(--danger); }
-.bdg-banned::before { background: var(--danger); }
-
-.bdg-deleted        { background: var(--muted-soft); color: var(--muted); }
-.bdg-deleted::before { background: var(--muted); }
-
-/* No dot for these variants */
-.bdg-staff {
-  background: #ede9fe;
-  color: #5b21b6;
-  padding: 2px 7px;
+/* Soft variant — filled-soft pill */
+.base-bdg--soft.base-bdg--success {
+  background: var(--success-soft);
+  color: var(--success);
 }
-.bdg-staff::before { display: none; }
+.base-bdg--soft.base-bdg--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.base-bdg--soft.base-bdg--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.base-bdg--soft.base-bdg--info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.base-bdg--soft.base-bdg--neutral {
+  background: var(--muted-soft);
+  color: var(--muted);
+}
+.base-bdg--soft.base-bdg--accent {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
 
-.bdg-ok        { background: var(--success-soft); color: var(--success); }
-.bdg-ok::before { background: var(--success); }
+/* Accent dot diverges from text color (text-2 token, dot is the brand
+ * accent). Other tones share text + dot colors via `currentColor`. */
+.base-bdg--soft.base-bdg--accent.base-bdg--dot::before {
+  background: var(--accent);
+}
 
-.bdg-degraded        { background: var(--warning-soft); color: var(--warning); }
-.bdg-degraded::before { background: var(--warning); }
+/* Outline variant — surface-2 + border, tone tweaks text only */
+.base-bdg--outline {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.base-bdg--outline.base-bdg--success {
+  color: var(--success);
+}
+.base-bdg--outline.base-bdg--warning {
+  color: var(--warning);
+}
+.base-bdg--outline.base-bdg--danger {
+  color: var(--danger);
+}
+.base-bdg--outline.base-bdg--info {
+  color: var(--info);
+}
+.base-bdg--outline.base-bdg--neutral {
+  color: var(--text-2);
+}
+.base-bdg--outline.base-bdg--accent {
+  color: var(--accent-text);
+}
 
-.bdg-error        { background: var(--danger-soft); color: var(--danger); }
-.bdg-error::before { background: var(--danger); }
+/* Outline dot uses the tone's "strong" colour (matches soft variant). */
+.base-bdg--outline.base-bdg--accent.base-bdg--dot::before {
+  background: var(--accent);
+}
 </style>
