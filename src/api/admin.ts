@@ -204,6 +204,12 @@ export async function syncExchangeRates(payload: {
   return data
 }
 
+/** Phase 6e — canonical severity classification (BR-AD-10). Derived
+ * server-side; clients must not reclassify. */
+export type AuditSeverity = 'critical' | 'warning' | 'info'
+
+export type AuditSinceWindow = '1h' | '24h' | '7d' | '30d'
+
 export interface AuditEntry {
   id: string
   actor_id: string
@@ -211,6 +217,8 @@ export interface AuditEntry {
   target_id: string | null
   details: Record<string, unknown>
   created_at: string
+  /** Phase 6e — present on every entry returned by the simulator. */
+  severity?: AuditSeverity
 }
 
 export interface AuditParams {
@@ -218,6 +226,10 @@ export interface AuditParams {
   action?: string
   actor_id?: string
   target_id?: string
+  /** Phase 6e — filter to a severity level (BR-AD-11). */
+  severity?: AuditSeverity
+  /** Phase 6e — drop entries older than the window (BR-AD-11). */
+  since?: AuditSinceWindow
 }
 
 export async function listAuditLog(params?: AuditParams): Promise<{ entries: AuditEntry[]; count: number }> {
