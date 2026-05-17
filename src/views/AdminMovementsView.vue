@@ -2,7 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { getConfirmed, getPending } from '@/api/mempool'
 import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
+import { listAllWallets, listExchangeRates } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
+
+const QUOTE = 'USDT'
 
 const toast = useToast()
 const confirmed = ref<ConfirmedTransaction[]>([])
@@ -10,6 +13,14 @@ const pending = ref<Transaction[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const activeTab = ref<'all' | 'pending' | 'confirmed'>('all')
+
+// Phase 6j — currency / rate lookups so the table can show USD per
+// row. Transactions ship only sender/receiver public keys + native
+// amount; we resolve currency via the wallet store and apply the
+// current X/<QUOTE> rate (rate-as-of-now, because pending mempool
+// rows have no confirmed_at to anchor against).
+const pubkeyToCurrency = ref<Record<string, string>>({})
+const rateByCurrency = ref<Record<string, number>>({})
 
 const stats = computed(() => ({
   total: confirmed.value.length + pending.value.length,
@@ -20,9 +31,32 @@ const stats = computed(() => ({
 async function load() {
   loading.value = true
   try {
-    const [conf, pend] = await Promise.all([getConfirmed(), getPending()])
+    const [conf, pend, walletsRes, ratesRes] = await Promise.all([
+      getConfirmed(),
+      getPending(),
+      listAllWallets(),
+      listExchangeRates({ to: QUOTE, limit: 200 }),
+    ])
     confirmed.value = conf.transactions
     pending.value = pend.transactions
+
+    const pkMap: Record<string, string> = {}
+    for (const w of walletsRes.wallets) pkMap[w.public_key] = w.currency
+    pubkeyToCurrency.value = pkMap
+
+    // Keep only the freshest row per from_currency (the rates endpoint
+    // returns history). Latest-wins so an operator's manual override
+    // takes precedence over a stale BOOTSTRAP_SEED row.
+    const rates: Record<string, number> = {}
+    for (const r of ratesRes.rates) {
+      if (r.to_currency !== QUOTE) continue
+      if (rates[r.from_currency] === undefined) {
+        rates[r.from_currency] = Number(r.rate)
+      }
+    }
+    // Quote-vs-quote is implicit 1:1 — set it so $USDT amounts pass through.
+    rates[QUOTE] = 1
+    rateByCurrency.value = rates
   } catch (e: unknown) {
     toast.add({ severity: 'error', summary: 'Error al cargar', detail: String(e), life: 4000 })
   } finally {
@@ -34,26 +68,43 @@ interface Row {
   sender: string
   receiver: string
   amount: number
+  currency: string | null
+  amountUsd: number | null
   status: 'completed' | 'pending'
   blockIndex?: number
   timestamp?: string
 }
 
-const rows = computed<Row[]>(() => {
-  const c: Row[] = confirmed.value.map((t) => ({
+function rowFromTx(
+  t: Transaction & { blockIndex?: number; blockTimestamp?: string },
+  status: 'completed' | 'pending',
+): Row {
+  // Sender first — owner side carries the source currency; receiver
+  // is the fallback (mint/coinbase rows have an empty sender wallet).
+  const currency =
+    pubkeyToCurrency.value[t.sender] ??
+    pubkeyToCurrency.value[t.receiver] ??
+    null
+  let amountUsd: number | null = null
+  if (currency && rateByCurrency.value[currency] !== undefined) {
+    const rate = rateByCurrency.value[currency]
+    if (Number.isFinite(rate)) amountUsd = t.amount * rate
+  }
+  return {
     sender: t.sender,
     receiver: t.receiver,
     amount: t.amount,
-    status: 'completed',
+    currency,
+    amountUsd,
+    status,
     blockIndex: t.blockIndex,
     timestamp: t.blockTimestamp,
-  }))
-  const p: Row[] = pending.value.map((t) => ({
-    sender: t.sender,
-    receiver: t.receiver,
-    amount: t.amount,
-    status: 'pending',
-  }))
+  }
+}
+
+const rows = computed<Row[]>(() => {
+  const c: Row[] = confirmed.value.map((t) => rowFromTx(t, 'completed'))
+  const p: Row[] = pending.value.map((t) => rowFromTx(t, 'pending'))
   const all = [...p, ...c]
   const q = searchQuery.value.toLowerCase()
   const filtered = q ? all.filter((r) => r.sender.toLowerCase().includes(q) || r.receiver.toLowerCase().includes(q)) : all
@@ -64,6 +115,11 @@ const rows = computed<Row[]>(() => {
 
 function truncate(s: string, n = 16): string {
   return s.length > n ? `${s.slice(0, n / 2)}…${s.slice(-4)}` : s
+}
+
+function fmtUsd(value: number | null): string {
+  if (value === null) return '—'
+  return `$${value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 onMounted(load)
@@ -145,6 +201,7 @@ onMounted(load)
             <th>De</th>
             <th>Para</th>
             <th class="num">Monto</th>
+            <th class="num">USD</th>
             <th>Estado</th>
             <th>Bloque / Cuando</th>
           </tr>
@@ -165,7 +222,14 @@ onMounted(load)
             </td>
             <td class="mono cell-addr">{{ truncate(r.sender) }}</td>
             <td class="mono cell-addr">{{ truncate(r.receiver) }}</td>
-            <td class="num mono">{{ r.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}</td>
+            <td class="num mono">
+              {{ r.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}
+              <span v-if="r.currency" class="cell-currency">{{ r.currency }}</span>
+            </td>
+            <td class="num mono usd-cell">
+              <template v-if="r.amountUsd !== null">{{ fmtUsd(r.amountUsd) }}</template>
+              <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
+            </td>
             <td>
               <span class="status-badge" :class="r.status">
                 {{ r.status === 'completed' ? 'Confirmado' : 'Pendiente' }}
@@ -178,7 +242,7 @@ onMounted(load)
             </td>
           </tr>
           <tr v-if="rows.length === 0">
-            <td colspan="6" class="empty-row">Sin movimientos.</td>
+            <td colspan="7" class="empty-row">Sin movimientos.</td>
           </tr>
         </tbody>
       </table>
@@ -257,6 +321,12 @@ onMounted(load)
 .mono { font-family: var(--font-mono); font-size: 12px; }
 .text-dim { color: var(--text-3); }
 .cell-addr { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell-currency {
+  margin-left: 4px; font-size: 10.5px; font-weight: 500;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.usd-cell { font-variant-numeric: tabular-nums; }
+.usd-missing { color: var(--text-3); }
 .empty-row { padding: 24px; text-align: center; color: var(--text-3); }
 
 /* Movement type */
@@ -281,6 +351,6 @@ onMounted(load)
 @media (max-width: 640px) {
   .bigstat-row { grid-template-columns: 1fr; }
   .page-h { flex-direction: column; align-items: flex-start; }
-  .data-table th:nth-child(6), .data-table td:nth-child(6) { display: none; }
+  .data-table th:nth-child(7), .data-table td:nth-child(7) { display: none; }
 }
 </style>
