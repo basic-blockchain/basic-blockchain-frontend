@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { listAuditLog, type AuditEntry } from '@/api/admin'
+import { listAuditLog, type AuditEntry, type AuditSeverity } from '@/api/admin'
 import { useChainStore } from '@/stores/chain'
 import { useAuthStore } from '@/stores/auth'
 
@@ -28,12 +28,21 @@ const pollTimer = ref<number | null>(null)
 const SEEN_BLOCK_KEY = 'notif:lastSeenBlock'
 const lastSeenBlock = ref<number>(Number(localStorage.getItem(SEEN_BLOCK_KEY) ?? '0'))
 
-function severityFromAction(action: string): Severity {
-  const a = action.toLowerCase()
-  if (a.includes('delete') || a.includes('ban') || a.includes('reject')) return 'danger'
-  if (a.includes('freeze') || a.includes('revoke')) return 'warning'
-  if (a.includes('grant') || a.includes('approve') || a.includes('create')) return 'success'
-  return 'info'
+// Phase 6j — adopt the server-derived severity (BR-AD-10). The
+// audit endpoint classifies every entry canonically as
+// `critical | warning | info`; we map those onto this component's
+// 4-level local palette (which keeps `success` for non-audit events
+// such as future "wallet activated" pushes). Falling back when the
+// field is missing keeps the component compatible with older audit
+// rows that predate the Phase 6e classification.
+const SEVERITY_MAP: Record<AuditSeverity, Severity> = {
+  critical: 'danger',
+  warning: 'warning',
+  info: 'info',
+}
+
+function severityOf(entry: AuditEntry): Severity {
+  return entry.severity ? SEVERITY_MAP[entry.severity] : 'info'
 }
 
 function titleFromAction(action: string): string {
@@ -86,7 +95,7 @@ const items = computed<Notification[]>(() => {
     for (const e of auditEntries.value) {
       list.push({
         id: `audit-${e.id}`,
-        severity: severityFromAction(e.action),
+        severity: severityOf(e),
         title: titleFromAction(e.action),
         meta: `por ${e.actor_id.slice(0, 12)}${e.actor_id.length > 12 ? '…' : ''}`,
         at: e.created_at,
@@ -116,7 +125,10 @@ async function loadAudit() {
     return
   }
   try {
-    const res = await listAuditLog({ limit: 20 })
+    // Phase 6j — server-side `since=24h` keeps the dropdown anchored to
+    // the last day instead of paginating through stale audit history.
+    // Severity is delivered per-entry; no client-side filter needed.
+    const res = await listAuditLog({ limit: 20, since: '24h' })
     auditEntries.value = res.entries
   } catch {
     /* keep previous on error */

@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-16 (Phase 6g backend + cleanup)
+Last updated: 2026-05-17 (Phase 6j admin consistency — Phase 6 closed)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -185,6 +185,93 @@ surface.
   `pending_review` indefinitely. See "Backend follow-up: KYC admin
   review" in §5 Backlog.
 
+### Phase 6e — Dashboard enrichment
+
+**Goal**: bring `AdminView` closer to the design reference: volume
+chart (30D / 90D / 1A), trend pills vs prior week, "Eventos críticos
+hoy" feed and "Top movimientos del día" table. Shipped as three
+sub-phases against a single contract.
+
+| Sub-phase | Step | Status | PR |
+| --- | --- | --- | --- |
+| 6e.0 | Contracts: spec the four endpoints + aggregation rules (BR-AD-06..12, `SEVERITY` map). Docs-only on the simulator. | done | simulator#235 |
+| 6e.1 | Backend: `GET /admin/volume`, `GET /admin/movements/top`, `?compare=` on `/admin/stats`, `?severity=` + `?since=` on `/admin/audit`, server-derived `severity` field, `CurrencyRepositoryProtocol.get_rate_at(at)` for historical FX, audit + rate timestamps fixed in the in-memory store. | done | simulator#236 |
+| 6e.2 | Frontend: `src/api/dashboard.ts` + `compare`/`severity` extensions on `stats.ts` + `admin.ts`. Modular ECharts via `vue-echarts` (LineChart + Grid + Tooltip + Legend + Title only). `useVolumeChartOptions` composable. `AdminView` gains a volume chart, trend pills on the bigstat row, critical-events feed and top-movements table. | done | _TBD_ |
+
+**Notes / follow-ups**:
+- USD-aggregated numbers everywhere use the rate as of `confirmed_at`
+  (BR-AD-06); transfers with no rate at-or-before that point are
+  excluded from USD totals and surfaced as `unpriced_count`
+  (BR-AD-07). This is what the dashboard renders as "N sin tasa FX".
+- Audit `severity` is canonical and server-derived (BR-AD-10). The
+  `NotificationCenter` can swap its source from chain events to
+  `listAuditLog({severity:'critical', since:'24h'})` whenever
+  product wants — same shape, no component change.
+- Volume chart bundle: modular ECharts adds ~140 KB gzip to the
+  AdminView chunk (lazy-loaded). Adding bar / donut later is a one-
+  line registration in `src/lib/echarts.ts`.
+- "Saldo bajo gestión" USD aggregation in Phase 5b / 6d.1 / 6d.2 is
+  now unblocked — every admin view can reuse `_convert_to_usd` via
+  the FX-as-of-timestamp helper exposed by the currency repo.
+
+### Phase 6j — Admin consistency cleanup *(closes Phase 6)*
+
+**Goal**: close the three loose ends that surfaced reviewing the
+finished Phase 6 batch — admin views were still inconsistent in three
+small but visible ways. Frontend-only, no contract change.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| `AdminMovementsView` resolves each transaction's currency from `listAllWallets()` and converts the native amount to USD via the latest X/USDT rate (fetched once on mount). New USD column on the table; native column gains a currency suffix; em-dash + tooltip for unpriced rows. | done | _TBD_ |
+| `NotificationCenter` swaps the local `severityFromAction(...)` heuristic for the server-derived `entry.severity` (BR-AD-10) via a `SEVERITY_MAP` constant. Audit fetch passes `since: '24h'` so the dropdown anchors to the last day. | done | _TBD_ |
+| USD-equivalent formatters across the admin surface (`useVolumeChartOptions`, `AdminView`, `AdminWalletsView`) unified to `es-AR` so users no longer read the same number two different ways when bouncing between admin pages. Technical readouts (proof / nonce, order-book ladders) keep `en-US` deliberately. | done | _TBD_ |
+
+**Phase 6 is now closed.** §4 Next is empty; Phase 7 (Cadena v2) in
+§5 Backlog is the next planned scope but is not yet committed —
+needs `DESIGN-v2.md` + a design conversation before any code lands.
+
+### Phase 6i.1 — Quote currency + bootstrap-seed + UX polish
+
+**Goal**: close the regression flagged after Phase 6i landed —
+"Saldo bajo gestión" collapsed to `$0` on a fresh boot because the
+simulator carried no FX rates and the AdminUsersView per-user cells
+read the same way for single- and multi-currency portfolios.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| Backend: `DASHBOARD_QUOTE_CURRENCY` (default `USDT`) and `DASHBOARD_BOOTSTRAP_SEED` env vars; new `infrastructure/dashboard_seed.py` that idempotently seeds the catalog (USDT/USDC/BTC/ETH/SOL/NATIVE) + X/USDT mid-market rates on first boot; `_USD_CURRENCY` now resolves from config so operators can switch quote currencies without code changes. New BR-AD-13. | done | simulator#238 |
+| Frontend: AdminUsersView per-user cell shows native + suffix for single-currency portfolios (e.g. `613.3 SOL`) and unified USD for multi-currency; KPI keeps the unified figure but surfaces a "N sin tasa FX" sub-label when applicable. AdminWalletsView KPI falls back to a `1.5 BTC · 200 USDT` native breakdown when no FX rate exists, with a `sin tasa FX para mostrar USD` warning. | done | _TBD_ |
+
+**Notes**:
+- Default quote is USDT because every Binance / Crypto.com pair the
+  existing exchange-rate-sync supports is quoted against USDT.
+  Switching to USDC or any other stablecoin is a single env var,
+  but the operator has to seed rates for it manually after boot.
+- Seed rates carry `source = 'BOOTSTRAP_SEED'` so they show up
+  distinctly in the admin rates table — easy to spot and override
+  via `/admin/exchange-rates` or `/admin/exchange-rates/sync`.
+
+### Phase 6i — USD aggregation across admin views
+
+**Goal**: close the "Saldo bajo gestión sums raw native balances
+without FX" carry-over documented on Phase 5b / 6d.1 / 6d.2. Phase
+6e.1 shipped the FX-as-of-timestamp helper; Phase 6i is the wiring
+that finally puts it to use in the live admin surface.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| Backend: `GET /admin/wallets` enriched with `balance_usd` per row + aggregate `total_balance_usd` and `unpriced_currencies` on the response (BR-AD-07: wallets without a rate today arrive as `null`, never silently zeroed). | done | simulator#237 |
+| Frontend: `WalletAdminRecord` types the new field; `AdminWalletsView` replaces its dead "Inactivas: 0" KPI with a real "Saldo bajo gestión" bigstat and adds a USD column to the wallets table; `AdminUsersView` sums real USD via `balance_usd` on its KPI and per-user totals (skipping unpriced wallets instead of folding them as $1=$1). | done | _TBD_ |
+
+**Notes**:
+- Live balances use `at=now` (no transaction timestamp to anchor to);
+  the same `_convert_to_usd` helper handles both this and the
+  historical confirmed_at lookups on `/admin/volume` and
+  `/admin/movements/top`.
+- Empty FX catalog yields a continuous "0 sin tasa FX" surface
+  instead of misleading aggregates — operators see the gap rather
+  than a wrong total.
+
 ### Admin Users hotfix batch (May 2026)
 
 **Goal**: ban modal visible, real totals in `ConfirmUserModal`, drawer
@@ -228,21 +315,9 @@ references and an honest list of what's still open.
 
 ## 4. Next (committed scope)
 
-### Phase 6e — Dashboard enrichment (`AdminView`)
-
-**Goal**: bring `AdminView` closer to `admin-screens.jsx` reference:
-volume chart (30D / 90D / 1A), asset composition bars, "Eventos críticos
-hoy" feed, "Top movimientos del día" table, trend pills (`+X% vs prev
-week`).
-
-- Status: next — committed but not started.
-- **Requires new backend endpoints**:
-  - Time-series volume aggregation (`GET /admin/volume?range=30d`).
-  - Severity-tagged audit recent (`GET /admin/audit?severity=critical&since=24h`).
-  - Top movements with USD value (depends on FX rates exposed).
-  - User/wallet trend deltas vs previous period (`GET /admin/stats?compare=7d`).
-- Unblocks "Saldo bajo gestión" real USD aggregation in the rest of
-  the admin views (Phase 5b / 6d.1 / 6d.2 all carry the same caveat).
+*(nothing committed yet — Phase 6e shipped in 6e.0 → 6e.1 → 6e.2; see §2
+Completed phases. Phase 7 in §5 is the next planned scope but not yet
+committed.)*
 
 ---
 
