@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-17 (Phase 6i USD aggregation)
+Last updated: 2026-05-17 (Phase 6i.1 quote currency + bootstrap-seed)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -213,6 +213,27 @@ sub-phases against a single contract.
 - "Saldo bajo gestión" USD aggregation in Phase 5b / 6d.1 / 6d.2 is
   now unblocked — every admin view can reuse `_convert_to_usd` via
   the FX-as-of-timestamp helper exposed by the currency repo.
+
+### Phase 6i.1 — Quote currency + bootstrap-seed + UX polish
+
+**Goal**: close the regression flagged after Phase 6i landed —
+"Saldo bajo gestión" collapsed to `$0` on a fresh boot because the
+simulator carried no FX rates and the AdminUsersView per-user cells
+read the same way for single- and multi-currency portfolios.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| Backend: `DASHBOARD_QUOTE_CURRENCY` (default `USDT`) and `DASHBOARD_BOOTSTRAP_SEED` env vars; new `infrastructure/dashboard_seed.py` that idempotently seeds the catalog (USDT/USDC/BTC/ETH/SOL/NATIVE) + X/USDT mid-market rates on first boot; `_USD_CURRENCY` now resolves from config so operators can switch quote currencies without code changes. New BR-AD-13. | done | simulator#238 |
+| Frontend: AdminUsersView per-user cell shows native + suffix for single-currency portfolios (e.g. `613.3 SOL`) and unified USD for multi-currency; KPI keeps the unified figure but surfaces a "N sin tasa FX" sub-label when applicable. AdminWalletsView KPI falls back to a `1.5 BTC · 200 USDT` native breakdown when no FX rate exists, with a `sin tasa FX para mostrar USD` warning. | done | _TBD_ |
+
+**Notes**:
+- Default quote is USDT because every Binance / Crypto.com pair the
+  existing exchange-rate-sync supports is quoted against USDT.
+  Switching to USDC or any other stablecoin is a single env var,
+  but the operator has to seed rates for it manually after boot.
+- Seed rates carry `source = 'BOOTSTRAP_SEED'` so they show up
+  distinctly in the admin rates table — easy to spot and override
+  via `/admin/exchange-rates` or `/admin/exchange-rates/sync`.
 
 ### Phase 6i — USD aggregation across admin views
 
