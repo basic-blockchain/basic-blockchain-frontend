@@ -9,13 +9,34 @@ const toast = useToast()
 
 const username = ref('')
 const displayName = ref('')
+const country = ref('')
 const loading = ref(false)
+
+// Same alpha-2 set the admin Users table renders flags for. Kept in
+// sync by convention until a shared `countries` util is extracted;
+// missing codes degrade gracefully (the admin view shows '🌐').
+const COUNTRY_OPTIONS: { code: string; label: string }[] = [
+  { code: 'AR', label: '🇦🇷 Argentina' },
+  { code: 'BR', label: '🇧🇷 Brasil' },
+  { code: 'CL', label: '🇨🇱 Chile' },
+  { code: 'CO', label: '🇨🇴 Colombia' },
+  { code: 'ES', label: '🇪🇸 España' },
+  { code: 'MX', label: '🇲🇽 México' },
+  { code: 'PE', label: '🇵🇪 Perú' },
+  { code: 'US', label: '🇺🇸 Estados Unidos' },
+  { code: 'UY', label: '🇺🇾 Uruguay' },
+  { code: 'VE', label: '🇻🇪 Venezuela' },
+]
 
 async function submit() {
   if (!username.value.trim()) return
   loading.value = true
   try {
-    const resp = await register(username.value.trim(), displayName.value.trim() || username.value.trim())
+    const resp = await register(
+      username.value.trim(),
+      displayName.value.trim() || username.value.trim(),
+      country.value || undefined,
+    )
     await router.push({
       path: '/activate',
       query: { username: resp.username, code: resp.activation_code },
@@ -57,6 +78,15 @@ async function submit() {
         <div class="fld">
           <label for="display-name">Nombre para mostrar <span class="opt">(opcional)</span></label>
           <input id="display-name" v-model="displayName" type="text" autocomplete="name" placeholder="Alice Smith" />
+        </div>
+        <div class="fld">
+          <label for="country">País <span class="opt">(opcional)</span></label>
+          <select id="country" v-model="country" autocomplete="country">
+            <option value="">Seleccioná un país…</option>
+            <option v-for="opt in COUNTRY_OPTIONS" :key="opt.code" :value="opt.code">
+              {{ opt.label }}
+            </option>
+          </select>
         </div>
 
         <button class="btn-primary auth-btn" type="submit" :disabled="loading">
@@ -222,8 +252,22 @@ async function submit() {
   transition: border-color 0.12s;
 }
 
-.fld input:focus {
+.fld input:focus,
+.fld select:focus {
   border-color: var(--accent);
+}
+
+.fld select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s;
 }
 
 .auth-btn {

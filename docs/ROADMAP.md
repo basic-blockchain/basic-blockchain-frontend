@@ -304,19 +304,20 @@ review") and rules BR-KY-09..16 in business-rules.md.
   sidebar nav (Plataforma · KYC) and the command palette
   (Admin · KYC).
 
-### Auth flow: populate `last_active` and `country` — **DONE (backend)**
+### Auth flow: populate `last_active` and `country` — **DONE**
 
-- `POST /auth/register` accepts an optional `country` field (case-folded
-  to uppercase, validated as 2-letter ISO 3166-1 alpha-2).
-- `POST /auth/login` calls `users.touch_last_active(...)` after every
-  credential / activation / ban guard so failures never update the
-  column. Rules captured as BR-AU-08 / BR-AU-09 in
-  `basic-blockchain-simulator/docs/business-rules.md`.
-- Simulator PR #226.
-- **Frontend follow-up (open)**: surface a country picker on
-  `RegisterView` and pass `country` in the `/auth/register` body.
-  Today the field is accepted but optional — registrations without a
-  picker still succeed with `country=null`.
+- Backend (simulator PR #226):
+  - `POST /auth/register` accepts an optional `country` (uppercase ISO
+    3166-1 alpha-2; otherwise `VALIDATION_ERROR`).
+  - `POST /auth/login` calls `users.touch_last_active(...)` after every
+    credential / activation / ban guard so failures never update the
+    column. Rules captured as BR-AU-08 / BR-AU-09.
+- Frontend:
+  - `src/api/auth.ts` `register(username, displayName, country?)` only
+    sends the field when present.
+  - `RegisterView` ships a País dropdown (10 alpha-2 codes matching the
+    flags already rendered on the admin Users table). Selection is
+    optional; empty submits behave as before.
 
 ### Phase 7 — Interactive iteration ("Cadena v2")
 
