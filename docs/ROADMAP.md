@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-16 (Phase 6g backend + cleanup)
+Last updated: 2026-05-17 (Phase 6e dashboard enrichment)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -185,6 +185,35 @@ surface.
   `pending_review` indefinitely. See "Backend follow-up: KYC admin
   review" in §5 Backlog.
 
+### Phase 6e — Dashboard enrichment
+
+**Goal**: bring `AdminView` closer to the design reference: volume
+chart (30D / 90D / 1A), trend pills vs prior week, "Eventos críticos
+hoy" feed and "Top movimientos del día" table. Shipped as three
+sub-phases against a single contract.
+
+| Sub-phase | Step | Status | PR |
+| --- | --- | --- | --- |
+| 6e.0 | Contracts: spec the four endpoints + aggregation rules (BR-AD-06..12, `SEVERITY` map). Docs-only on the simulator. | done | simulator#235 |
+| 6e.1 | Backend: `GET /admin/volume`, `GET /admin/movements/top`, `?compare=` on `/admin/stats`, `?severity=` + `?since=` on `/admin/audit`, server-derived `severity` field, `CurrencyRepositoryProtocol.get_rate_at(at)` for historical FX, audit + rate timestamps fixed in the in-memory store. | done | simulator#236 |
+| 6e.2 | Frontend: `src/api/dashboard.ts` + `compare`/`severity` extensions on `stats.ts` + `admin.ts`. Modular ECharts via `vue-echarts` (LineChart + Grid + Tooltip + Legend + Title only). `useVolumeChartOptions` composable. `AdminView` gains a volume chart, trend pills on the bigstat row, critical-events feed and top-movements table. | done | _TBD_ |
+
+**Notes / follow-ups**:
+- USD-aggregated numbers everywhere use the rate as of `confirmed_at`
+  (BR-AD-06); transfers with no rate at-or-before that point are
+  excluded from USD totals and surfaced as `unpriced_count`
+  (BR-AD-07). This is what the dashboard renders as "N sin tasa FX".
+- Audit `severity` is canonical and server-derived (BR-AD-10). The
+  `NotificationCenter` can swap its source from chain events to
+  `listAuditLog({severity:'critical', since:'24h'})` whenever
+  product wants — same shape, no component change.
+- Volume chart bundle: modular ECharts adds ~140 KB gzip to the
+  AdminView chunk (lazy-loaded). Adding bar / donut later is a one-
+  line registration in `src/lib/echarts.ts`.
+- "Saldo bajo gestión" USD aggregation in Phase 5b / 6d.1 / 6d.2 is
+  now unblocked — every admin view can reuse `_convert_to_usd` via
+  the FX-as-of-timestamp helper exposed by the currency repo.
+
 ### Admin Users hotfix batch (May 2026)
 
 **Goal**: ban modal visible, real totals in `ConfirmUserModal`, drawer
@@ -228,21 +257,9 @@ references and an honest list of what's still open.
 
 ## 4. Next (committed scope)
 
-### Phase 6e — Dashboard enrichment (`AdminView`)
-
-**Goal**: bring `AdminView` closer to `admin-screens.jsx` reference:
-volume chart (30D / 90D / 1A), asset composition bars, "Eventos críticos
-hoy" feed, "Top movimientos del día" table, trend pills (`+X% vs prev
-week`).
-
-- Status: next — committed but not started.
-- **Requires new backend endpoints**:
-  - Time-series volume aggregation (`GET /admin/volume?range=30d`).
-  - Severity-tagged audit recent (`GET /admin/audit?severity=critical&since=24h`).
-  - Top movements with USD value (depends on FX rates exposed).
-  - User/wallet trend deltas vs previous period (`GET /admin/stats?compare=7d`).
-- Unblocks "Saldo bajo gestión" real USD aggregation in the rest of
-  the admin views (Phase 5b / 6d.1 / 6d.2 all carry the same caveat).
+*(nothing committed yet — Phase 6e shipped in 6e.0 → 6e.1 → 6e.2; see §2
+Completed phases. Phase 7 in §5 is the next planned scope but not yet
+committed.)*
 
 ---
 
