@@ -45,7 +45,7 @@ onMounted(() => {
     !attrs['aria-labelledby'] &&
     !slots.default
   ) {
-    // eslint-disable-next-line no-console
+     
     console.warn(
       '[BaseButton] iconOnly=true requires an `aria-label` attribute or default slot content for an accessible name.',
     )
@@ -60,14 +60,27 @@ onMounted(() => {
     :disabled="isInert"
     :aria-busy="loading ? 'true' : undefined"
   >
-    <span v-if="loading || slots.leading" class="base-btn__leading">
-      <span v-if="loading" class="base-btn__spinner" aria-hidden="true" />
-      <slot v-else name="leading" />
+    <span
+      v-if="loading || slots.leading"
+      class="base-btn__leading"
+    >
+      <span
+        v-if="loading"
+        class="base-btn__spinner"
+        aria-hidden="true"
+      />
+      <slot
+        v-else
+        name="leading"
+      />
     </span>
     <span :class="iconOnly ? 'base-btn__sr-only' : 'base-btn__label'">
       <slot />
     </span>
-    <span v-if="slots.trailing" class="base-btn__trailing">
+    <span
+      v-if="slots.trailing"
+      class="base-btn__trailing"
+    >
       <slot name="trailing" />
     </span>
   </button>
