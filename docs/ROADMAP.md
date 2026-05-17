@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-17 (Phase 6e dashboard enrichment)
+Last updated: 2026-05-17 (Phase 6i USD aggregation)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -213,6 +213,27 @@ sub-phases against a single contract.
 - "Saldo bajo gestión" USD aggregation in Phase 5b / 6d.1 / 6d.2 is
   now unblocked — every admin view can reuse `_convert_to_usd` via
   the FX-as-of-timestamp helper exposed by the currency repo.
+
+### Phase 6i — USD aggregation across admin views
+
+**Goal**: close the "Saldo bajo gestión sums raw native balances
+without FX" carry-over documented on Phase 5b / 6d.1 / 6d.2. Phase
+6e.1 shipped the FX-as-of-timestamp helper; Phase 6i is the wiring
+that finally puts it to use in the live admin surface.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| Backend: `GET /admin/wallets` enriched with `balance_usd` per row + aggregate `total_balance_usd` and `unpriced_currencies` on the response (BR-AD-07: wallets without a rate today arrive as `null`, never silently zeroed). | done | simulator#237 |
+| Frontend: `WalletAdminRecord` types the new field; `AdminWalletsView` replaces its dead "Inactivas: 0" KPI with a real "Saldo bajo gestión" bigstat and adds a USD column to the wallets table; `AdminUsersView` sums real USD via `balance_usd` on its KPI and per-user totals (skipping unpriced wallets instead of folding them as $1=$1). | done | _TBD_ |
+
+**Notes**:
+- Live balances use `at=now` (no transaction timestamp to anchor to);
+  the same `_convert_to_usd` helper handles both this and the
+  historical confirmed_at lookups on `/admin/volume` and
+  `/admin/movements/top`.
+- Empty FX catalog yields a continuous "0 sin tasa FX" surface
+  instead of misleading aggregates — operators see the gap rather
+  than a wrong total.
 
 ### Admin Users hotfix batch (May 2026)
 

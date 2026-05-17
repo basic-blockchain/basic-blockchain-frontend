@@ -118,12 +118,25 @@ export interface WalletAdminRecord {
   currency: string
   wallet_type: WalletType
   balance: string
+  /** Phase 6i — USD using `get_rate_at(currency, USD, now)`. `null`
+   * when the currency has no FX rate today (BR-AD-07: never silently
+   * zeroed). */
+  balance_usd: string | null
   public_key: string
   frozen: boolean
 }
 
-export async function listAllWallets(): Promise<{ wallets: WalletAdminRecord[]; count: number }> {
-  const { data } = await client.get('/admin/wallets')
+export interface ListAllWalletsResponse {
+  wallets: WalletAdminRecord[]
+  count: number
+  /** Sum of every wallet's `balance_usd` (skips unpriced rows). */
+  total_balance_usd: string
+  /** Currency codes that had no rate at fetch time. */
+  unpriced_currencies: string[]
+}
+
+export async function listAllWallets(): Promise<ListAllWalletsResponse> {
+  const { data } = await client.get<ListAllWalletsResponse>('/admin/wallets')
   return data
 }
 
