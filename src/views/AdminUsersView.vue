@@ -108,12 +108,23 @@ const kpis = computed(() => {
     if (hasPendingKyc(u)) kycPending += 1
     if (hasFrozenWallets(u.user_id)) restricted += 1
   }
+  // Phase 6i / 6i.1 — `balance_usd` carries the real USD via
+  // `get_rate_at(currency, USDT, now)`. Wallets without a rate are
+  // counted as unpriced (BR-AD-07), not folded as $1 = $1. The KPI
+  // is always the unified USD aggregate; `unpricedCount` powers a
+  // sub-label so the operator sees the gap.
   let totalUsd = 0
+  let unpricedCount = 0
   for (const w of wallets.value) {
-    const n = Number(w.balance)
+    if (w.balance_usd === null) {
+      const native = Number(w.balance)
+      if (Number.isFinite(native) && native !== 0) unpricedCount += 1
+      continue
+    }
+    const n = Number(w.balance_usd)
     if (Number.isFinite(n)) totalUsd += n
   }
-  return { total, active, restricted, banned, kycPending, totalUsd }
+  return { total, active, restricted, banned, kycPending, totalUsd, unpricedCount }
 })
 
 const countsByTab = computed(() => {
@@ -181,16 +192,52 @@ function userWalletCount(userId: string): number {
   return wallets.value.filter((w) => w.user_id === userId).length
 }
 
-function userTotals(userId: string): { walletCount: number; totalUsd: number } {
+function userTotals(userId: string): {
+  walletCount: number
+  totalUsd: number
+  pricedCount: number
+  nativeByCurrency: Record<string, number>
+} {
   let walletCount = 0
   let totalUsd = 0
+  let pricedCount = 0
+  const nativeByCurrency: Record<string, number> = {}
   for (const w of wallets.value) {
     if (w.user_id !== userId) continue
     walletCount += 1
-    const n = Number(w.balance)
-    if (Number.isFinite(n)) totalUsd += n
+    const native = Number(w.balance)
+    if (Number.isFinite(native) && native !== 0) {
+      nativeByCurrency[w.currency] = (nativeByCurrency[w.currency] ?? 0) + native
+    }
+    if (w.balance_usd === null) continue
+    const n = Number(w.balance_usd)
+    if (Number.isFinite(n)) {
+      totalUsd += n
+      pricedCount += 1
+    }
   }
-  return { walletCount, totalUsd }
+  return { walletCount, totalUsd, pricedCount, nativeByCurrency }
+}
+
+function formatNative(value: number, currency: string): string {
+  // Crypto-style: up to 8 decimals, trim trailing zeros, group integers.
+  const fixed = value.toFixed(8).replace(/\.?0+$/, '')
+  const [intPart, frac] = fixed.split('.')
+  const grouped = Number(intPart).toLocaleString('es-AR')
+  return frac ? `${grouped}.${frac} ${currency}` : `${grouped} ${currency}`
+}
+
+/** Per-user "Saldo total" cell:
+ *  - Wallets across a single currency → native amount + suffix (e.g. "613.3 SOL").
+ *  - Multiple currencies → unified USD aggregate via `fmtUsd(totalUsd)`.
+ *  - No wallets at all → $0,00. */
+function userTotalLabel(userId: string): string {
+  const t = userTotals(userId)
+  const currencies = Object.keys(t.nativeByCurrency)
+  if (currencies.length === 1) {
+    return formatNative(t.nativeByCurrency[currencies[0]], currencies[0])
+  }
+  return fmtUsd(t.totalUsd)
 }
 
 function openConfirm(u: AdminUser, action: UserAction) {
@@ -280,7 +327,7 @@ function toDrawerWallets(records: WalletAdminRecord[]): DrawerWallet[] {
     network: w.currency,
     address: w.public_key,
     balance: w.balance,
-    balanceUsd: Number(w.balance) || 0,
+    balanceUsd: w.balance_usd !== null ? Number(w.balance_usd) || 0 : 0,
     status: w.frozen ? 'frozen' : 'active',
     createdAt: '',
   }))
@@ -523,7 +570,12 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
       <div class="bigstat">
         <div class="lb">Saldo bajo gestión</div>
         <div class="vl">{{ fmtUsd(kpis.totalUsd) }}</div>
-        <div class="ds">{{ wallets.length }} wallets</div>
+        <div class="ds">
+          {{ wallets.length }} wallets
+          <template v-if="kpis.unpricedCount > 0">
+            · <span class="unpriced">{{ kpis.unpricedCount }} sin tasa FX</span>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -617,7 +669,7 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
               <span class="country-cell">{{ countryFlag(u.country) }} <span class="muted">{{ u.country ?? '—' }}</span></span>
             </td>
             <td class="num mono">{{ userWalletCount(u.user_id) }}</td>
-            <td class="num mono">{{ fmtUsd(userTotals(u.user_id).totalUsd) }}</td>
+            <td class="num mono">{{ userTotalLabel(u.user_id) }}</td>
             <td class="muted">{{ relTime(u.last_active) }}</td>
             <td class="muted">{{ fmtDate(u.created_at) }}</td>
           </tr>
@@ -710,6 +762,7 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
 .vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
 .ds { font-size: 11.5px; color: var(--text-3); }
 .vl-warn { color: var(--warning); }
+.ds .unpriced { color: var(--warning); font-weight: 500; }
 
 /* Toolbar */
 .toolbar {
