@@ -110,7 +110,11 @@ const kpis = computed(() => {
   }
   let totalUsd = 0
   for (const w of wallets.value) {
-    const n = Number(w.balance)
+    // Phase 6i — `balance_usd` carries the real USD value via
+    // `get_rate_at(currency, USD, now)`. Skip wallets without a rate
+    // (BR-AD-07) instead of folding native balances as $1 = $1.
+    if (w.balance_usd === null) continue
+    const n = Number(w.balance_usd)
     if (Number.isFinite(n)) totalUsd += n
   }
   return { total, active, restricted, banned, kycPending, totalUsd }
@@ -187,7 +191,8 @@ function userTotals(userId: string): { walletCount: number; totalUsd: number } {
   for (const w of wallets.value) {
     if (w.user_id !== userId) continue
     walletCount += 1
-    const n = Number(w.balance)
+    if (w.balance_usd === null) continue
+    const n = Number(w.balance_usd)
     if (Number.isFinite(n)) totalUsd += n
   }
   return { walletCount, totalUsd }
@@ -280,7 +285,7 @@ function toDrawerWallets(records: WalletAdminRecord[]): DrawerWallet[] {
     network: w.currency,
     address: w.public_key,
     balance: w.balance,
-    balanceUsd: Number(w.balance) || 0,
+    balanceUsd: w.balance_usd !== null ? Number(w.balance_usd) || 0 : 0,
     status: w.frozen ? 'frozen' : 'active',
     createdAt: '',
   }))
