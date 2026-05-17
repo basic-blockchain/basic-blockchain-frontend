@@ -27,11 +27,20 @@ export interface MeResponse {
   kyc_level?: 'L0' | 'L1' | 'L2' | 'L3'
 }
 
-export async function register(username: string, displayName: string): Promise<RegisterResponse> {
-  const { data } = await client.post<RegisterResponse>('/auth/register', {
+export async function register(
+  username: string,
+  displayName: string,
+  country?: string,
+): Promise<RegisterResponse> {
+  const body: Record<string, string> = {
     username,
     display_name: displayName,
-  })
+  }
+  // Backend validates this as a 2-letter ISO 3166-1 alpha-2 code and
+  // rejects anything else with VALIDATION_ERROR; only forward the
+  // field when the user actually picked one.
+  if (country) body.country = country
+  const { data } = await client.post<RegisterResponse>('/auth/register', body)
   return data
 }
 
