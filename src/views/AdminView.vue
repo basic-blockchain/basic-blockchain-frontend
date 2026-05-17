@@ -270,7 +270,7 @@ onMounted(async () => {
       </div>
       <div v-if="volume" class="chart-totals">
         <span>
-          Total <strong>${{ Number(volume.totals.volume_usd).toLocaleString('en-US', { maximumFractionDigits: 2 }) }}</strong>
+          Total <strong>${{ Number(volume.totals.volume_usd).toLocaleString('es-AR', { maximumFractionDigits: 2 }) }}</strong>
         </span>
         <span>· {{ volume.totals.tx_count }} tx</span>
         <span v-if="volume.totals.unpriced_count > 0" class="unpriced-note">
@@ -331,7 +331,7 @@ onMounted(async () => {
                 </div>
               </td>
               <td class="num mono">{{ m.amount }} {{ m.currency }}</td>
-              <td class="num mono usd">${{ Number(m.amount_usd).toLocaleString('en-US', { maximumFractionDigits: 2 }) }}</td>
+              <td class="num mono usd">${{ Number(m.amount_usd).toLocaleString('es-AR', { maximumFractionDigits: 2 }) }}</td>
               <td class="ts mono">{{ relativeTime(m.confirmed_at) }}</td>
             </tr>
           </tbody>

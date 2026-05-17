@@ -42,13 +42,17 @@ async function load() {
 function formatUsd(value: string | number): string {
   const n = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(n)) return '—'
-  return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+  // Phase 6j — locale aligned with the rest of the admin surface
+  // (`es-AR` formats as `1.234,56`). Avoids the `1,234.56` /
+  // `1.234,56` mismatch operators saw when bouncing between Wallets
+  // and Users.
+  return n.toLocaleString('es-AR', { maximumFractionDigits: 2 })
 }
 
 function formatNative(value: number, currency: string): string {
   const fixed = value.toFixed(8).replace(/\.?0+$/, '')
   const [intPart, frac] = fixed.split('.')
-  const grouped = Number(intPart).toLocaleString('en-US')
+  const grouped = Number(intPart).toLocaleString('es-AR')
   return frac ? `${grouped}.${frac} ${currency}` : `${grouped} ${currency}`
 }
 

@@ -38,7 +38,7 @@ export function useVolumeChartOptions(
         formatter: (params: Array<{ axisValueLabel: string; data: [string, number]; marker: string }>) => {
           if (!params.length) return ''
           const row = series.find((b) => b.ts === params[0]?.data?.[0])
-          const usd = row ? Number(row.volume_usd).toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'
+          const usd = row ? Number(row.volume_usd).toLocaleString('es-AR', { maximumFractionDigits: 2 }) : '—'
           const count = row ? row.tx_count : 0
           const unpriced = row ? row.unpriced_count : 0
           const unpricedLine =
