@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-17 (Phase 6i.1 quote currency + bootstrap-seed)
+Last updated: 2026-05-17 (Phase 6j admin consistency — Phase 6 closed)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -213,6 +213,22 @@ sub-phases against a single contract.
 - "Saldo bajo gestión" USD aggregation in Phase 5b / 6d.1 / 6d.2 is
   now unblocked — every admin view can reuse `_convert_to_usd` via
   the FX-as-of-timestamp helper exposed by the currency repo.
+
+### Phase 6j — Admin consistency cleanup *(closes Phase 6)*
+
+**Goal**: close the three loose ends that surfaced reviewing the
+finished Phase 6 batch — admin views were still inconsistent in three
+small but visible ways. Frontend-only, no contract change.
+
+| Step | Status | PR |
+| --- | --- | --- |
+| `AdminMovementsView` resolves each transaction's currency from `listAllWallets()` and converts the native amount to USD via the latest X/USDT rate (fetched once on mount). New USD column on the table; native column gains a currency suffix; em-dash + tooltip for unpriced rows. | done | _TBD_ |
+| `NotificationCenter` swaps the local `severityFromAction(...)` heuristic for the server-derived `entry.severity` (BR-AD-10) via a `SEVERITY_MAP` constant. Audit fetch passes `since: '24h'` so the dropdown anchors to the last day. | done | _TBD_ |
+| USD-equivalent formatters across the admin surface (`useVolumeChartOptions`, `AdminView`, `AdminWalletsView`) unified to `es-AR` so users no longer read the same number two different ways when bouncing between admin pages. Technical readouts (proof / nonce, order-book ladders) keep `en-US` deliberately. | done | _TBD_ |
+
+**Phase 6 is now closed.** §4 Next is empty; Phase 7 (Cadena v2) in
+§5 Backlog is the next planned scope but is not yet committed —
+needs `DESIGN-v2.md` + a design conversation before any code lands.
 
 ### Phase 6i.1 — Quote currency + bootstrap-seed + UX polish
 
