@@ -45,6 +45,30 @@ function formatUsd(value: string | number): string {
   return n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 }
 
+function formatNative(value: number, currency: string): string {
+  const fixed = value.toFixed(8).replace(/\.?0+$/, '')
+  const [intPart, frac] = fixed.split('.')
+  const grouped = Number(intPart).toLocaleString('en-US')
+  return frac ? `${grouped}.${frac} ${currency}` : `${grouped} ${currency}`
+}
+
+/** Native-by-currency aggregate built from the raw wallet list.
+ * Used as a fallback when `total_balance_usd` is 0 because no FX
+ * rate exists for any wallet's currency. */
+const nativeAggregate = computed(() => {
+  const byCurrency: Record<string, number> = {}
+  for (const w of wallets.value) {
+    const n = Number(w.balance)
+    if (!Number.isFinite(n) || n === 0) continue
+    byCurrency[w.currency] = (byCurrency[w.currency] ?? 0) + n
+  }
+  return Object.entries(byCurrency)
+    .map(([c, sum]) => formatNative(sum, c))
+    .join(' · ')
+})
+
+const hasPricedBalance = computed(() => Number(totalBalanceUsd.value) > 0)
+
 onMounted(load)
 
 const filtered = computed(() => {
@@ -179,14 +203,24 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
       </div>
       <div class="bigstat">
         <div class="lb">Saldo bajo gestión</div>
-        <div class="vl">${{ formatUsd(totalBalanceUsd) }}</div>
-        <div class="ds">
-          <template v-if="unpricedCurrencies.length">
-            <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
-            ({{ unpricedCurrencies.join(', ') }})
-          </template>
-          <template v-else>USD agregado</template>
-        </div>
+        <template v-if="hasPricedBalance">
+          <div class="vl">${{ formatUsd(totalBalanceUsd) }}</div>
+          <div class="ds">
+            <template v-if="unpricedCurrencies.length">
+              <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
+              ({{ unpricedCurrencies.join(', ') }})
+            </template>
+            <template v-else>USD agregado</template>
+          </div>
+        </template>
+        <template v-else-if="nativeAggregate">
+          <div class="vl vl-native" :title="nativeAggregate">{{ nativeAggregate }}</div>
+          <div class="ds unpriced">sin tasa FX para mostrar USD</div>
+        </template>
+        <template v-else>
+          <div class="vl">$0</div>
+          <div class="ds">sin balances</div>
+        </template>
       </div>
     </div>
 
@@ -279,6 +313,20 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
 .vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
 .ds { font-size: 11.5px; color: var(--text-3); }
 .ds .unpriced { color: var(--warning); font-weight: 500; }
+.ds.unpriced { color: var(--warning); }
+/* Native-currency breakdown rendered when no FX rate exists. Smaller
+ * size + tabular nums keeps a multi-currency string like
+ * "1.5 BTC · 200 USDT" readable inside a bigstat without truncating
+ * silently. */
+.vl-native {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .usd-cell { font-variant-numeric: tabular-nums; }
 .usd-missing { color: var(--text-3); }
