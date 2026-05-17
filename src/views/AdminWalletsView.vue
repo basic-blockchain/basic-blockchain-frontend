@@ -13,6 +13,8 @@ import WalletDrawer, {
 } from '@/components/drawers/WalletDrawer.vue'
 
 const wallets = ref<WalletAdminRecord[]>([])
+const totalBalanceUsd = ref('0')
+const unpricedCurrencies = ref<string[]>([])
 const loading = ref(false)
 const error = ref('')
 const filterUser = ref('')
@@ -28,12 +30,48 @@ async function load() {
   try {
     const res = await listAllWallets()
     wallets.value = res.wallets
+    totalBalanceUsd.value = res.total_balance_usd
+    unpricedCurrencies.value = res.unpriced_currencies
   } catch (e: unknown) {
     error.value = String(e)
   } finally {
     loading.value = false
   }
 }
+
+function formatUsd(value: string | number): string {
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return '—'
+  // Phase 6j — locale aligned with the rest of the admin surface
+  // (`es-AR` formats as `1.234,56`). Avoids the `1,234.56` /
+  // `1.234,56` mismatch operators saw when bouncing between Wallets
+  // and Users.
+  return n.toLocaleString('es-AR', { maximumFractionDigits: 2 })
+}
+
+function formatNative(value: number, currency: string): string {
+  const fixed = value.toFixed(8).replace(/\.?0+$/, '')
+  const [intPart, frac] = fixed.split('.')
+  const grouped = Number(intPart).toLocaleString('es-AR')
+  return frac ? `${grouped}.${frac} ${currency}` : `${grouped} ${currency}`
+}
+
+/** Native-by-currency aggregate built from the raw wallet list.
+ * Used as a fallback when `total_balance_usd` is 0 because no FX
+ * rate exists for any wallet's currency. */
+const nativeAggregate = computed(() => {
+  const byCurrency: Record<string, number> = {}
+  for (const w of wallets.value) {
+    const n = Number(w.balance)
+    if (!Number.isFinite(n) || n === 0) continue
+    byCurrency[w.currency] = (byCurrency[w.currency] ?? 0) + n
+  }
+  return Object.entries(byCurrency)
+    .map(([c, sum]) => formatNative(sum, c))
+    .join(' · ')
+})
+
+const hasPricedBalance = computed(() => Number(totalBalanceUsd.value) > 0)
 
 onMounted(load)
 
@@ -168,9 +206,25 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
         <div class="ds">bloqueadas</div>
       </div>
       <div class="bigstat">
-        <div class="lb">Inactivas</div>
-        <div class="vl">0</div>
-        <div class="ds">sin actividad</div>
+        <div class="lb">Saldo bajo gestión</div>
+        <template v-if="hasPricedBalance">
+          <div class="vl">${{ formatUsd(totalBalanceUsd) }}</div>
+          <div class="ds">
+            <template v-if="unpricedCurrencies.length">
+              <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
+              ({{ unpricedCurrencies.join(', ') }})
+            </template>
+            <template v-else>USD agregado</template>
+          </div>
+        </template>
+        <template v-else-if="nativeAggregate">
+          <div class="vl vl-native" :title="nativeAggregate">{{ nativeAggregate }}</div>
+          <div class="ds unpriced">sin tasa FX para mostrar USD</div>
+        </template>
+        <template v-else>
+          <div class="vl">$0</div>
+          <div class="ds">sin balances</div>
+        </template>
       </div>
     </div>
 
@@ -197,6 +251,7 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
             <th>Wallet ID</th>
             <th>Usuario</th>
             <th>Balance</th>
+            <th>USD</th>
             <th>Tipo</th>
             <th>Clave pública</th>
             <th>Estado</th>
@@ -212,6 +267,10 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
               <span class="username"> @{{ w.username }}</span>
             </td>
             <td class="mono"><AmountDisplay :amount="parseBalance(w.balance)" :precision="8" :unit="w.currency" /></td>
+            <td class="mono usd-cell">
+              <template v-if="w.balance_usd !== null">${{ formatUsd(w.balance_usd) }}</template>
+              <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
+            </td>
             <td>
               <span class="type-badge" :class="`type-${w.wallet_type.toLowerCase()}`">{{ w.wallet_type }}</span>
             </td>
@@ -257,6 +316,24 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
 .lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
 .ds { font-size: 11.5px; color: var(--text-3); }
+.ds .unpriced { color: var(--warning); font-weight: 500; }
+.ds.unpriced { color: var(--warning); }
+/* Native-currency breakdown rendered when no FX rate exists. Smaller
+ * size + tabular nums keeps a multi-currency string like
+ * "1.5 BTC · 200 USDT" readable inside a bigstat without truncating
+ * silently. */
+.vl-native {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usd-cell { font-variant-numeric: tabular-nums; }
+.usd-missing { color: var(--text-3); }
 
 .asset-pill {
   display: inline-flex; align-items: center; justify-content: center;
