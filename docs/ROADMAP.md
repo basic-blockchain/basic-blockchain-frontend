@@ -248,26 +248,25 @@ week`).
 
 ## 5. Backlog (later)
 
-### Backend: fix simulator promotion script direction
+### Backend: fix simulator promotion script direction — **DONE**
 
-- `basic-blockchain-simulator/scripts/devsecops_promotion_chain.sh`
-  lines 101-104 are downward (`production → main`, `production →
-  staging`, `staging → qa`, `qa → develop`) but
-  `docs/devsecops/PROMOTION_STRATEGY.md` describes upward flow.
-- Flip to match: `develop → qa`, `qa → staging`, `staging → production`,
-  `production → main`. Frontend script is already correct.
-- Until this lands, the simulator promotion chain is run manually
-  (`gh pr create` per step) — see the "Repo plumbing" notes above.
+- `scripts/devsecops_promotion_chain.sh` now opens upward PRs
+  (`develop → qa → staging → production → main`), matching
+  `docs/devsecops/PROMOTION_STRATEGY.md` and the frontend script.
+- Simulator PR #217. The chain is back to one-command on both repos.
 
-### Backend: resilient PG SELECT on missing columns
+### Backend: resilient PG SELECT on missing columns — **DONE**
 
-- After PR simulator#183 the PG adapter SELECTs `country`, `kyc_level`,
-  `last_active`, `created_at` even on databases that have not yet run
-  migration V018, which produces a 500 on `/admin/users`.
-- Fix: try the extended SELECT, fall back to the legacy SELECT when a
-  `column does not exist` error fires. ~20 lines + a regression test.
-- Workaround in the meantime: run `python migrations/migrate.py` after
-  pulling.
+- `PostgresUserStore._select_users(...)` runs the extended SELECT first;
+  on `psycopg2.errors.UndefinedColumn` it falls back to the legacy
+  projection and latches `self._users_legacy_only = True` so the
+  failure round-trip happens at most once per process. Records served
+  from the fallback default `kyc_level='L0'` and `country=None`.
+- Simulator PR #225 with regression test in
+  `tests/test_infrastructure_adapters.py::test_postgres_user_store_falls_back_to_legacy_select`.
+- The "pull → migrate → restart" guidance in §6 Decisions remains
+  best practice — the fallback exists for environments where the
+  migration is temporarily delayed.
 
 ### Backend follow-up: KYC admin review — **DONE** (Phase 6g-admin, simulator)
 
@@ -305,13 +304,19 @@ review") and rules BR-KY-09..16 in business-rules.md.
   sidebar nav (Plataforma · KYC) and the command palette
   (Admin · KYC).
 
-### Auth flow: populate `last_active` and `country`
+### Auth flow: populate `last_active` and `country` — **DONE (backend)**
 
-- `users.last_active` and `users.country` exist in the schema (V018)
-  but no write path sets them yet.
-- Login + sensitive actions should bump `last_active`; signup should
-  collect `country` (frontend picker + backend storage).
-- Small enough to live alongside Phase 6g or as its own PR.
+- `POST /auth/register` accepts an optional `country` field (case-folded
+  to uppercase, validated as 2-letter ISO 3166-1 alpha-2).
+- `POST /auth/login` calls `users.touch_last_active(...)` after every
+  credential / activation / ban guard so failures never update the
+  column. Rules captured as BR-AU-08 / BR-AU-09 in
+  `basic-blockchain-simulator/docs/business-rules.md`.
+- Simulator PR #226.
+- **Frontend follow-up (open)**: surface a country picker on
+  `RegisterView` and pass `country` in the `/auth/register` body.
+  Today the field is accepted but optional — registrations without a
+  picker still succeed with `country=null`.
 
 ### Phase 7 — Interactive iteration ("Cadena v2")
 
