@@ -2,7 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import BaseDrawer from '@/components/atoms/BaseDrawer.vue'
 
-function makeWrapper(props: Record<string, unknown>) {
+interface DrawerTestProps {
+  open: boolean
+  title?: string
+  width?: string | number
+  dismissable?: boolean
+  anchor?: 'right' | 'left'
+}
+
+function makeWrapper(props: DrawerTestProps) {
   return mount(BaseDrawer, {
     props,
     slots: { default: () => 'Drawer body' },

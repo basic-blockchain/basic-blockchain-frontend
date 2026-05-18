@@ -3,11 +3,21 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { h, nextTick } from 'vue'
 import BaseModal from '@/components/atoms/BaseModal.vue'
 
-function makeMount(props: Record<string, unknown>, slots: Record<string, unknown> = {}) {
+interface ModalTestProps {
+  open: boolean
+  title?: string
+  width?: string | number
+  dismissable?: boolean
+}
+
+function makeMount(
+  props: ModalTestProps,
+  slots: Record<string, () => unknown> = {},
+) {
   return mount(BaseModal, {
     attachTo: document.body,
     props,
-    slots,
+    slots: slots as never,
   })
 }
 

@@ -3,10 +3,20 @@ import { mount } from '@vue/test-utils'
 import { h } from 'vue'
 import BaseModal from '@/components/atoms/BaseModal.vue'
 
-function makeWrapper(props: Record<string, unknown>, slots: Record<string, unknown> = {}) {
+interface ModalTestProps {
+  open: boolean
+  title?: string
+  width?: string | number
+  dismissable?: boolean
+}
+
+function makeWrapper(
+  props: ModalTestProps,
+  slots: Record<string, () => unknown> = {},
+) {
   return mount(BaseModal, {
     props,
-    slots,
+    slots: slots as never,
     global: { stubs: { teleport: true } },
   })
 }
