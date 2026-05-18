@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import BaseDrawer from '@/components/atoms/BaseDrawer.vue'
 
 export interface DrawerWallet {
   id: string
@@ -79,12 +80,9 @@ watch(
   },
 )
 
-function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && props.open) emit('close')
+function onOpenChange(value: boolean) {
+  if (!value) emit('close')
 }
-
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 const allFrozen = computed(() => {
   const u = props.user
@@ -230,8 +228,11 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
 </script>
 
 <template>
-  <div class="scrim" :class="{ open }" @click="emit('close')"></div>
-  <aside class="drawer" :class="{ open }" role="dialog" aria-modal="true">
+  <BaseDrawer
+    :open="open"
+    :width="720"
+    @update:open="onOpenChange"
+  >
     <template v-if="user">
       <div class="drawer-head">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
@@ -625,41 +626,20 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
         </template>
       </div>
     </template>
-  </aside>
+  </BaseDrawer>
 </template>
 
 <style scoped>
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 199;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s;
-}
-.scrim.open {
-  opacity: 1;
-  pointer-events: all;
-}
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 480px;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  z-index: 200;
+/* BaseDrawer owns the shell; override body padding to 0 so the
+ * internal drawer-head / drawer-tabs / drawer-body layout keeps
+ * the v1 padding contract. */
+:deep(.base-modal__body) {
+  padding: 0;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
-.drawer.open {
-  transform: translateX(0);
-}
+
 .drawer-head {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
