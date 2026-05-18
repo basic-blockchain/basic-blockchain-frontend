@@ -117,8 +117,11 @@ function formatDefault(row: Row, key: string): string {
         v-for="(col, i) in columns"
         :key="`col-${i}`"
         :style="colStyle(col)"
-      />
-      <col v-if="hasRowActions" style="width: 32px" />
+      >
+      <col
+        v-if="hasRowActions"
+        style="width: 32px"
+      >
     </colgroup>
     <thead
       v-if="showHead"
@@ -143,7 +146,9 @@ function formatDefault(row: Row, key: string): string {
               aria-hidden="true"
             >{{ sortIcon(col.key) }}</span>
           </button>
-          <template v-else>{{ col.label }}</template>
+          <template v-else>
+            {{ col.label }}
+          </template>
         </th>
         <th
           v-if="hasRowActions"
@@ -170,7 +175,9 @@ function formatDefault(row: Row, key: string): string {
               :index="index"
               :column="col"
               :value="getCellValue(row, col.key)"
-            >{{ formatDefault(row, col.key) }}</slot>
+            >
+              {{ formatDefault(row, col.key) }}
+            </slot>
           </td>
           <td
             v-if="hasRowActions"
@@ -189,7 +196,9 @@ function formatDefault(row: Row, key: string): string {
           :colspan="totalCols"
           class="base-tbl__empty"
         >
-          <slot name="empty">No data</slot>
+          <slot name="empty">
+            No data
+          </slot>
         </td>
       </tr>
     </tbody>
