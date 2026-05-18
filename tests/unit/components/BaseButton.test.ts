@@ -17,7 +17,7 @@ describe('BaseButton', () => {
     },
   )
 
-  it.each(['sm', 'md'] as const)('applies the %s size class', (size) => {
+  it.each(['sm', 'md', 'lg'] as const)('applies the %s size class', (size) => {
     const wrapper = mount(BaseButton, { props: { size } })
     expect(wrapper.classes()).toContain(`base-btn--${size}`)
   })

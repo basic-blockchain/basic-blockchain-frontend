@@ -3,7 +3,7 @@ import { computed, onMounted, useAttrs, useSlots } from 'vue'
 
 interface Props {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   loading?: boolean
   disabled?: boolean
   iconOnly?: boolean
@@ -162,6 +162,12 @@ onMounted(() => {
   font-size: 12px;
 }
 
+.base-btn--lg {
+  height: 36px;
+  padding: 0 var(--space-lg);
+  font-size: 13px;
+}
+
 /* Modifiers */
 .base-btn--icon-only {
   width: 28px;
@@ -170,6 +176,9 @@ onMounted(() => {
 }
 .base-btn--sm.base-btn--icon-only {
   width: 26px;
+}
+.base-btn--lg.base-btn--icon-only {
+  width: 36px;
 }
 
 .base-btn--block {

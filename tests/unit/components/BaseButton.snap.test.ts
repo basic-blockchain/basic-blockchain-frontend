@@ -3,11 +3,11 @@ import { mount } from '@vue/test-utils'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
-type Size = 'sm' | 'md'
+type Size = 'sm' | 'md' | 'lg'
 type State = 'idle' | 'loading' | 'disabled'
 
 const variants: Variant[] = ['primary', 'secondary', 'danger', 'ghost']
-const sizes: Size[] = ['sm', 'md']
+const sizes: Size[] = ['sm', 'md', 'lg']
 const states: State[] = ['idle', 'loading', 'disabled']
 
 describe('BaseButton snapshots', () => {
