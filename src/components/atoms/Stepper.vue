@@ -17,7 +17,7 @@ interface Props {
 const props = defineProps<Props>()
 
 if (import.meta.env.DEV && props.steps.length === 0) {
-  // eslint-disable-next-line no-console
+   
   console.warn('[Stepper] received an empty `steps` array — rendering will be empty.')
 }
 
