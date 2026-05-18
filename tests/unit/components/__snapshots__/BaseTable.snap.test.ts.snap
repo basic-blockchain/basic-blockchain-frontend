@@ -1,0 +1,188 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BaseTable snapshots > omits thead when showHead=false 1`] = `
+"<table data-v-946b79bc="" class="base-tbl">
+  <!--v-if-->
+  <!--v-if-->
+  <tbody data-v-946b79bc="" class="base-tbl__body">
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">1</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Alice</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">100</td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">2</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Bob</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">250</td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">3</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Carol</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">42</td>
+      <!--v-if-->
+    </tr>
+  </tbody>
+</table>"
+`;
+
+exports[`BaseTable snapshots > renders a plain table with 3 columns × 3 rows 1`] = `
+"<table data-v-946b79bc="" class="base-tbl">
+  <!--v-if-->
+  <thead data-v-946b79bc="" class="base-tbl__head">
+    <tr data-v-946b79bc="">
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">ID</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Name</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Amount</th>
+      <!--v-if-->
+    </tr>
+  </thead>
+  <tbody data-v-946b79bc="" class="base-tbl__body">
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">1</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Alice</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">100</td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">2</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Bob</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">250</td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">3</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Carol</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">42</td>
+      <!--v-if-->
+    </tr>
+  </tbody>
+</table>"
+`;
+
+exports[`BaseTable snapshots > renders num + width columns via colgroup 1`] = `
+"<table data-v-946b79bc="" class="base-tbl">
+  <colgroup data-v-946b79bc="">
+    <col data-v-946b79bc="" style="width: 60px;">
+    <col data-v-946b79bc="" style="width: 180px;">
+    <col data-v-946b79bc="" style="width: 100px;">
+    <!--v-if-->
+  </colgroup>
+  <thead data-v-946b79bc="" class="base-tbl__head">
+    <tr data-v-946b79bc="">
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">ID</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Name</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-right base-tbl__cell--num">Amount</th>
+      <!--v-if-->
+    </tr>
+  </thead>
+  <tbody data-v-946b79bc="" class="base-tbl__body">
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">1</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Alice</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-right base-tbl__cell--num">100</td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">2</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Bob</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-right base-tbl__cell--num">250</td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">3</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Carol</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-right base-tbl__cell--num">42</td>
+      <!--v-if-->
+    </tr>
+  </tbody>
+</table>"
+`;
+
+exports[`BaseTable snapshots > renders the empty state with default text when rows is empty 1`] = `
+"<table data-v-946b79bc="" class="base-tbl">
+  <!--v-if-->
+  <thead data-v-946b79bc="" class="base-tbl__head">
+    <tr data-v-946b79bc="">
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">ID</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Name</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Amount</th>
+      <!--v-if-->
+    </tr>
+  </thead>
+  <tbody data-v-946b79bc="" class="base-tbl__body">
+    <tr data-v-946b79bc="">
+      <td data-v-946b79bc="" colspan="3" class="base-tbl__empty"> No data </td>
+    </tr>
+  </tbody>
+</table>"
+`;
+
+exports[`BaseTable snapshots > renders the trailing actions column when row-actions slot is provided 1`] = `
+"<table data-v-946b79bc="" class="base-tbl">
+  <!--v-if-->
+  <thead data-v-946b79bc="" class="base-tbl__head">
+    <tr data-v-946b79bc="">
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">ID</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Name</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Amount</th>
+      <th data-v-946b79bc="" class="base-tbl__cell--actions"></th>
+    </tr>
+  </thead>
+  <tbody data-v-946b79bc="" class="base-tbl__body">
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">1</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Alice</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">100</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--actions"><button class="menu-btn">⋯</button></td>
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">2</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Bob</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">250</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--actions"><button class="menu-btn">⋯</button></td>
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">3</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Carol</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">42</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--actions"><button class="menu-btn">⋯</button></td>
+    </tr>
+  </tbody>
+</table>"
+`;
+
+exports[`BaseTable snapshots > uses the cell-<key> slot when provided 1`] = `
+"<table data-v-946b79bc="" class="base-tbl">
+  <!--v-if-->
+  <thead data-v-946b79bc="" class="base-tbl__head">
+    <tr data-v-946b79bc="">
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">ID</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Name</th>
+      <th data-v-946b79bc="" class="base-tbl__head-cell base-tbl__cell--align-left">Amount</th>
+      <!--v-if-->
+    </tr>
+  </thead>
+  <tbody data-v-946b79bc="" class="base-tbl__body">
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">1</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Alice</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left"><span class="amt">$100.00</span></td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">2</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Bob</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left"><span class="amt">$250.00</span></td>
+      <!--v-if-->
+    </tr>
+    <tr data-v-946b79bc="" class="">
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">3</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left">Carol</td>
+      <td data-v-946b79bc="" class="base-tbl__cell--align-left"><span class="amt">$42.00</span></td>
+      <!--v-if-->
+    </tr>
+  </tbody>
+</table>"
+`;

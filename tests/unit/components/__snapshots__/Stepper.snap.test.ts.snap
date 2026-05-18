@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Stepper snapshots > renders 4 steps · current=0 (initial state, nothing done) 1`] = `
+"<ol data-v-dfd2912a="" class="stepper" role="list">
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--current" aria-current="step"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">1</span><span data-v-dfd2912a="" class="stepper__label">Step A</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">2</span><span data-v-dfd2912a="" class="stepper__label">Step B</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">3</span><span data-v-dfd2912a="" class="stepper__label">Step C</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">4</span><span data-v-dfd2912a="" class="stepper__label">Step D</span></li>
+  <!--v-if-->
+</ol>"
+`;
+
+exports[`Stepper snapshots > renders 4 steps · current=2 (two done, one current, one pending) 1`] = `
+"<ol data-v-dfd2912a="" class="stepper" role="list">
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step A</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step B</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--current" aria-current="step"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">3</span><span data-v-dfd2912a="" class="stepper__label">Step C</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">4</span><span data-v-dfd2912a="" class="stepper__label">Step D</span></li>
+  <!--v-if-->
+</ol>"
+`;
+
+exports[`Stepper snapshots > renders 4 steps · current=2 with current overridden to error 1`] = `
+"<ol data-v-dfd2912a="" class="stepper" role="list">
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step A</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step B</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--error" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--error"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">!</span><span data-v-dfd2912a="" class="stepper__label">Step C</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">4</span><span data-v-dfd2912a="" class="stepper__label">Step D</span></li>
+  <!--v-if-->
+</ol>"
+`;
+
+exports[`Stepper snapshots > renders 4 steps · current=3 (last step active) 1`] = `
+"<ol data-v-dfd2912a="" class="stepper" role="list">
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step A</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step B</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step C</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--current" aria-current="step"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">4</span><span data-v-dfd2912a="" class="stepper__label">Step D</span></li>
+  <!--v-if-->
+</ol>"
+`;
+
+exports[`Stepper snapshots > renders 5 steps · current=1 with step 2 overridden to done (skip-ahead) 1`] = `
+"<ol data-v-dfd2912a="" class="stepper" role="list">
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step A</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--current" aria-current="step"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">2</span><span data-v-dfd2912a="" class="stepper__label">Step B</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step C</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">4</span><span data-v-dfd2912a="" class="stepper__label">Step D</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--pending" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--pending"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">5</span><span data-v-dfd2912a="" class="stepper__label">Step E</span></li>
+  <!--v-if-->
+</ol>"
+`;
+
+exports[`Stepper snapshots > renders 5 steps · current=4 (terminal step active, all prior done) 1`] = `
+"<ol data-v-dfd2912a="" class="stepper" role="list">
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step A</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step B</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step C</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--done"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">✓</span><span data-v-dfd2912a="" class="stepper__label">Step D</span></li><span data-v-dfd2912a="" class="stepper__line stepper__line--done" aria-hidden="true"></span>
+  <li data-v-dfd2912a="" class="stepper__item stepper__item--current" aria-current="step"><span data-v-dfd2912a="" class="stepper__circle" aria-hidden="true">5</span><span data-v-dfd2912a="" class="stepper__label">Step E</span></li>
+  <!--v-if-->
+</ol>"
+`;

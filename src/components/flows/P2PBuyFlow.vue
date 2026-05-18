@@ -26,7 +26,12 @@ const step = ref(0)
 const amount = ref('500.00')
 const method = ref(props.offer.methods[0] ?? '')
 
-const steps = ['Monto', 'Pagar', 'Esperar', 'Recibido']
+const steps = [
+  { key: 'amount', label: 'Monto' },
+  { key: 'pay', label: 'Pagar' },
+  { key: 'wait', label: 'Esperar' },
+  { key: 'received', label: 'Recibido' },
+]
 
 const arsTotal = computed(() => {
   const a = parseFloat(amount.value.replace(',', '')) || 0
