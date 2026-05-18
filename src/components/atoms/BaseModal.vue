@@ -166,14 +166,18 @@ function releaseScrollLock() {
               <h2
                 v-if="title"
                 class="base-modal__title"
-              >{{ title }}</h2>
+              >
+                {{ title }}
+              </h2>
               <button
                 v-if="dismissable"
                 type="button"
                 class="base-modal__close"
                 aria-label="Cerrar"
                 @click="dismiss"
-              >×</button>
+              >
+                ×
+              </button>
             </slot>
           </header>
           <div class="base-modal__body">

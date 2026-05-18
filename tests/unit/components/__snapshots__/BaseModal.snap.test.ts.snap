@@ -6,7 +6,7 @@ exports[`BaseModal snapshots > renders the built-in header when title is provide
     <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--centered" aria-hidden="true">
       <div data-v-78c0434b="" class="base-modal base-modal--centered" role="dialog" aria-modal="true" aria-label="Are you sure?" style="width: 480px; max-width: 92vw;" tabindex="-1">
         <header data-v-78c0434b="" class="base-modal__header">
-          <h2 data-v-78c0434b="" class="base-modal__title">Are you sure?</h2><button data-v-78c0434b="" type="button" class="base-modal__close" aria-label="Cerrar">×</button>
+          <h2 data-v-78c0434b="" class="base-modal__title">Are you sure?</h2><button data-v-78c0434b="" type="button" class="base-modal__close" aria-label="Cerrar"> × </button>
         </header>
         <div data-v-78c0434b="" class="base-modal__body">Confirmation body</div>
         <!--v-if-->
@@ -36,7 +36,7 @@ exports[`BaseModal snapshots > renders with custom width (number → px) 1`] = `
     <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--centered" aria-hidden="true">
       <div data-v-78c0434b="" class="base-modal base-modal--centered" role="dialog" aria-modal="true" aria-label="Wide modal" style="width: 640px; max-width: 92vw;" tabindex="-1">
         <header data-v-78c0434b="" class="base-modal__header">
-          <h2 data-v-78c0434b="" class="base-modal__title">Wide modal</h2><button data-v-78c0434b="" type="button" class="base-modal__close" aria-label="Cerrar">×</button>
+          <h2 data-v-78c0434b="" class="base-modal__title">Wide modal</h2><button data-v-78c0434b="" type="button" class="base-modal__close" aria-label="Cerrar"> × </button>
         </header>
         <div data-v-78c0434b="" class="base-modal__body">Body</div>
         <!--v-if-->
