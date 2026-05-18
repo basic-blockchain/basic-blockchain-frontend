@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AuthLayout snapshots > renders defaults (built-in brand + simple foot, no right-panel) 1`] = `
+"<div data-v-270f51ea="" class="auth-wrap">
+  <div data-v-270f51ea="" class="auth-left">
+    <div data-v-270f51ea="" data-v-270f51ea-s="" class="auth-brand">
+      <div data-v-270f51ea="" data-v-270f51ea-s="" class="auth-mark">◆</div><span data-v-270f51ea="" data-v-270f51ea-s="">Cadena</span>
+    </div>
+    <form data-v-270f51ea-s="" class="auth-form">Body</form>
+    <footer data-v-270f51ea="" class="auth-foot"><span data-v-270f51ea="" data-v-270f51ea-s="">© 2026 Cadena</span></footer>
+  </div>
+  <div data-v-270f51ea="" class="auth-right"></div>
+</div>"
+`;
+
+exports[`AuthLayout snapshots > renders with custom right-panel + custom foot slots 1`] = `
+"<div data-v-270f51ea="" class="auth-wrap">
+  <div data-v-270f51ea="" class="auth-left">
+    <div data-v-270f51ea="" data-v-270f51ea-s="" class="auth-brand">
+      <div data-v-270f51ea="" data-v-270f51ea-s="" class="auth-mark">◆</div><span data-v-270f51ea="" data-v-270f51ea-s="">Cadena</span>
+    </div>
+    <form data-v-270f51ea-s="" class="auth-form">Body</form>
+    <footer data-v-270f51ea="" class="auth-foot"><span data-v-270f51ea-s="">© 2026 Cadena</span><a data-v-270f51ea-s="" href="#">Términos</a></footer>
+  </div>
+  <div data-v-270f51ea="" class="auth-right">
+    <div data-v-270f51ea-s="" class="auth-right-content">
+      <div data-v-270f51ea-s="" class="auth-right-label">Plataforma</div>
+      <p data-v-270f51ea-s="" class="auth-quote">Sample quote</p>
+    </div>
+  </div>
+</div>"
+`;
