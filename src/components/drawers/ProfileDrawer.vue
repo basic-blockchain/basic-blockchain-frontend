@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import BaseDrawer from '@/components/atoms/BaseDrawer.vue'
 import type { AuthUser, KycLevel } from '@/stores/auth'
 import {
   getKycStatus, uploadKycDocument, submitKycReview,
@@ -12,11 +13,9 @@ const emit = defineEmits<{ close: [] }>()
 type Tab = 'profile' | 'kyc'
 const tab = ref<Tab>('profile')
 
-function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && props.open) emit('close')
+function onOpenChange(value: boolean) {
+  if (!value) emit('close')
 }
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 function copyId() {
   if (props.user) navigator.clipboard?.writeText(props.user.user_id).catch(() => {})
@@ -196,8 +195,12 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
 </script>
 
 <template>
-  <div class="scrim" :class="{ open }" @click="emit('close')" />
-  <aside class="drawer" :class="{ open }" role="dialog" aria-modal="true" aria-label="Mi perfil">
+  <BaseDrawer
+    :open="open"
+    :width="540"
+    aria-label="Mi perfil"
+    @update:open="onOpenChange"
+  >
     <template v-if="user">
       <!-- Header -->
       <div class="drawer-head">
@@ -370,35 +373,19 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
 
       </div>
     </template>
-  </aside>
+  </BaseDrawer>
 </template>
 
 <style scoped>
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
-  z-index: 199;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s;
-}
-.scrim.open { opacity: 1; pointer-events: all; }
-
-.drawer {
-  position: fixed;
-  top: 0; right: 0; bottom: 0;
-  width: 400px;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  z-index: 200;
+/* BaseDrawer owns the shell; override body padding to 0 so the
+ * internal drawer-head + drawer-tabs + drawer-body layout keeps
+ * the v1 padding contract. */
+:deep(.base-modal__body) {
+  padding: 0;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
-.drawer.open { transform: translateX(0); }
 
 /* Header */
 .drawer-head {
