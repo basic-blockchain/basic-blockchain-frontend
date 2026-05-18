@@ -205,27 +205,58 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
       <!-- Header -->
       <div class="drawer-head">
         <div class="head-row">
-          <div class="avatar" aria-hidden="true">{{ user.display_name.charAt(0).toUpperCase() }}</div>
+          <div
+            class="avatar"
+            aria-hidden="true"
+          >
+            {{ user.display_name.charAt(0).toUpperCase() }}
+          </div>
           <div class="head-info">
-            <div class="head-name">{{ user.display_name }}</div>
+            <div class="head-name">
+              {{ user.display_name }}
+            </div>
             <div class="head-sub">
               <span class="mono">@{{ user.username }}</span>
-              <span class="bdg" :class="roleBadgeClass">{{ primaryRole }}</span>
-              <span v-if="user.banned" class="bdg bdg-banned">Baneado</span>
+              <span
+                class="bdg"
+                :class="roleBadgeClass"
+              >{{ primaryRole }}</span>
+              <span
+                v-if="user.banned"
+                class="bdg bdg-banned"
+              >Baneado</span>
             </div>
           </div>
-          <button class="btn btn-icon btn-ghost" aria-label="Cerrar perfil" @click="emit('close')">
-            <span class="pi pi-times" aria-hidden="true" />
+          <button
+            class="btn btn-icon btn-ghost"
+            aria-label="Cerrar perfil"
+            @click="emit('close')"
+          >
+            <span
+              class="pi pi-times"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>
 
       <!-- Tabs -->
-      <nav class="drawer-tabs" aria-label="Secciones de perfil">
-        <button class="drawer-tab" :class="{ active: tab === 'profile' }" @click="tab = 'profile'">
+      <nav
+        class="drawer-tabs"
+        aria-label="Secciones de perfil"
+      >
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'profile' }"
+          @click="tab = 'profile'"
+        >
           Perfil
         </button>
-        <button class="drawer-tab" :class="{ active: tab === 'kyc' }" @click="tab = 'kyc'">
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'kyc' }"
+          @click="tab = 'kyc'"
+        >
           KYC <span class="tab-badge">{{ kycLevel }}</span>
         </button>
         <!-- doc upload hidden file inputs -->
@@ -237,21 +268,29 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
           accept="image/*,application/pdf"
           style="display:none"
           @change="onFileSelected(doc.key, $event)"
-        />
+        >
       </nav>
 
       <div class="drawer-body">
-
         <!-- Profile tab -->
         <template v-if="tab === 'profile'">
-          <div class="section-h">Identidad</div>
+          <div class="section-h">
+            Identidad
+          </div>
           <div class="kv-panel">
             <div class="kv-row">
               <span class="kv-label">User ID</span>
               <span class="kv-val mono xs">
                 {{ user.user_id }}
-                <button class="copy-btn" aria-label="Copiar ID" @click="copyId">
-                  <span class="pi pi-copy" aria-hidden="true" />
+                <button
+                  class="copy-btn"
+                  aria-label="Copiar ID"
+                  @click="copyId"
+                >
+                  <span
+                    class="pi pi-copy"
+                    aria-hidden="true"
+                  />
                 </button>
               </span>
             </div>
@@ -266,7 +305,11 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
             <div class="kv-row">
               <span class="kv-label">Roles</span>
               <span class="kv-val roles-list">
-                <span v-for="r in user.roles" :key="r" class="bdg bdg-info sm">{{ r }}</span>
+                <span
+                  v-for="r in user.roles"
+                  :key="r"
+                  class="bdg bdg-info sm"
+                >{{ r }}</span>
               </span>
             </div>
             <div class="kv-row">
@@ -276,13 +319,24 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
             <div class="kv-row no-border">
               <span class="kv-label">Estado</span>
               <span class="kv-val">
-                <span v-if="user.banned" class="bdg bdg-banned">Baneado</span>
-                <span v-else class="bdg bdg-active">Activo</span>
+                <span
+                  v-if="user.banned"
+                  class="bdg bdg-banned"
+                >Baneado</span>
+                <span
+                  v-else
+                  class="bdg bdg-active"
+                >Activo</span>
               </span>
             </div>
           </div>
 
-          <div class="section-h" style="margin-top: 18px;">Seguridad</div>
+          <div
+            class="section-h"
+            style="margin-top: 18px;"
+          >
+            Seguridad
+          </div>
           <div class="kv-panel">
             <div class="kv-row no-border">
               <span class="kv-label">Contraseña</span>
@@ -296,14 +350,23 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
         <!-- KYC tab -->
         <template v-else-if="tab === 'kyc'">
           <div class="kyc-card">
-            <div class="kyc-level-badge">{{ currentKyc.level }}</div>
+            <div class="kyc-level-badge">
+              {{ currentKyc.level }}
+            </div>
             <div class="kyc-card-info">
-              <div class="kyc-card-name">Nivel {{ currentKyc.level }} · {{ currentKyc.name }}</div>
-              <div class="kyc-card-desc">{{ currentKyc.desc }}</div>
+              <div class="kyc-card-name">
+                Nivel {{ currentKyc.level }} · {{ currentKyc.name }}
+              </div>
+              <div class="kyc-card-desc">
+                {{ currentKyc.desc }}
+              </div>
             </div>
           </div>
 
-          <div v-if="pendingReview" class="kyc-banner pending">
+          <div
+            v-if="pendingReview"
+            class="kyc-banner pending"
+          >
             Revisión pendiente para nivel {{ pendingReview }}. Te avisaremos cuando se complete.
           </div>
 
@@ -314,17 +377,31 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
               class="kyc-level-row"
               :class="{ current: lvl.level === kycLevel, past: lvl.level < kycLevel }"
             >
-              <span class="kyc-level-dot" aria-hidden="true" />
+              <span
+                class="kyc-level-dot"
+                aria-hidden="true"
+              />
               <div class="kyc-level-text">
                 <span class="kyc-level-label">{{ lvl.level }}</span>
                 <span class="kyc-level-name">{{ lvl.name }}</span>
               </div>
-              <span v-if="lvl.level === kycLevel" class="bdg bdg-pending_kyc xs">Actual</span>
-              <span v-else-if="lvl.level < kycLevel" class="bdg bdg-active xs">Completado</span>
+              <span
+                v-if="lvl.level === kycLevel"
+                class="bdg bdg-pending_kyc xs"
+              >Actual</span>
+              <span
+                v-else-if="lvl.level < kycLevel"
+                class="bdg bdg-active xs"
+              >Completado</span>
             </div>
           </div>
 
-          <div class="section-h" style="margin-top: 18px;">Documentos</div>
+          <div
+            class="section-h"
+            style="margin-top: 18px;"
+          >
+            Documentos
+          </div>
           <div class="kv-panel">
             <div
               v-for="(doc, i) in KYC_DOCS"
@@ -336,7 +413,10 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
                 <span class="kv-label doc-label">{{ doc.label }}</span>
                 <span class="doc-min">Requerido desde {{ doc.minLevel }}</span>
               </div>
-              <span class="bdg xs" :class="statusBadge(documents[doc.key].status).cls">
+              <span
+                class="bdg xs"
+                :class="statusBadge(documents[doc.key].status).cls"
+              >
                 {{ statusBadge(documents[doc.key].status).label }}
               </span>
               <button
@@ -344,18 +424,36 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
                 :disabled="uploadingDoc !== null || pendingReview !== null"
                 @click="triggerUpload(doc.key)"
               >
-                <span v-if="uploadingDoc === doc.key" class="pi pi-spin pi-spinner" aria-hidden="true" />
-                <template v-else-if="documents[doc.key].status === 'missing'">Subir</template>
-                <template v-else>Reemplazar</template>
+                <span
+                  v-if="uploadingDoc === doc.key"
+                  class="pi pi-spin pi-spinner"
+                  aria-hidden="true"
+                />
+                <template v-else-if="documents[doc.key].status === 'missing'">
+                  Subir
+                </template>
+                <template v-else>
+                  Reemplazar
+                </template>
               </button>
             </div>
           </div>
 
-          <div v-if="kycError" class="kyc-banner danger">{{ kycError }}</div>
+          <div
+            v-if="kycError"
+            class="kyc-banner danger"
+          >
+            {{ kycError }}
+          </div>
 
-          <div v-if="target" class="kyc-submit">
+          <div
+            v-if="target"
+            class="kyc-submit"
+          >
             <div class="kyc-submit-info">
-              <div class="kyc-submit-title">Solicitar nivel {{ target }}</div>
+              <div class="kyc-submit-title">
+                Solicitar nivel {{ target }}
+              </div>
               <div class="kyc-submit-desc">
                 Subí los documentos requeridos y enviá tu solicitud a revisión.
               </div>
@@ -365,12 +463,17 @@ function statusBadge(s: KycDocumentStatus): { cls: string; label: string } {
               :disabled="!canSubmitReview || submitting"
               @click="onSubmitReview"
             >
-              <span v-if="submitting" class="pi pi-spin pi-spinner" aria-hidden="true" />
-              <template v-else>Enviar a revisión</template>
+              <span
+                v-if="submitting"
+                class="pi pi-spin pi-spinner"
+                aria-hidden="true"
+              />
+              <template v-else>
+                Enviar a revisión
+              </template>
             </button>
           </div>
         </template>
-
       </div>
     </template>
   </BaseDrawer>
