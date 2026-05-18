@@ -228,7 +228,9 @@ describe('BaseTable', () => {
       props: {
         columns: baseColumns,
         rows: users,
-        rowClass: (row: User) => (row.balance > 100 ? 'is-rich' : 'is-poor'),
+        rowClass: ((row: User) => (row.balance > 100 ? 'is-rich' : 'is-poor')) as unknown as (
+          row: object,
+        ) => string,
       },
     })
     const trs = wrapper.findAll('tbody tr')
@@ -242,7 +244,10 @@ describe('BaseTable', () => {
       props: {
         columns: baseColumns,
         rows: users,
-        rowKey: 'id' as const,
+        // VTU widens `Row` to `object` at the call site so the generic
+        // `keyof Row & string` resolves to `never`. Runtime behaviour is
+        // what the test asserts.
+        rowKey: 'id' as unknown as never,
       },
     })
     expect(wrapper.findAll('tbody tr')).toHaveLength(3)
@@ -253,7 +258,7 @@ describe('BaseTable', () => {
       props: {
         columns: baseColumns,
         rows: users,
-        rowKey: (row: User) => `user-${row.id}`,
+        rowKey: ((row: User) => `user-${row.id}`) as unknown as (row: object) => string,
       },
     })
     expect(wrapper.findAll('tbody tr')).toHaveLength(3)
