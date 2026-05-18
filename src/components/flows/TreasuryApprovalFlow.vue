@@ -19,7 +19,12 @@ const approver2Signed = ref(false)
 const progress = ref(0)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-const steps = ['Revisar', 'Firmar', '2ª aprobación', 'Ejecutado']
+const steps = [
+  { key: 'review', label: 'Revisar' },
+  { key: 'sign', label: 'Firmar' },
+  { key: 'approve', label: '2ª aprobación' },
+  { key: 'execute', label: 'Ejecutado' },
+]
 
 watch(step, (s) => {
   if (s === 3) {
