@@ -13,7 +13,9 @@
     <div class="auth-left">
       <slot name="brand">
         <div class="auth-brand">
-          <div class="auth-mark">◆</div>
+          <div class="auth-mark">
+            ◆
+          </div>
           <span>Cadena</span>
         </div>
       </slot>

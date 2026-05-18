@@ -80,7 +80,9 @@ async function submit() {
       </BaseBadge>
 
       <h1>Crear cuenta</h1>
-      <p class="auth-sub">Elegí un nombre de usuario para acceder a la plataforma.</p>
+      <p class="auth-sub">
+        Elegí un nombre de usuario para acceder a la plataforma.
+      </p>
 
       <div class="fld">
         <label for="username">Usuario</label>
@@ -110,7 +112,9 @@ async function submit() {
           v-model="country"
           autocomplete="country"
         >
-          <option value="">Seleccioná un país…</option>
+          <option value="">
+            Seleccioná un país…
+          </option>
           <option
             v-for="opt in COUNTRY_OPTIONS"
             :key="opt.code"
@@ -132,14 +136,20 @@ async function submit() {
       </BaseButton>
 
       <div class="auth-switch">
-        ¿Ya tenés cuenta? <RouterLink to="/login">Ingresar</RouterLink>
+        ¿Ya tenés cuenta? <RouterLink to="/login">
+          Ingresar
+        </RouterLink>
       </div>
     </form>
 
     <template #right-panel>
       <div class="auth-right-content">
-        <div class="auth-right-label">Onboarding</div>
-        <p class="auth-quote">"Verificación progresiva. Empezás operando en minutos, subís de nivel cuando te conviene."</p>
+        <div class="auth-right-label">
+          Onboarding
+        </div>
+        <p class="auth-quote">
+          "Verificación progresiva. Empezás operando en minutos, subís de nivel cuando te conviene."
+        </p>
       </div>
 
       <div class="role-card">

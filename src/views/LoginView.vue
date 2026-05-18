@@ -42,7 +42,9 @@ async function submit() {
       @submit.prevent="submit"
     >
       <h1>Ingresar</h1>
-      <p class="auth-sub">Accedé a tu panel de la plataforma.</p>
+      <p class="auth-sub">
+        Accedé a tu panel de la plataforma.
+      </p>
 
       <div class="fld">
         <label for="username">Email o usuario</label>
@@ -99,7 +101,9 @@ async function submit() {
       </RouterLink>
 
       <div class="auth-switch">
-        ¿No tenés cuenta? <RouterLink to="/register">Crear una</RouterLink>
+        ¿No tenés cuenta? <RouterLink to="/register">
+          Crear una
+        </RouterLink>
       </div>
     </form>
 
@@ -112,8 +116,12 @@ async function submit() {
 
     <template #right-panel>
       <div class="auth-right-content">
-        <div class="auth-right-label">Plataforma</div>
-        <p class="auth-quote">"Operaciones, cumplimiento y tesorería sobre la misma capa de datos blockchain — sin reconciliaciones manuales."</p>
+        <div class="auth-right-label">
+          Plataforma
+        </div>
+        <p class="auth-quote">
+          "Operaciones, cumplimiento y tesorería sobre la misma capa de datos blockchain — sin reconciliaciones manuales."
+        </p>
       </div>
 
       <div class="role-card">

@@ -74,7 +74,9 @@ async function submit() {
       </BaseBadge>
 
       <h1>Activar cuenta</h1>
-      <p class="auth-sub">Bienvenido/a, <strong>{{ username }}</strong>. Elegí una contraseña para completar la activación.</p>
+      <p class="auth-sub">
+        Bienvenido/a, <strong>{{ username }}</strong>. Elegí una contraseña para completar la activación.
+      </p>
 
       <div class="fld">
         <label for="password">Contraseña</label>
@@ -118,14 +120,20 @@ async function submit() {
       </BaseButton>
 
       <div class="auth-switch">
-        ¿Ya activaste tu cuenta? <RouterLink to="/login">Ingresar</RouterLink>
+        ¿Ya activaste tu cuenta? <RouterLink to="/login">
+          Ingresar
+        </RouterLink>
       </div>
     </form>
 
     <template #right-panel>
       <div class="auth-right-content">
-        <div class="auth-right-label">Seguridad</div>
-        <p class="auth-quote">"Tu contraseña se almacena con hashing seguro. Nunca la enviamos por email ni la conocemos."</p>
+        <div class="auth-right-label">
+          Seguridad
+        </div>
+        <p class="auth-quote">
+          "Tu contraseña se almacena con hashing seguro. Nunca la enviamos por email ni la conocemos."
+        </p>
       </div>
 
       <div class="role-card">
