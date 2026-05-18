@@ -19,7 +19,7 @@ if (
   props.variant === 'bigstat' &&
   props.padding !== 'default'
 ) {
-  // eslint-disable-next-line no-console
+   
   console.warn(
     `[BaseCard] variant='bigstat' ignores padding='${props.padding}'; the bigstat variant enforces its own padding scale.`,
   )
