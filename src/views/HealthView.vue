@@ -2,11 +2,34 @@
 import { onMounted } from 'vue'
 import { useMetricsStore } from '@/stores/metrics'
 import MetricsBar from '@/components/organisms/MetricsBar.vue'
-import StatusBadge from '@/components/atoms/StatusBadge.vue'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const store = useMetricsStore()
 
 onMounted(() => store.fetchAll())
+
+type HealthStatus = 'ok' | 'degraded' | 'error' | 'n/a'
+
+const HEALTH_LABEL: Record<HealthStatus, string> = {
+  ok: 'Operativo',
+  degraded: 'Degradado',
+  error: 'Error',
+  'n/a': 'N/D',
+}
+
+function healthTone(status: string | null | undefined): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'ok') return 'success'
+  if (status === 'degraded') return 'warning'
+  if (status === 'error') return 'danger'
+  return 'neutral'
+}
+
+function healthLabel(status: string | null | undefined): string {
+  if (!status) return 'N/D'
+  return HEALTH_LABEL[status as HealthStatus] ?? status
+}
 </script>
 
 <template>
@@ -16,63 +39,102 @@ onMounted(() => store.fetchAll())
         <h1>Salud del nodo</h1>
         <p>Estado en tiempo real del backend y la base de datos</p>
       </div>
-      <button class="btn btn-ghost" type="button" :disabled="store.loading" @click="store.fetchAll()">
-        <span class="pi pi-refresh" :class="{ 'pi-spin': store.loading }" aria-hidden="true" />
+      <BaseButton
+        variant="ghost"
+        size="sm"
+        :loading="store.loading"
+        @click="store.fetchAll()"
+      >
         Actualizar
-      </button>
+      </BaseButton>
     </div>
 
     <!-- KPI bigstat row -->
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Estado nodo</div>
-        <div class="vl" :class="store.health?.status === 'ok' ? 'vl-ok' : store.health?.status === 'degraded' ? 'vl-warn' : ''">
-          {{ store.health?.status === 'ok' ? 'Operativo' : store.health?.status === 'degraded' ? 'Degradado' : '—' }}
-        </div>
-        <div class="ds">último check ahora</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Base de datos</div>
-        <div class="vl" :class="store.health?.db === 'ok' ? 'vl-ok' : store.health?.db === 'error' ? 'vl-err' : ''">
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Estado nodo</span>
+        </template>
+        <span :class="store.health?.status === 'ok' ? 'vl-ok' : store.health?.status === 'degraded' ? 'vl-warn' : ''">
+          {{ healthLabel(store.health?.status) }}
+        </span>
+        <template #footer>
+          último check ahora
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Base de datos</span>
+        </template>
+        <span :class="store.health?.db === 'ok' ? 'vl-ok' : store.health?.db === 'error' ? 'vl-err' : ''">
           {{ store.health?.db === 'ok' ? 'Conectada' : store.health?.db === 'error' ? 'Error' : '—' }}
-        </div>
-        <div class="ds">PostgreSQL</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Altura de cadena</div>
-        <div class="vl">{{ store.health?.chainHeight ?? store.metrics?.chainHeight ?? '—' }}</div>
-        <div class="ds">bloques confirmados</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Avg. minado</div>
-        <div class="vl">
-          {{ store.metrics?.avgMineTimeSeconds != null
-              ? store.metrics.avgMineTimeSeconds.toFixed(2)
-              : '—' }}<span v-if="store.metrics?.avgMineTimeSeconds != null" class="vl-unit">s</span>
-        </div>
-        <div class="ds">tiempo medio por bloque</div>
-      </div>
+        </span>
+        <template #footer>
+          PostgreSQL
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Altura de cadena</span>
+        </template>
+        {{ store.health?.chainHeight ?? store.metrics?.chainHeight ?? '—' }}
+        <template #footer>
+          bloques confirmados
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Avg. minado</span>
+        </template>
+        <template v-if="store.metrics?.avgMineTimeSeconds != null">
+          {{ store.metrics.avgMineTimeSeconds.toFixed(2) }}<span class="vl-unit">s</span>
+        </template>
+        <template v-else>
+          —
+        </template>
+        <template #footer>
+          tiempo medio por bloque
+        </template>
+      </BaseCard>
     </div>
 
-    <MetricsBar :metrics="store.metrics" :health="store.health" />
+    <MetricsBar
+      :metrics="store.metrics"
+      :health="store.health"
+    />
 
-    <section v-if="store.health" class="panel">
-      <div class="panel-h">Detalles del nodo</div>
+    <BaseCard
+      v-if="store.health"
+      variant="default"
+      padding="none"
+    >
+      <template #header>
+        <div class="panel-h">
+          Detalles del nodo
+        </div>
+      </template>
       <div class="details-grid">
         <div class="detail-row">
           <span class="detail-label">Estado</span>
-          <StatusBadge :status="store.health.status" />
+          <BaseBadge :tone="healthTone(store.health.status)">
+            {{ healthLabel(store.health.status) }}
+          </BaseBadge>
         </div>
         <div class="detail-row">
           <span class="detail-label">Base de datos</span>
-          <StatusBadge :status="store.health.db" />
+          <BaseBadge :tone="healthTone(store.health.db)">
+            {{ healthLabel(store.health.db) }}
+          </BaseBadge>
         </div>
         <div class="detail-row">
           <span class="detail-label">Altura de cadena</span>
           <span class="detail-val">{{ store.health.chainHeight }}</span>
         </div>
       </div>
-    </section>
+    </BaseCard>
   </div>
 </template>
 
@@ -102,36 +164,26 @@ onMounted(() => store.fetchAll())
   color: var(--text-2);
 }
 
-/* Bigstat KPI row */
 .bigstat-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
-.bigstat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+.vl-unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-2);
 }
-.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
-.vl {
-  font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0;
-  color: var(--text); font-variant-numeric: tabular-nums;
-  display: inline-flex; align-items: baseline; gap: 6px;
+.vl-ok {
+  color: var(--success);
 }
-.vl-unit { font-size: 14px; font-weight: 400; color: var(--text-2); }
-.vl-ok   { color: var(--success); }
-.vl-warn { color: var(--warning); }
-.vl-err  { color: var(--danger); }
-.ds { font-size: 11.5px; color: var(--text-3); }
+.vl-warn {
+  color: var(--warning);
+}
+.vl-err {
+  color: var(--danger);
+}
 
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
 .panel-h {
   padding: 10px 14px;
   font-size: 12px;
@@ -154,7 +206,9 @@ onMounted(() => store.fetchAll())
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
-.detail-row:last-child { border-bottom: none; }
+.detail-row:last-child {
+  border-bottom: none;
+}
 .detail-label {
   font-size: 13px;
   font-weight: 500;
@@ -168,9 +222,18 @@ onMounted(() => store.fetchAll())
   color: var(--text);
 }
 
-@media (max-width: 900px) { .bigstat-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) {
+  .bigstat-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 @media (max-width: 640px) {
-  .page-h { flex-direction: column; align-items: flex-start; }
-  .bigstat-row { grid-template-columns: 1fr; }
+  .page-h {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bigstat-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

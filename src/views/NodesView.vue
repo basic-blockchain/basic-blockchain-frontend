@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useNodesStore } from '@/stores/nodes'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const nodesStore = useNodesStore()
 
@@ -27,13 +31,15 @@ async function registerPeer() {
 const latencies = [38, 82, 124, 4, 56]
 const statuses: Array<'online' | 'syncing' | 'offline'> = ['online', 'online', 'syncing', 'offline']
 
+type PeerStatus = 'online' | 'syncing' | 'offline'
+
 interface PeerRow {
   url: string
   region: string
   version: string
   height: number
   latency: string
-  status: 'online' | 'syncing' | 'offline'
+  status: PeerStatus
   lastSync: string
 }
 
@@ -47,7 +53,7 @@ function regionFor(url: string): string {
 const peerRows = computed<PeerRow[]>(() =>
   nodesStore.peers.map((url, i) => {
     const lat = latencies[i % latencies.length]
-    const status =
+    const status: PeerStatus =
       url.includes('localhost') || url.includes('127.0.0.1')
         ? 'online'
         : statuses[i % statuses.length]
@@ -63,11 +69,31 @@ const peerRows = computed<PeerRow[]>(() =>
   }),
 )
 
-function badgeClass(status: 'online' | 'syncing' | 'offline'): string {
-  if (status === 'online') return 'bdg bdg-active'
-  if (status === 'syncing') return 'bdg bdg-pending_kyc'
-  return 'bdg bdg-banned'
+const STATUS_TONE: Record<PeerStatus, 'success' | 'warning' | 'neutral'> = {
+  online: 'success',
+  syncing: 'warning',
+  offline: 'neutral',
 }
+const STATUS_LABEL: Record<PeerStatus, string> = {
+  online: 'Online',
+  syncing: 'Sincronizando',
+  offline: 'Offline',
+}
+
+interface PeerColumn {
+  key: string
+  label: string
+  num?: boolean
+}
+const peerColumns: PeerColumn[] = [
+  { key: 'url', label: 'Endpoint' },
+  { key: 'region', label: 'Región' },
+  { key: 'version', label: 'Versión' },
+  { key: 'height', label: 'Altura', num: true },
+  { key: 'latency', label: 'Latencia', num: true },
+  { key: 'status', label: 'Estado' },
+  { key: 'lastSync', label: 'Último sync' },
+]
 </script>
 
 <template>
@@ -78,44 +104,76 @@ function badgeClass(status: 'online' | 'syncing' | 'offline'): string {
         <p>Peers conectados, sincronización y consenso PoW.</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-sm btn-primary" :disabled="resolving" @click="resolveConsensus">
-          <i class="pi pi-refresh" />
-          <span>Resolver consenso</span>
-        </button>
+        <BaseButton
+          variant="primary"
+          size="sm"
+          :loading="resolving"
+          @click="resolveConsensus"
+        >
+          Resolver consenso
+        </BaseButton>
       </div>
     </div>
 
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Peers totales</div>
-        <div class="vl">{{ nodesStore.total }}</div>
-        <div class="ds">{{ nodesStore.peers.length }} registrados</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Altura consenso</div>
-        <div class="vl">11</div>
-        <div class="ds">3 nodos coinciden</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Latencia media</div>
-        <div class="vl">62ms</div>
-        <div class="ds">peers online</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Estado red</div>
-        <div class="vl ok">Saludable</div>
-        <div class="ds">consenso estable</div>
-      </div>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Peers totales</span>
+        </template>
+        {{ nodesStore.total }}
+        <template #footer>
+          {{ nodesStore.peers.length }} registrados
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Altura consenso</span>
+        </template>
+        11
+        <template #footer>
+          3 nodos coinciden
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Latencia media</span>
+        </template>
+        62ms
+        <template #footer>
+          peers online
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Estado red</span>
+        </template>
+        <span class="ok">Saludable</span>
+        <template #footer>
+          consenso estable
+        </template>
+      </BaseCard>
     </div>
 
-    <div v-if="nodesStore.loading" class="loading-wrap">
+    <div
+      v-if="nodesStore.loading"
+      class="loading-wrap"
+    >
       <div class="spinner" />
     </div>
 
-    <div v-if="nodesStore.consensusReplaced === true" class="banner banner-success">
+    <div
+      v-if="nodesStore.consensusReplaced === true"
+      class="banner banner-success"
+    >
       Consenso aplicado: la cadena local fue reemplazada por una más larga.
     </div>
-    <div v-else-if="nodesStore.consensusReplaced === false" class="banner banner-info">
+    <div
+      v-else-if="nodesStore.consensusReplaced === false"
+      class="banner banner-info"
+    >
       La cadena local ya es la más larga.
     </div>
 
@@ -124,63 +182,82 @@ function badgeClass(status: 'online' | 'syncing' | 'offline'): string {
         <span class="section-h">Peers registrados</span>
         <span class="muted xs">Auto-sync cada 30s</span>
       </div>
-      <div class="flow-card">
-        <div v-if="peerRows.length === 0" class="empty muted">
-          No hay peers registrados todavía.
-        </div>
-        <table v-else class="tbl">
-          <thead>
-            <tr>
-              <th>Endpoint</th>
-              <th>Región</th>
-              <th>Versión</th>
-              <th class="num">Altura</th>
-              <th class="num">Latencia</th>
-              <th>Estado</th>
-              <th>Último sync</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in peerRows" :key="p.url">
-              <td class="mono xs">{{ p.url }}</td>
-              <td>{{ p.region }}</td>
-              <td class="muted xs">{{ p.version }}</td>
-              <td class="num mono">#{{ p.height }}</td>
-              <td class="num mono xs">{{ p.latency }}</td>
-              <td><span :class="badgeClass(p.status)">{{ p.status }}</span></td>
-              <td class="muted xs">{{ p.lastSync }}</td>
-              <td>
-                <button class="btn btn-icon btn-sm">
-                  <i class="pi pi-ellipsis-h" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <BaseCard
+        variant="default"
+        padding="none"
+      >
+        <BaseTable
+          :columns="peerColumns"
+          :rows="peerRows"
+          :row-key="(p: PeerRow) => p.url"
+        >
+          <template #cell-url="{ row }">
+            <span class="mono xs">{{ row.url }}</span>
+          </template>
+          <template #cell-region="{ row }">
+            {{ row.region }}
+          </template>
+          <template #cell-version="{ row }">
+            <span class="muted xs">{{ row.version }}</span>
+          </template>
+          <template #cell-height="{ row }">
+            <span class="mono">#{{ row.height }}</span>
+          </template>
+          <template #cell-latency="{ row }">
+            <span class="mono xs">{{ row.latency }}</span>
+          </template>
+          <template #cell-status="{ row }">
+            <BaseBadge :tone="STATUS_TONE[row.status]">
+              {{ STATUS_LABEL[row.status] }}
+            </BaseBadge>
+          </template>
+          <template #cell-lastSync="{ row }">
+            <span class="muted xs">{{ row.lastSync }}</span>
+          </template>
+          <template #row-actions>
+            <BaseButton
+              variant="ghost"
+              size="sm"
+              icon-only
+              aria-label="Más acciones"
+            >
+              ⋯
+            </BaseButton>
+          </template>
+          <template #empty>
+            No hay peers registrados todavía.
+          </template>
+        </BaseTable>
+      </BaseCard>
     </section>
 
     <section>
-      <div class="section-h">Registrar nuevo peer</div>
-      <div class="flow-card register">
+      <div class="section-h">
+        Registrar nuevo peer
+      </div>
+      <BaseCard
+        variant="default"
+        padding="default"
+      >
         <div class="reg-row">
           <input
             v-model="newUrl"
             class="reg-input mono"
             placeholder="http://node.example.io:5000"
             @keyup.enter="registerPeer"
-          />
-          <button class="btn btn-primary" @click="registerPeer">
-            <i class="pi pi-plus" />
-            <span>Registrar</span>
-          </button>
+          >
+          <BaseButton
+            variant="primary"
+            @click="registerPeer"
+          >
+            Registrar
+          </BaseButton>
         </div>
         <div class="muted xs hint">
           Al registrar, el nodo intercambia su altura y hash de cabecera. Si la cadena remota es más
           larga y válida, se inicia consenso automático.
         </div>
-      </div>
+      </BaseCard>
     </section>
   </div>
 </template>
@@ -218,31 +295,8 @@ function badgeClass(status: 'online' | 'syncing' | 'offline'): string {
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
-.bigstat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-}
-.lb {
-  font-size: 11.5px;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.vl {
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 4px 0;
-  color: var(--text);
-}
-.vl.ok {
+.ok {
   color: var(--success);
-}
-.ds {
-  font-size: 11.5px;
-  color: var(--text-3);
 }
 .section-h-row {
   display: flex;
@@ -259,33 +313,14 @@ function badgeClass(status: 'online' | 'syncing' | 'offline'): string {
   margin-bottom: 8px;
   display: inline-block;
 }
-.tbl {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.tbl th,
-.tbl td {
-  text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.tbl tr:last-child td {
-  border-bottom: none;
-}
-.tbl th.num,
-.tbl td.num {
-  text-align: right;
-}
 .xs {
   font-size: 11.5px;
 }
-.empty {
-  padding: 40px;
-  text-align: center;
+.muted {
+  color: var(--text-3);
 }
-.register {
-  padding: 14px;
+.mono {
+  font-family: var(--font-mono);
 }
 .reg-row {
   display: flex;
