@@ -7,6 +7,7 @@ Scope: combined plan for `basic-blockchain-frontend` and
 build-out around the redesign proposal.
 
 See also:
+
 - [DESIGN.md](./DESIGN.md) — Phase 5 design system reference
 - [components.md](./components.md) — Atomic Design component catalog
 - Backend equivalent: `../basic-blockchain-simulator/docs/devsecops/PROMOTION_STRATEGY.md`
@@ -34,26 +35,27 @@ Order inside "Backlog" is recommended but not binding.
 **Goal**: every view consumes the same shared vocabulary (`page-h`,
 `bigstat-row`, `panel`, `panel-h`, `field`, `btn`, `tabs`, `tbl`).
 
-| Step | Status | PR |
-| --- | --- | --- |
-| ChainView / Mempool / Nodes | done | (pre-history) |
-| Admin Wallets / Currencies / Exchange Rates / Movements / Sends / Compliance / P2P | done | (pre-history) |
-| AdminSettingsView naming alignment | done | #161 |
-| ExchangeView Phase 5 wrap | done | #162 |
-| AdminView, AdminAuditView, AdminTreasuryView, HealthView, ValidationView | already compliant — no PR needed | — |
-| `docs/DESIGN.md` design-system reference | done | #163 |
+| Step                                                                               | Status                           | PR            |
+| ---------------------------------------------------------------------------------- | -------------------------------- | ------------- |
+| ChainView / Mempool / Nodes                                                        | done                             | (pre-history) |
+| Admin Wallets / Currencies / Exchange Rates / Movements / Sends / Compliance / P2P | done                             | (pre-history) |
+| AdminSettingsView naming alignment                                                 | done                             | #161          |
+| ExchangeView Phase 5 wrap                                                          | done                             | #162          |
+| AdminView, AdminAuditView, AdminTreasuryView, HealthView, ValidationView           | already compliant — no PR needed | —             |
+| `docs/DESIGN.md` design-system reference                                           | done                             | #163          |
 
 ### Phase 5b — Users table redesign
 
 **Goal**: bring `AdminUsersView` in line with the Screenshot_438 reference
 (KPI strip, filter chips, rich rows, pagination).
 
-| Step | Status | PR |
-| --- | --- | --- |
-| Backend: extend `UserRecord` with `country`, `kyc_level`, `last_active`, `created_at` + migration V018 + endpoint serialization | done | simulator#183 |
-| Frontend: 4-KPI bigstat row, filter chips (Todos / Activos / KYC / Congelados / Baneados), search + KYC + País filters, "Mostrar eliminados" toggle, avatar + KYC badge + country flag columns, pagination footer | done | #190 |
+| Step                                                                                                                                                                                                              | Status | PR            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| Backend: extend `UserRecord` with `country`, `kyc_level`, `last_active`, `created_at` + migration V018 + endpoint serialization                                                                                   | done   | simulator#183 |
+| Frontend: 4-KPI bigstat row, filter chips (Todos / Activos / KYC / Congelados / Baneados), search + KYC + País filters, "Mostrar eliminados" toggle, avatar + KYC badge + country flag columns, pagination footer | done   | #190          |
 
 **Carry-overs** (documented in the PR bodies):
+
 - ~~Inline role-chip toggles removed from the table; re-wiring role
   management into the `UserDrawer` is a follow-up.~~ Landed in
   Phase 6d.3 (see below).
@@ -86,12 +88,13 @@ Order inside "Backlog" is recommended but not binding.
 **Goal**: replace hardcoded empty arrays in the admin drawers with real
 fetched data; add a parallel `WalletDrawer` for per-wallet detail.
 
-| Sub-phase | Step | Status | PR |
-| --- | --- | --- | --- |
-| 6d.1 | `UserDrawer`: real wallets (filtered from `listAllWallets`), movements (mempool feeds filtered by user public keys), audit (`listAuditLog target_id=userId`) | done | #173 |
-| 6d.2 | `WalletDrawer`: new component with Resumen / Movimientos / Auditoría tabs; `AdminWalletsView` row click integration; freeze/unfreeze from drawer header | done | #182 |
+| Sub-phase | Step                                                                                                                                                         | Status | PR   |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | ---- |
+| 6d.1      | `UserDrawer`: real wallets (filtered from `listAllWallets`), movements (mempool feeds filtered by user public keys), audit (`listAuditLog target_id=userId`) | done   | #173 |
+| 6d.2      | `WalletDrawer`: new component with Resumen / Movimientos / Auditoría tabs; `AdminWalletsView` row click integration; freeze/unfreeze from drawer header      | done   | #182 |
 
 **Carry-overs** (documented in the PR bodies):
+
 - ~~Cross-navigation from the `UserDrawer` Wallets tab into the
   `WalletDrawer` not wired — follow-up.~~ Landed in Phase 6d.4
   (see below).
@@ -108,11 +111,12 @@ fetched data; add a parallel `WalletDrawer` for per-wallet detail.
 detail drawer, replacing the inline role chips removed from the
 Phase 5b table.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| Extend `DrawerUser` with raw `roles: string[]`, add `grant_role` / `revoke_role` to `DrawerAction`, surface a `Roles` section under the Resumen tab (one row per manageable role with Otorgar/Revocar button), wire `grantRole` / `revokeRole` via `handleDrawerAction` with optimistic reload | done | _TBD_ |
+| Step                                                                                                                                                                                                                                                                                           | Status | PR    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| Extend `DrawerUser` with raw `roles: string[]`, add `grant_role` / `revoke_role` to `DrawerAction`, surface a `Roles` section under the Resumen tab (one row per manageable role with Otorgar/Revocar button), wire `grantRole` / `revokeRole` via `handleDrawerAction` with optimistic reload | done   | _TBD_ |
 
 **Notes**:
+
 - Role mutations bypass `ConfirmUserModal` — they are idempotent server
   side and a confirmation step adds friction without safety value.
 - "Roles" section is hidden for `deleted` users (replaced by a dashed
@@ -124,11 +128,12 @@ Phase 5b table.
 the `WalletDrawer` mounted at the `AdminUsersView` level, instead of
 being inert.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| `UserDrawer` emits `view-wallet` from clickable wallet rows; `AdminUsersView` mounts its own `WalletDrawer` instance, hydrates movements + audit from the same pending/confirmed/audit pipeline used by `AdminWalletsView`, and routes freeze/unfreeze actions back through the admin API | done | _TBD_ |
+| Step                                                                                                                                                                                                                                                                                      | Status | PR    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| `UserDrawer` emits `view-wallet` from clickable wallet rows; `AdminUsersView` mounts its own `WalletDrawer` instance, hydrates movements + audit from the same pending/confirmed/audit pipeline used by `AdminWalletsView`, and routes freeze/unfreeze actions back through the admin API | done   | _TBD_ |
 
 **Notes**:
+
 - The wallet-loading pipeline is replicated rather than extracted into
   a composable for this PR — the surface is small (~70 lines) and a
   shared composable can land naturally with a future drawer iteration.
@@ -142,13 +147,14 @@ being inert.
 notification surface — the two gaps documented in the original
 Phase 6 diagnostic.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| `NotificationCenter` (bell + dropdown) reading from `listAuditLog` (admin) and the chain store (new blocks for all users), severity inferred from the action verb; unread-count badge driven by `localStorage`-persisted `lastSeenAt` / `lastSeenBlock`; "Marcar leídas" + "Ver auditoría completa" CTAs | done | _TBD_ |
-| `CommandPalette` (⌘K / Ctrl+K) with grouped results — Navegación (sidebar entries filtered by auth/role), Bloques (chain store match by index/merkleRoot), Usuarios + Wallets (admin only, lazy-loaded on first open). Keyboard nav ↑↓/Enter/Esc | done | _TBD_ |
-| Topbar wiring: the inert `<input>` becomes a `<button>` that opens the palette; the bell sits to its right; global `keydown` listener catches ⌘K/Ctrl+K | done | _TBD_ |
+| Step                                                                                                                                                                                                                                                                                                     | Status | PR    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| `NotificationCenter` (bell + dropdown) reading from `listAuditLog` (admin) and the chain store (new blocks for all users), severity inferred from the action verb; unread-count badge driven by `localStorage`-persisted `lastSeenAt` / `lastSeenBlock`; "Marcar leídas" + "Ver auditoría completa" CTAs | done   | _TBD_ |
+| `CommandPalette` (⌘K / Ctrl+K) with grouped results — Navegación (sidebar entries filtered by auth/role), Bloques (chain store match by index/merkleRoot), Usuarios + Wallets (admin only, lazy-loaded on first open). Keyboard nav ↑↓/Enter/Esc                                                         | done   | _TBD_ |
+| Topbar wiring: the inert `<input>` becomes a `<button>` that opens the palette; the bell sits to its right; global `keydown` listener catches ⌘K/Ctrl+K                                                                                                                                                  | done   | _TBD_ |
 
 **Notes / follow-ups**:
+
 - The notification feed is derived from `audit` entries + chain events.
   When Phase 6e ships a `GET /admin/audit?severity=critical&since=24h`
   endpoint, `NotificationCenter` will swap its source without changing
@@ -166,15 +172,16 @@ admin involvement. Phase 6g lays the **base layer**; the future
 redesign iteration (or its skip) decides on top of this concrete
 surface.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| `AuthUser.kyc_level` optional + threaded through `MeResponse` and `_setUser`; exported top-level `KycLevel` type | done | _TBD_ |
-| `src/api/kyc.ts` — typed contract for `GET /me/kyc/status`, `POST /me/kyc/documents`, `POST /me/kyc/review` (`KycDocumentRecord`, `KycStatusResponse`, `UploadKycDocumentPayload`) | done | _TBD_ |
-| `ProfileDrawer` KYC tab — real document upload (file input + base64 + status badge), review submission CTA, pending banner | done | _TBD_ |
-| **Backend (simulator)**: `/me/kyc/status` · `/me/kyc/documents` · `/me/kyc/review` + `kyc_level` on `/auth/me` (V019 migration, audit events) | done | simulator#191 |
-| Cleanup: drop the `localStorage` fallback in `ProfileDrawer` now that the backend is the source of truth | done | _TBD_ |
+| Step                                                                                                                                                                               | Status | PR            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| `AuthUser.kyc_level` optional + threaded through `MeResponse` and `_setUser`; exported top-level `KycLevel` type                                                                   | done   | _TBD_         |
+| `src/api/kyc.ts` — typed contract for `GET /me/kyc/status`, `POST /me/kyc/documents`, `POST /me/kyc/review` (`KycDocumentRecord`, `KycStatusResponse`, `UploadKycDocumentPayload`) | done   | _TBD_         |
+| `ProfileDrawer` KYC tab — real document upload (file input + base64 + status badge), review submission CTA, pending banner                                                         | done   | _TBD_         |
+| **Backend (simulator)**: `/me/kyc/status` · `/me/kyc/documents` · `/me/kyc/review` + `kyc_level` on `/auth/me` (V019 migration, audit events)                                      | done   | simulator#191 |
+| Cleanup: drop the `localStorage` fallback in `ProfileDrawer` now that the backend is the source of truth                                                                           | done   | _TBD_         |
 
 **Notes / follow-ups**:
+
 - `users.kyc_level` is now returned by `/auth/me` and the client picks
   it up through `AuthUser.kyc_level`. Existing rows still default to
   `'L0'` until they complete a review.
@@ -192,13 +199,14 @@ chart (30D / 90D / 1A), trend pills vs prior week, "Eventos críticos
 hoy" feed and "Top movimientos del día" table. Shipped as three
 sub-phases against a single contract.
 
-| Sub-phase | Step | Status | PR |
-| --- | --- | --- | --- |
-| 6e.0 | Contracts: spec the four endpoints + aggregation rules (BR-AD-06..12, `SEVERITY` map). Docs-only on the simulator. | done | simulator#235 |
-| 6e.1 | Backend: `GET /admin/volume`, `GET /admin/movements/top`, `?compare=` on `/admin/stats`, `?severity=` + `?since=` on `/admin/audit`, server-derived `severity` field, `CurrencyRepositoryProtocol.get_rate_at(at)` for historical FX, audit + rate timestamps fixed in the in-memory store. | done | simulator#236 |
-| 6e.2 | Frontend: `src/api/dashboard.ts` + `compare`/`severity` extensions on `stats.ts` + `admin.ts`. Modular ECharts via `vue-echarts` (LineChart + Grid + Tooltip + Legend + Title only). `useVolumeChartOptions` composable. `AdminView` gains a volume chart, trend pills on the bigstat row, critical-events feed and top-movements table. | done | _TBD_ |
+| Sub-phase | Step                                                                                                                                                                                                                                                                                                                                     | Status | PR            |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| 6e.0      | Contracts: spec the four endpoints + aggregation rules (BR-AD-06..12, `SEVERITY` map). Docs-only on the simulator.                                                                                                                                                                                                                       | done   | simulator#235 |
+| 6e.1      | Backend: `GET /admin/volume`, `GET /admin/movements/top`, `?compare=` on `/admin/stats`, `?severity=` + `?since=` on `/admin/audit`, server-derived `severity` field, `CurrencyRepositoryProtocol.get_rate_at(at)` for historical FX, audit + rate timestamps fixed in the in-memory store.                                              | done   | simulator#236 |
+| 6e.2      | Frontend: `src/api/dashboard.ts` + `compare`/`severity` extensions on `stats.ts` + `admin.ts`. Modular ECharts via `vue-echarts` (LineChart + Grid + Tooltip + Legend + Title only). `useVolumeChartOptions` composable. `AdminView` gains a volume chart, trend pills on the bigstat row, critical-events feed and top-movements table. | done   | _TBD_         |
 
 **Notes / follow-ups**:
+
 - USD-aggregated numbers everywhere use the rate as of `confirmed_at`
   (BR-AD-06); transfers with no rate at-or-before that point are
   excluded from USD totals and surfaced as `unpriced_count`
@@ -214,17 +222,17 @@ sub-phases against a single contract.
   now unblocked — every admin view can reuse `_convert_to_usd` via
   the FX-as-of-timestamp helper exposed by the currency repo.
 
-### Phase 6j — Admin consistency cleanup *(closes Phase 6)*
+### Phase 6j — Admin consistency cleanup _(closes Phase 6)_
 
 **Goal**: close the three loose ends that surfaced reviewing the
 finished Phase 6 batch — admin views were still inconsistent in three
 small but visible ways. Frontend-only, no contract change.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| `AdminMovementsView` resolves each transaction's currency from `listAllWallets()` and converts the native amount to USD via the latest X/USDT rate (fetched once on mount). New USD column on the table; native column gains a currency suffix; em-dash + tooltip for unpriced rows. | done | _TBD_ |
-| `NotificationCenter` swaps the local `severityFromAction(...)` heuristic for the server-derived `entry.severity` (BR-AD-10) via a `SEVERITY_MAP` constant. Audit fetch passes `since: '24h'` so the dropdown anchors to the last day. | done | _TBD_ |
-| USD-equivalent formatters across the admin surface (`useVolumeChartOptions`, `AdminView`, `AdminWalletsView`) unified to `es-AR` so users no longer read the same number two different ways when bouncing between admin pages. Technical readouts (proof / nonce, order-book ladders) keep `en-US` deliberately. | done | _TBD_ |
+| Step                                                                                                                                                                                                                                                                                                             | Status | PR    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| `AdminMovementsView` resolves each transaction's currency from `listAllWallets()` and converts the native amount to USD via the latest X/USDT rate (fetched once on mount). New USD column on the table; native column gains a currency suffix; em-dash + tooltip for unpriced rows.                             | done   | _TBD_ |
+| `NotificationCenter` swaps the local `severityFromAction(...)` heuristic for the server-derived `entry.severity` (BR-AD-10) via a `SEVERITY_MAP` constant. Audit fetch passes `since: '24h'` so the dropdown anchors to the last day.                                                                            | done   | _TBD_ |
+| USD-equivalent formatters across the admin surface (`useVolumeChartOptions`, `AdminView`, `AdminWalletsView`) unified to `es-AR` so users no longer read the same number two different ways when bouncing between admin pages. Technical readouts (proof / nonce, order-book ladders) keep `en-US` deliberately. | done   | _TBD_ |
 
 **Phase 6 is now closed.** §4 Next is empty; Phase 7 (Cadena v2) in
 §5 Backlog is the next planned scope but is not yet committed —
@@ -237,12 +245,13 @@ needs `DESIGN-v2.md` + a design conversation before any code lands.
 simulator carried no FX rates and the AdminUsersView per-user cells
 read the same way for single- and multi-currency portfolios.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| Backend: `DASHBOARD_QUOTE_CURRENCY` (default `USDT`) and `DASHBOARD_BOOTSTRAP_SEED` env vars; new `infrastructure/dashboard_seed.py` that idempotently seeds the catalog (USDT/USDC/BTC/ETH/SOL/NATIVE) + X/USDT mid-market rates on first boot; `_USD_CURRENCY` now resolves from config so operators can switch quote currencies without code changes. New BR-AD-13. | done | simulator#238 |
-| Frontend: AdminUsersView per-user cell shows native + suffix for single-currency portfolios (e.g. `613.3 SOL`) and unified USD for multi-currency; KPI keeps the unified figure but surfaces a "N sin tasa FX" sub-label when applicable. AdminWalletsView KPI falls back to a `1.5 BTC · 200 USDT` native breakdown when no FX rate exists, with a `sin tasa FX para mostrar USD` warning. | done | _TBD_ |
+| Step                                                                                                                                                                                                                                                                                                                                                                                        | Status | PR            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| Backend: `DASHBOARD_QUOTE_CURRENCY` (default `USDT`) and `DASHBOARD_BOOTSTRAP_SEED` env vars; new `infrastructure/dashboard_seed.py` that idempotently seeds the catalog (USDT/USDC/BTC/ETH/SOL/NATIVE) + X/USDT mid-market rates on first boot; `_USD_CURRENCY` now resolves from config so operators can switch quote currencies without code changes. New BR-AD-13.                      | done   | simulator#238 |
+| Frontend: AdminUsersView per-user cell shows native + suffix for single-currency portfolios (e.g. `613.3 SOL`) and unified USD for multi-currency; KPI keeps the unified figure but surfaces a "N sin tasa FX" sub-label when applicable. AdminWalletsView KPI falls back to a `1.5 BTC · 200 USDT` native breakdown when no FX rate exists, with a `sin tasa FX para mostrar USD` warning. | done   | _TBD_         |
 
 **Notes**:
+
 - Default quote is USDT because every Binance / Crypto.com pair the
   existing exchange-rate-sync supports is quoted against USDT.
   Switching to USDC or any other stablecoin is a single env var,
@@ -258,12 +267,13 @@ without FX" carry-over documented on Phase 5b / 6d.1 / 6d.2. Phase
 6e.1 shipped the FX-as-of-timestamp helper; Phase 6i is the wiring
 that finally puts it to use in the live admin surface.
 
-| Step | Status | PR |
-| --- | --- | --- |
-| Backend: `GET /admin/wallets` enriched with `balance_usd` per row + aggregate `total_balance_usd` and `unpriced_currencies` on the response (BR-AD-07: wallets without a rate today arrive as `null`, never silently zeroed). | done | simulator#237 |
-| Frontend: `WalletAdminRecord` types the new field; `AdminWalletsView` replaces its dead "Inactivas: 0" KPI with a real "Saldo bajo gestión" bigstat and adds a USD column to the wallets table; `AdminUsersView` sums real USD via `balance_usd` on its KPI and per-user totals (skipping unpriced wallets instead of folding them as $1=$1). | done | _TBD_ |
+| Step                                                                                                                                                                                                                                                                                                                                          | Status | PR            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
+| Backend: `GET /admin/wallets` enriched with `balance_usd` per row + aggregate `total_balance_usd` and `unpriced_currencies` on the response (BR-AD-07: wallets without a rate today arrive as `null`, never silently zeroed).                                                                                                                 | done   | simulator#237 |
+| Frontend: `WalletAdminRecord` types the new field; `AdminWalletsView` replaces its dead "Inactivas: 0" KPI with a real "Saldo bajo gestión" bigstat and adds a USD column to the wallets table; `AdminUsersView` sums real USD via `balance_usd` on its KPI and per-user totals (skipping unpriced wallets instead of folding them as $1=$1). | done   | _TBD_         |
 
 **Notes**:
+
 - Live balances use `at=now` (no transaction timestamp to anchor to);
   the same `_convert_to_usd` helper handles both this and the
   historical confirmed_at lookups on `/admin/volume` and
@@ -278,8 +288,8 @@ that finally puts it to use in the live admin surface.
 actions route through the confirm flow, soft-delete returns `deleted_at`,
 ISO timestamp on soft-delete.
 
-| Repo | PR | Status |
-| --- | --- | --- |
+| Repo      | PR   | Status |
+| --------- | ---- | ------ |
 | simulator | #171 | merged |
 | frontend  | #160 | merged |
 
@@ -311,20 +321,21 @@ ISO timestamp on soft-delete.
 **Goal**: visual + UX refresh against the same backend / framework
 stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
 
-| Sub-phase | Step | Status | PR |
-| --- | --- | --- | --- |
-| 7.0 | DESIGN-v2.md contract + token deltas (`--surface-3`, `--radius-pill`, `--space-*`, `--duration-*`, `--ease-*`) added to `src/assets/design-system.css`. Additive only — every v1 component keeps rendering. | in flight | _TBD_ |
-| 7.1 | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`, consolidated `AddrChip`/`AssetPill`). Each one a separate PR. | pending | — |
-| 7.2 | Login / Register migration. | pending | — |
-| 7.3 | AdminView dashboard refresh. | pending | — |
-| 7.4 | AdminUsersView (row-actions, bulk-action footer). | pending | — |
-| 7.5 | AdminWalletsView (USD/native toggle, row-actions). | pending | — |
-| 7.6 | UserDrawer + WalletDrawer unification into one detail-panel pattern with breadcrumb-style entity nav. | pending | — |
-| 7.7 | ChainView / MempoolView / NodesView refresh. | pending | — |
-| 7.8 | Treasury distribution + dual-sign mint flows (consumer of `Stepper`; depends on new simulator endpoints proposed in DESIGN-v2 §7). | pending | — |
-| 7.9 | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView. | pending | — |
+| Sub-phase | Step                                                                                                                                                                                                        | Status      | PR    |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----- |
+| 7.0       | DESIGN-v2.md contract + token deltas (`--surface-3`, `--radius-pill`, `--space-*`, `--duration-*`, `--ease-*`) added to `src/assets/design-system.css`. Additive only — every v1 component keeps rendering. | in flight   | _TBD_ |
+| 7.1       | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`, consolidated `AddrChip`/`AssetPill`). Each one a separate PR.                       | done        | —     |
+| 7.2       | Login / Register migration.                                                                                                                                                                                 | in progress | —     |
+| 7.3       | AdminView dashboard refresh.                                                                                                                                                                                | done        | -     |
+| 7.4       | AdminUsersView (row-actions, bulk-action footer).                                                                                                                                                           | done        | -     |
+| 7.5       | AdminWalletsView (USD/native toggle, row-actions).                                                                                                                                                          | done        | -     |
+| 7.6       | UserDrawer + WalletDrawer unification into one detail-panel pattern with breadcrumb-style entity nav.                                                                                                       | done        | -     |
+| 7.7       | ChainView / MempoolView / NodesView refresh.                                                                                                                                                                | done        | -     |
+| 7.8       | Treasury distribution + dual-sign mint flows (consumer of `Stepper`; depends on new simulator endpoints proposed in DESIGN-v2 §7).                                                                          | done        | -     |
+| 7.9       | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView.                                                                        | done        | —     |
 
 **Iteration rules** (captured in DESIGN-v2 §6):
+
 - One screen or one base component per PR.
 - Route filenames stay; the file is rewritten in place.
 - Tokens before components; components before screens.
@@ -335,9 +346,9 @@ stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
 
 ## 4. Next (committed scope)
 
-*(nothing committed yet — Phase 6e shipped in 6e.0 → 6e.1 → 6e.2; see §2
+_(nothing committed yet — Phase 6e shipped in 6e.0 → 6e.1 → 6e.2; see §2
 Completed phases. Phase 7 in §5 is the next planned scope but not yet
-committed.)*
+committed.)_
 
 ---
 
@@ -388,6 +399,7 @@ Audit emits `KYC_DOCUMENT_APPROVED`, `KYC_DOCUMENT_REJECTED` and
 review") and rules BR-KY-09..16 in business-rules.md.
 
 **Frontend follow-up — DONE (Phase 6h)**:
+
 - `src/api/kyc.ts` exports `getPendingKycReviews()`,
   `approveKycDocument()`, `rejectKycDocument()`, `promoteKycLevel()`
   plus the `PendingKycReview` / `PromoteKycResponse` types.
@@ -414,8 +426,8 @@ review") and rules BR-KY-09..16 in business-rules.md.
     flags already rendered on the admin Users table). Selection is
     optional; empty submits behave as before.
 
-*(Phase 7 was promoted from §5 Backlog to §3 In flight when the
-DESIGN-v2 contract opened. See §3.)*
+_(Phase 7 was promoted from §5 Backlog to §3 In flight when the
+DESIGN-v2 contract opened. See §3.)_
 
 ---
 
@@ -453,17 +465,17 @@ contributors do not re-litigate them.
 
 ## 7. Reference: PR map (May 2026 batch)
 
-| Repo | PR | Title | Status |
-| --- | --- | --- | --- |
-| simulator | #171 | fix(admin): `deleted_at` + ISO timestamp | merged |
-| simulator | #183 | feat(admin): enriched user profile fields (Phase 5b backend) | merged |
-| frontend | #160 | fix(admin-users): visible confirm modal + real totals | merged |
-| frontend | #161 | refactor(admin-settings): Phase 5 alignment | merged |
-| frontend | #162 | refactor(exchange): Phase 5 wrap | merged |
-| frontend | #163 | docs: DESIGN.md | merged |
-| frontend | #164 | chore(ci): coverage threshold 80→65 (temporary) | merged |
-| frontend | #173 | feat(admin-users): hydrate UserDrawer (Phase 6d.1) | merged |
-| frontend | #174 | docs: ROADMAP.md initial | merged |
-| frontend | #182 | feat(admin-wallets): WalletDrawer (Phase 6d.2) | merged |
-| frontend | #190 | feat(admin-users): Phase 5b table redesign | merged |
-| frontend | #159 | feat(admin-users): redesign list view | closed — superseded by #160 + #173 + #190 |
+| Repo      | PR   | Title                                                        | Status                                    |
+| --------- | ---- | ------------------------------------------------------------ | ----------------------------------------- |
+| simulator | #171 | fix(admin): `deleted_at` + ISO timestamp                     | merged                                    |
+| simulator | #183 | feat(admin): enriched user profile fields (Phase 5b backend) | merged                                    |
+| frontend  | #160 | fix(admin-users): visible confirm modal + real totals        | merged                                    |
+| frontend  | #161 | refactor(admin-settings): Phase 5 alignment                  | merged                                    |
+| frontend  | #162 | refactor(exchange): Phase 5 wrap                             | merged                                    |
+| frontend  | #163 | docs: DESIGN.md                                              | merged                                    |
+| frontend  | #164 | chore(ci): coverage threshold 80→65 (temporary)              | merged                                    |
+| frontend  | #173 | feat(admin-users): hydrate UserDrawer (Phase 6d.1)           | merged                                    |
+| frontend  | #174 | docs: ROADMAP.md initial                                     | merged                                    |
+| frontend  | #182 | feat(admin-wallets): WalletDrawer (Phase 6d.2)               | merged                                    |
+| frontend  | #190 | feat(admin-users): Phase 5b table redesign                   | merged                                    |
+| frontend  | #159 | feat(admin-users): redesign list view                        | closed — superseded by #160 + #173 + #190 |
