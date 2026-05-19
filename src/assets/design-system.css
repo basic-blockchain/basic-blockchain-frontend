@@ -6,6 +6,8 @@
   --bg:             #faf9f6;
   --surface:        #ffffff;
   --surface-2:      #f5f4f0;
+  /* v2 — nested surface (drawer-in-drawer, modal-in-drawer). */
+  --surface-3:      #efece5;
   --hover:          #f1efe9;
 
   /* Borders */
@@ -40,9 +42,28 @@
   --shadow-lg: 0 24px 64px rgba(20,18,12,0.16), 0 8px 24px rgba(20,18,12,0.08);
 
   /* Radius */
-  --radius-sm: 4px;
-  --radius:    6px;
-  --radius-lg: 10px;
+  --radius-sm:   4px;
+  --radius:      6px;
+  --radius-lg:   10px;
+  /* v2 — chip / badge / range-tab pill. Phase 6 inlined `99px` in
+   * four places; this token formalises the value. */
+  --radius-pill: 99px;
+
+  /* v2 — spacing scale. The Phase 5 sheet already used these
+   * informally; v2 makes them addressable so future components can
+   * read `var(--space-md)` instead of guessing magic numbers. */
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 10px;
+  --space-lg: 14px;
+  --space-xl: 20px;
+
+  /* v2 — motion. v1 hardcodes `0.12s` in 40+ files; the duration
+   * tokens give every animation one knob to turn. */
+  --duration-fast: 120ms;
+  --duration-base: 220ms;
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
 
   /* Typography */
   --font-sans: "Geist", "Söhne", "Helvetica Neue", Helvetica, sans-serif;

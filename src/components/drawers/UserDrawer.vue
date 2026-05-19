@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import BaseDrawer from '@/components/atoms/BaseDrawer.vue'
 
 export interface DrawerWallet {
   id: string
@@ -79,12 +80,9 @@ watch(
   },
 )
 
-function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && props.open) emit('close')
+function onOpenChange(value: boolean) {
+  if (!value) emit('close')
 }
-
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 
 const allFrozen = computed(() => {
   const u = props.user
@@ -230,17 +228,36 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
 </script>
 
 <template>
-  <div class="scrim" :class="{ open }" @click="emit('close')"></div>
-  <aside class="drawer" :class="{ open }" role="dialog" aria-modal="true">
+  <BaseDrawer
+    :open="open"
+    :width="720"
+    @update:open="onOpenChange"
+  >
     <template v-if="user">
       <div class="drawer-head">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <span class="mono" style="font-size:11px; color:var(--text-3);">{{ user.id }}</span>
-          <button class="copy-btn" @click="copyId" aria-label="Copy ID"><i class="pi pi-copy"></i></button>
-          <span v-if="user.role === 'staff' || user.role === 'admin'" class="bdg bdg-info">Staff</span>
-          <div style="flex:1;"></div>
-          <button class="btn btn-ghost btn-icon" @click="emit('close')" aria-label="Close">
-            <i class="pi pi-times"></i>
+          <span
+            class="mono"
+            style="font-size:11px; color:var(--text-3);"
+          >{{ user.id }}</span>
+          <button
+            class="copy-btn"
+            aria-label="Copy ID"
+            @click="copyId"
+          >
+            <i class="pi pi-copy" />
+          </button>
+          <span
+            v-if="user.role === 'staff' || user.role === 'admin'"
+            class="bdg bdg-info"
+          >Staff</span>
+          <div style="flex:1;" />
+          <button
+            class="btn btn-ghost btn-icon"
+            aria-label="Close"
+            @click="emit('close')"
+          >
+            <i class="pi pi-times" />
           </button>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
@@ -250,70 +267,109 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
             {{ user.fullName.charAt(0) }}
           </div>
           <div style="flex:1; min-width:0;">
-            <div style="font-weight:600; font-size:15px;">{{ user.fullName }}</div>
+            <div style="font-weight:600; font-size:15px;">
+              {{ user.fullName }}
+            </div>
             <div
               style="font-size:11.5px; color:var(--text-2); display:flex; flex-wrap:wrap; gap:8px; margin-top:2px;"
             >
               <span>{{ user.email }}</span>
               <span>{{ user.country.flag }} {{ user.country.name }}</span>
               <span class="bdg bdg-pending_kyc">{{ user.kyc }}</span>
-              <span class="bdg" :class="statusBadge(user.status).cls">{{ statusBadge(user.status).label }}</span>
+              <span
+                class="bdg"
+                :class="statusBadge(user.status).cls"
+              >{{ statusBadge(user.status).label }}</span>
             </div>
           </div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;">
-          <button v-if="user.status !== 'deleted'" class="btn btn-sm" @click="emitAction('edit')">
-            <i class="pi pi-pencil"></i> Editar
+          <button
+            v-if="user.status !== 'deleted'"
+            class="btn btn-sm"
+            @click="emitAction('edit')"
+          >
+            <i class="pi pi-pencil" /> Editar
           </button>
           <button
             v-if="user.status !== 'banned' && user.status !== 'deleted'"
             class="btn btn-sm"
             @click="emitAction('ban')"
           >
-            <i class="pi pi-ban"></i> Banear
+            <i class="pi pi-ban" /> Banear
           </button>
-          <button v-if="user.status === 'banned'" class="btn btn-sm" @click="emitAction('unban')">
-            <i class="pi pi-check"></i> Desbanear
+          <button
+            v-if="user.status === 'banned'"
+            class="btn btn-sm"
+            @click="emitAction('unban')"
+          >
+            <i class="pi pi-check" /> Desbanear
           </button>
           <button
             v-if="!allFrozen && user.status !== 'deleted'"
             class="btn btn-sm"
             @click="emitAction('freeze')"
           >
-            <i class="pi pi-lock"></i> Congelar
+            <i class="pi pi-lock" /> Congelar
           </button>
           <button
             v-if="allFrozen && user.status !== 'deleted'"
             class="btn btn-sm"
             @click="emitAction('unfreeze')"
           >
-            <i class="pi pi-lock-open"></i> Descongelar
+            <i class="pi pi-lock-open" /> Descongelar
           </button>
           <button
             v-if="user.status !== 'deleted'"
             class="btn btn-sm btn-danger"
             @click="emitAction('delete')"
           >
-            <i class="pi pi-trash"></i> Eliminar
+            <i class="pi pi-trash" /> Eliminar
           </button>
-          <button v-if="user.status === 'deleted'" class="btn btn-sm" @click="emitAction('restore')">
-            <i class="pi pi-refresh"></i> Restaurar
+          <button
+            v-if="user.status === 'deleted'"
+            class="btn btn-sm"
+            @click="emitAction('restore')"
+          >
+            <i class="pi pi-refresh" /> Restaurar
           </button>
         </div>
       </div>
 
       <nav class="drawer-tabs">
-        <button class="drawer-tab" :class="{ active: tab === 'overview' }" @click="tab = 'overview'">
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'overview' }"
+          @click="tab = 'overview'"
+        >
           Resumen
         </button>
-        <button class="drawer-tab" :class="{ active: tab === 'wallets' }" @click="tab = 'wallets'">
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'wallets' }"
+          @click="tab = 'wallets'"
+        >
           Wallets <span class="count">{{ user.wallets.length }}</span>
         </button>
-        <button class="drawer-tab" :class="{ active: tab === 'movements' }" @click="tab = 'movements'">
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'movements' }"
+          @click="tab = 'movements'"
+        >
           Movimientos <span class="count">{{ user.movements.length }}</span>
         </button>
-        <button class="drawer-tab" :class="{ active: tab === 'kyc' }" @click="tab = 'kyc'">KYC</button>
-        <button class="drawer-tab" :class="{ active: tab === 'audit' }" @click="tab = 'audit'">
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'kyc' }"
+          @click="tab = 'kyc'"
+        >
+          KYC
+        </button>
+        <button
+          class="drawer-tab"
+          :class="{ active: tab === 'audit' }"
+          @click="tab = 'audit'"
+        >
           Auditoría <span class="count">{{ user.audit.length }}</span>
         </button>
       </nav>
@@ -345,30 +401,48 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
 
       <div class="drawer-body">
         <template v-if="tab === 'overview'">
-          <div class="section-h">Identidad</div>
+          <div class="section-h">
+            Identidad
+          </div>
           <div
             style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:4px 14px; margin-bottom:16px;"
           >
             <div class="kvs">
               <div>ID</div>
-              <div class="mono" style="font-size:11px;">{{ user.id }}</div>
+              <div
+                class="mono"
+                style="font-size:11px;"
+              >
+                {{ user.id }}
+              </div>
               <div>Nombre completo</div>
               <div>{{ user.fullName }}</div>
               <div>Email</div>
               <div>{{ user.email }}</div>
               <div>Teléfono</div>
-              <div class="mono">{{ user.phone }}</div>
+              <div class="mono">
+                {{ user.phone }}
+              </div>
               <div>País</div>
               <div>{{ user.country.flag }} {{ user.country.name }} ({{ user.country.code }})</div>
               <div>Rol</div>
               <div>
-                <span v-if="user.role !== 'user'" class="bdg bdg-info">Staff</span>
+                <span
+                  v-if="user.role !== 'user'"
+                  class="bdg bdg-info"
+                >Staff</span>
                 <span v-else>Usuario</span>
               </div>
               <div>2FA</div>
               <div>
-                <span v-if="user.twoFA" style="color:var(--success);">Activado</span>
-                <span v-else class="muted">Desactivado</span>
+                <span
+                  v-if="user.twoFA"
+                  style="color:var(--success);"
+                >Activado</span>
+                <span
+                  v-else
+                  class="muted"
+                >Desactivado</span>
               </div>
               <div>Registro</div>
               <div>{{ user.createdAt }} <span class="muted">{{ timeAgo(user.createdAt) }}</span></div>
@@ -377,10 +451,14 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
             </div>
           </div>
 
-          <div class="section-h">Resumen on-chain</div>
+          <div class="section-h">
+            Resumen on-chain
+          </div>
           <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px;">
             <div style="border:1px solid var(--border); border-radius:var(--radius); padding:12px;">
-              <div style="font-size:11px; color:var(--text-2);">Saldo total</div>
+              <div style="font-size:11px; color:var(--text-2);">
+                Saldo total
+              </div>
               <div style="font-size:20px; font-weight:600; letter-spacing:-0.02em;">
                 ${{ user.totalUsd.toLocaleString() }}
               </div>
@@ -389,20 +467,32 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
               </div>
             </div>
             <div style="border:1px solid var(--border); border-radius:var(--radius); padding:12px;">
-              <div style="font-size:11px; color:var(--text-2);">Operaciones P2P</div>
-              <div style="font-size:20px; font-weight:600; letter-spacing:-0.02em;">{{ p2pCount }}</div>
-              <div style="font-size:11px; color:var(--text-3); margin-top:2px;">últimos 90 días</div>
+              <div style="font-size:11px; color:var(--text-2);">
+                Operaciones P2P
+              </div>
+              <div style="font-size:20px; font-weight:600; letter-spacing:-0.02em;">
+                {{ p2pCount }}
+              </div>
+              <div style="font-size:11px; color:var(--text-3); margin-top:2px;">
+                últimos 90 días
+              </div>
             </div>
             <div style="border:1px solid var(--border); border-radius:var(--radius); padding:12px;">
-              <div style="font-size:11px; color:var(--text-2);">Volumen total</div>
+              <div style="font-size:11px; color:var(--text-2);">
+                Volumen total
+              </div>
               <div style="font-size:20px; font-weight:600; letter-spacing:-0.02em;">
                 ${{ totalVolume.toFixed(0) }}
               </div>
-              <div style="font-size:11px; color:var(--text-3); margin-top:2px;">P2P + Exchange</div>
+              <div style="font-size:11px; color:var(--text-3); margin-top:2px;">
+                P2P + Exchange
+              </div>
             </div>
           </div>
 
-          <div class="section-h">Roles</div>
+          <div class="section-h">
+            Roles
+          </div>
           <div
             v-if="user.status !== 'deleted'"
             class="roles-card"
@@ -417,9 +507,14 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
                 <div class="role-label">
                   <span class="mono role-code">{{ role }}</span>
                   <span class="role-name">{{ roleMeta[role].label }}</span>
-                  <span v-if="hasRole(role)" class="bdg bdg-active">Activo</span>
+                  <span
+                    v-if="hasRole(role)"
+                    class="bdg bdg-active"
+                  >Activo</span>
                 </div>
-                <div class="role-desc">{{ roleMeta[role].desc }}</div>
+                <div class="role-desc">
+                  {{ roleMeta[role].desc }}
+                </div>
               </div>
               <button
                 class="btn btn-sm"
@@ -430,13 +525,18 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
               </button>
             </div>
           </div>
-          <div v-else class="roles-disabled">
+          <div
+            v-else
+            class="roles-disabled"
+          >
             Los roles no se pueden gestionar para un usuario eliminado.
           </div>
         </template>
 
         <template v-else-if="tab === 'wallets'">
-          <div class="section-h">Wallets ({{ user.wallets.length }})</div>
+          <div class="section-h">
+            Wallets ({{ user.wallets.length }})
+          </div>
           <div>
             <div
               v-for="(w, i) in user.wallets"
@@ -462,20 +562,35 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
                     class="bdg"
                     :class="w.status === 'active' ? 'bdg-active' : 'bdg-info'"
                   >{{ w.status === 'active' ? 'Activa' : 'Congelada' }}</span>
-                  <span class="muted" style="font-size:11px;">{{ w.createdAt }}</span>
+                  <span
+                    class="muted"
+                    style="font-size:11px;"
+                  >{{ w.createdAt }}</span>
                 </div>
-                <div class="mono" style="font-size:11px; color:var(--text-2);">{{ shortAddr(w.address) }}</div>
+                <div
+                  class="mono"
+                  style="font-size:11px; color:var(--text-2);"
+                >
+                  {{ shortAddr(w.address) }}
+                </div>
               </div>
               <div style="text-align:right;">
-                <div class="mono" style="font-weight:500;">{{ w.balance }} {{ w.asset }}</div>
-                <div style="color:var(--text-3); font-size:11px;">≈ ${{ w.balanceUsd.toLocaleString() }}</div>
+                <div
+                  class="mono"
+                  style="font-weight:500;"
+                >
+                  {{ w.balance }} {{ w.asset }}
+                </div>
+                <div style="color:var(--text-3); font-size:11px;">
+                  ≈ ${{ w.balanceUsd.toLocaleString() }}
+                </div>
               </div>
               <button
                 class="btn btn-sm btn-icon btn-ghost"
                 aria-label="Ver detalle de wallet"
                 @click.stop="emit('view-wallet', w.id)"
               >
-                <i class="pi pi-chevron-right"></i>
+                <i class="pi pi-chevron-right" />
               </button>
             </div>
           </div>
@@ -512,7 +627,10 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
               On-chain
             </button>
           </div>
-          <table class="tbl" style="font-size:12px; width:100%;">
+          <table
+            class="tbl"
+            style="font-size:12px; width:100%;"
+          >
             <thead>
               <tr>
                 <th>Tipo</th>
@@ -523,7 +641,10 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
               </tr>
             </thead>
             <tbody>
-              <tr v-for="m in filteredMovements" :key="m.id">
+              <tr
+                v-for="m in filteredMovements"
+                :key="m.id"
+              >
                 <td>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <span
@@ -534,17 +655,24 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
                         borderRadius: '50%',
                         background: typeColor(m.type),
                       }"
-                    ></span>
+                    />
                     {{ typeLabel[m.type] }}
                   </div>
                 </td>
                 <td>{{ m.asset }}</td>
                 <td>
-                  <div class="mono">{{ m.amount }} {{ m.asset }}</div>
-                  <div style="color:var(--text-3); font-size:11px;">≈ ${{ m.amountUsd }}</div>
+                  <div class="mono">
+                    {{ m.amount }} {{ m.asset }}
+                  </div>
+                  <div style="color:var(--text-3); font-size:11px;">
+                    ≈ ${{ m.amountUsd }}
+                  </div>
                 </td>
                 <td>
-                  <span class="bdg" :class="statusMovBadge(m.status).cls">{{ statusMovBadge(m.status).label }}</span>
+                  <span
+                    class="bdg"
+                    :class="statusMovBadge(m.status).cls"
+                  >{{ statusMovBadge(m.status).label }}</span>
                 </td>
                 <td>{{ m.createdAt }}</td>
               </tr>
@@ -562,12 +690,18 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
               {{ user.kyc }}
             </div>
             <div style="flex:1;">
-              <div style="font-weight:600; font-size:14px;">{{ kycInfo.name }}</div>
-              <div style="color:var(--text-2); font-size:12.5px; margin-top:2px;">{{ kycInfo.desc }}</div>
+              <div style="font-weight:600; font-size:14px;">
+                {{ kycInfo.name }}
+              </div>
+              <div style="color:var(--text-2); font-size:12.5px; margin-top:2px;">
+                {{ kycInfo.desc }}
+              </div>
             </div>
           </div>
 
-          <div class="section-h">Documentos</div>
+          <div class="section-h">
+            Documentos
+          </div>
           <div
             style="border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;"
           >
@@ -582,8 +716,13 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
                 borderBottom: i === documents.length - 1 ? 'none' : '1px solid var(--border)',
               }"
             >
-              <div style="flex:1; font-size:12.5px;">{{ d.label }}</div>
-              <span class="bdg" :class="docBadge(docStatus(user.kyc, d.key)).cls">
+              <div style="flex:1; font-size:12.5px;">
+                {{ d.label }}
+              </div>
+              <span
+                class="bdg"
+                :class="docBadge(docStatus(user.kyc, d.key)).cls"
+              >
                 {{ docBadge(docStatus(user.kyc, d.key)).label }}
               </span>
               <button
@@ -591,14 +730,16 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
                 class="btn btn-ghost btn-sm btn-icon"
                 aria-label="View"
               >
-                <i class="pi pi-eye"></i>
+                <i class="pi pi-eye" />
               </button>
             </div>
           </div>
         </template>
 
         <template v-else-if="tab === 'audit'">
-          <div class="section-h">Auditoría ({{ user.audit.length }} eventos)</div>
+          <div class="section-h">
+            Auditoría ({{ user.audit.length }} eventos)
+          </div>
           <div>
             <div
               v-for="(ev, i) in user.audit"
@@ -612,54 +753,40 @@ const documents: { key: 'dni' | 'selfie' | 'address' | 'funds'; label: string }[
             >
               <span
                 style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent); margin-top:6px; flex-shrink:0;"
-              ></span>
+              />
               <div style="flex:1; min-width:0;">
-                <div style="font-size:13px; font-weight:500;">{{ ev.action }}</div>
+                <div style="font-size:13px; font-weight:500;">
+                  {{ ev.action }}
+                </div>
                 <div style="font-size:11.5px; color:var(--text-2);">
-                  {{ ev.meta }} · por <span class="mono" style="color:var(--text-2);">{{ ev.actor }}</span>
+                  {{ ev.meta }} · por <span
+                    class="mono"
+                    style="color:var(--text-2);"
+                  >{{ ev.actor }}</span>
                 </div>
               </div>
-              <div style="font-size:11px; color:var(--text-3); white-space:nowrap;">{{ ev.at }}</div>
+              <div style="font-size:11px; color:var(--text-3); white-space:nowrap;">
+                {{ ev.at }}
+              </div>
             </div>
           </div>
         </template>
       </div>
     </template>
-  </aside>
+  </BaseDrawer>
 </template>
 
 <style scoped>
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 199;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s;
-}
-.scrim.open {
-  opacity: 1;
-  pointer-events: all;
-}
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 480px;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  z-index: 200;
+/* BaseDrawer owns the shell; override body padding to 0 so the
+ * internal drawer-head / drawer-tabs / drawer-body layout keeps
+ * the v1 padding contract. */
+:deep(.base-modal__body) {
+  padding: 0;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
-.drawer.open {
-  transform: translateX(0);
-}
+
 .drawer-head {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);

@@ -6,6 +6,10 @@ import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
 import { useToast } from 'primevue/usetoast'
 import TreasuryApprovalFlow from '@/components/flows/TreasuryApprovalFlow.vue'
 import type { TreasuryData } from '@/components/flows/TreasuryApprovalFlow.vue'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const toast = useToast()
 const wallets = ref<WalletAdminRecord[]>([])
@@ -65,6 +69,21 @@ function openDistribution() {
     asset: 'USDT',
   }
 }
+
+interface TreasuryColumn {
+  key: string
+  label: string
+}
+const treasuryColumns: TreasuryColumn[] = [
+  { key: 'wallet_id', label: 'Wallet ID' },
+  { key: 'currency', label: 'Moneda' },
+  { key: 'balance', label: 'Balance' },
+  { key: 'pub_key', label: 'Clave pública' },
+]
+
+function rowKey(w: WalletAdminRecord): string {
+  return w.wallet_id
+}
 </script>
 
 <template>
@@ -74,92 +93,172 @@ function openDistribution() {
         <h1>Tesorería</h1>
         <p>Wallets de reserva de la plataforma por moneda</p>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" @click="openDistribution">
-          <span class="pi pi-send" aria-hidden="true" />
+      <div class="page-actions">
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          @click="openDistribution"
+        >
           Distribuir
-        </button>
-        <button class="btn btn-ghost" :disabled="loading" @click="load">
-          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+        </BaseButton>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          :loading="loading"
+          @click="load"
+        >
           Actualizar
-        </button>
+        </BaseButton>
       </div>
     </div>
 
-    <!-- Treasury KPIs (bigstat) -->
+    <!-- Treasury KPIs -->
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Wallets tesorería</div>
-        <div class="vl">{{ totalTreasury }}</div>
-        <div class="ds">wallets activas</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Monedas</div>
-        <div class="vl">{{ currencies_count }}</div>
-        <div class="ds">tipos distintos</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Balance NATIVE</div>
-        <div class="vl">{{ totalNative }}</div>
-        <div class="ds">NATIVE en reserva</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Estado</div>
-        <div class="vl">{{ loading ? 'Cargando' : 'OK' }}</div>
-        <div class="ds">sincronizado</div>
-      </div>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Wallets tesorería</span>
+        </template>
+        {{ totalTreasury }}
+        <template #footer>
+          wallets activas
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Monedas</span>
+        </template>
+        {{ currencies_count }}
+        <template #footer>
+          tipos distintos
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Balance NATIVE</span>
+        </template>
+        {{ totalNative }}
+        <template #footer>
+          NATIVE en reserva
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Estado</span>
+        </template>
+        {{ loading ? 'Cargando' : 'OK' }}
+        <template #footer>
+          sincronizado
+        </template>
+      </BaseCard>
     </div>
 
     <!-- Create treasury panel -->
-    <section class="panel">
-      <div class="panel-h">Crear wallet de tesorería</div>
-      <div class="panel-form inline-form">
+    <BaseCard
+      variant="default"
+      padding="default"
+    >
+      <template #header>
+        <div class="section-h">
+          Crear wallet de tesorería
+        </div>
+      </template>
+      <div class="inline-form">
         <div class="field">
-          <label class="field-label" for="currency">Moneda</label>
-          <select id="currency" v-model="selectedCurrency" class="field-select" :disabled="creating">
-            <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }} · {{ c.name }}</option>
+          <label
+            class="field-label"
+            for="currency"
+          >Moneda</label>
+          <select
+            id="currency"
+            v-model="selectedCurrency"
+            class="field-select"
+            :disabled="creating"
+          >
+            <option
+              v-for="c in currencies"
+              :key="c.code"
+              :value="c.code"
+            >
+              {{ c.code }} · {{ c.name }}
+            </option>
           </select>
         </div>
-        <button class="btn btn-primary" :disabled="creating" @click="createTreasury">
-          <span v-if="creating" class="pi pi-spin pi-spinner" aria-hidden="true" />
-          {{ creating ? 'Creando…' : 'Crear' }}
-        </button>
+        <BaseButton
+          variant="primary"
+          :loading="creating"
+          @click="createTreasury"
+        >
+          Crear
+        </BaseButton>
       </div>
-    </section>
+    </BaseCard>
 
     <!-- Treasury wallets table -->
-    <div class="panel">
-      <div class="panel-h">
-        <span>Wallets de tesorería</span>
-        <span class="count-badge sm">{{ treasuryWallets.length }}</span>
+    <BaseCard
+      variant="default"
+      padding="none"
+    >
+      <template #header>
+        <div class="panel-h">
+          <span>Wallets de tesorería</span>
+          <span class="count-badge sm">{{ treasuryWallets.length }}</span>
+        </div>
+      </template>
+      <div
+        v-if="loading"
+        class="loading-row"
+      >
+        <span
+          class="pi pi-spin pi-spinner"
+          aria-hidden="true"
+        /> Cargando…
       </div>
-      <div v-if="loading" class="loading-row">
-        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
-      </div>
-      <table v-else class="tbl">
-        <thead>
-          <tr>
-            <th>Wallet ID</th>
-            <th>Moneda</th>
-            <th>Balance</th>
-            <th>Clave pública</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="w in treasuryWallets" :key="w.wallet_id">
-            <td class="mono"><HashChip :hash="w.wallet_id" :length="16" label="wallet id" /></td>
-            <td>
-              <span class="currency-badge">{{ w.currency }}</span>
-            </td>
-            <td class="mono"><AmountDisplay :amount="Number(w.balance)" :precision="8" :unit="w.currency" /></td>
-            <td class="mono text-dim"><HashChip :hash="w.public_key" :length="14" label="public key" /></td>
-          </tr>
-          <tr v-if="treasuryWallets.length === 0 && !loading">
-            <td colspan="4" class="empty-row">Sin wallets de tesorería todavía.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <BaseTable
+        v-else
+        :columns="treasuryColumns"
+        :rows="treasuryWallets"
+        :row-key="rowKey"
+      >
+        <template #cell-wallet_id="{ row }">
+          <span class="mono">
+            <HashChip
+              :hash="row.wallet_id"
+              :length="16"
+              label="wallet id"
+            />
+          </span>
+        </template>
+        <template #cell-currency="{ row }">
+          <BaseBadge
+            variant="outline"
+            tone="warning"
+          >
+            {{ row.currency }}
+          </BaseBadge>
+        </template>
+        <template #cell-balance="{ row }">
+          <span class="mono">
+            <AmountDisplay
+              :amount="Number(row.balance)"
+              :precision="8"
+              :unit="row.currency"
+            />
+          </span>
+        </template>
+        <template #cell-pub_key="{ row }">
+          <span class="mono text-dim">
+            <HashChip
+              :hash="row.public_key"
+              :length="14"
+              label="public key"
+            />
+          </span>
+        </template>
+        <template #empty>
+          Sin wallets de tesorería todavía.
+        </template>
+      </BaseTable>
+    </BaseCard>
   </div>
 
   <TreasuryApprovalFlow
@@ -171,60 +270,129 @@ function openDistribution() {
 </template>
 
 <style scoped>
-.treasury-view { display: flex; flex-direction: column; gap: 18px; }
+.treasury-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 
-.page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
-.page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
+.page-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.page-h h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.page-actions {
+  display: flex;
+  gap: 8px;
+}
 
-/* Bigstat row (Phase 5 design system) */
 .bigstat-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
-.bigstat {
-  background: var(--surface);
+
+.section-h,
+.panel-h {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.section-h {
+  border-bottom: none;
+  padding: 0 0 8px;
+}
+
+.inline-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.field-select {
+  padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+  font-family: var(--font-sans);
+}
+.field-select:focus {
+  border-color: var(--accent);
+}
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
   padding: 16px;
 }
-.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
-.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
-.ds { font-size: 11.5px; color: var(--text-3); }
 
-.field { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
-.field-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
-.field-select {
-  padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-2); color: var(--text); font-size: 13px; outline: none;
-  transition: border-color 0.12s; font-family: var(--font-sans);
+.count-badge.sm {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  line-height: 1.2;
+  background: var(--surface-2);
+  color: var(--text-3);
+  border-radius: var(--radius-pill);
+  font-weight: 500;
 }
-.field-select:focus { border-color: var(--accent); }
 
-.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.tbl th, .tbl td { text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--border); }
-.tbl th { font-size: 11.5px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface-2); }
-.tbl tr:last-child td { border-bottom: none; }
-.empty-row { text-align: center; color: var(--text-3); padding: 24px; }
-.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; padding: 16px; }
-.panel-form { padding: 16px; }
-.inline-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-
-.mono { font-family: var(--font-mono); font-size: 12px; }
-.text-dim { color: var(--text-3); }
-
-.currency-badge {
-  padding: 2px 8px; border-radius: 20px; font-size: 12px;
-  font-weight: 600; background: var(--warning-soft); color: var(--warning);
+.mono {
   font-family: var(--font-mono);
+  font-size: 12px;
+}
+.text-dim {
+  color: var(--text-3);
 }
 
 @media (max-width: 900px) {
-  .bigstat-row { grid-template-columns: 1fr 1fr; }
+  .bigstat-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 @media (max-width: 640px) {
-  .page-h { flex-direction: column; align-items: flex-start; }
-  .bigstat-row { grid-template-columns: 1fr; }
+  .page-h {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bigstat-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

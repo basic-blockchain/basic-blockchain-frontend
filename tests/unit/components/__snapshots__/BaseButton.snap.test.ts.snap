@@ -1,0 +1,241 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BaseButton snapshots > renders danger / lg / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--lg" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / lg / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--lg" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / lg / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--lg base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / md / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--md" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / md / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--md" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / md / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--md base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / sm / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--sm" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / sm / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--sm" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders danger / sm / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--danger base-btn--sm base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / lg / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--lg" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / lg / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--lg" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / lg / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--lg base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / md / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--md" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / md / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--md" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / md / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--md base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / sm / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--sm" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / sm / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--sm" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders ghost / sm / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--ghost base-btn--sm base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / lg / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--lg" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / lg / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--lg" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / lg / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--lg base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / md / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--md" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / md / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--md" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / md / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--md base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / sm / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--sm" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / sm / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--sm" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders primary / sm / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--primary base-btn--sm base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / lg / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--lg" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / lg / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--lg" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / lg / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--lg base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / md / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--md" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / md / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--md" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / md / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--md base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / sm / disabled 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--sm" type="button" disabled="">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / sm / idle 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--sm" type="button">
+  <!--v-if--><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
+
+exports[`BaseButton snapshots > renders secondary / sm / loading 1`] = `
+"<button data-v-df905d64="" class="base-btn base-btn--secondary base-btn--sm base-btn--loading" type="button" disabled="" aria-busy="true"><span data-v-df905d64="" class="base-btn__leading"><span data-v-df905d64="" class="base-btn__spinner" aria-hidden="true"></span></span><span data-v-df905d64="" class="base-btn__label">Label</span>
+  <!--v-if-->
+</button>"
+`;
