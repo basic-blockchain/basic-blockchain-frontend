@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { WalletAdminRecord } from '@/api/admin'
 import BaseDrawer from '@/components/atoms/BaseDrawer.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 export interface DrawerWalletMovement {
   id: string
@@ -104,13 +105,9 @@ function onOpenChange(value: boolean) {
           </span>
           <span class="bdg bdg-pending_kyc">{{ data.wallet.wallet_type }}</span>
           <div class="spacer" />
-          <button
-            class="btn btn-ghost btn-icon"
-            aria-label="Close"
-            @click="emit('close')"
-          >
+          <BaseButton class="btn-icon" variant="ghost" aria-label="Close" @click="emit('close')">
             <i class="pi pi-times" />
-          </button>
+          </BaseButton>
         </div>
 
         <div class="head-main">
@@ -132,22 +129,12 @@ function onOpenChange(value: boolean) {
         </div>
 
         <div class="actions">
-          <button
-            v-if="!data.wallet.frozen"
-            class="btn btn-sm"
-            :disabled="loading"
-            @click="emitAction('freeze')"
-          >
+          <BaseButton v-if="!data.wallet.frozen" variant="ghost" size="sm" :disabled="loading" @click="emitAction('freeze')">
             <i class="pi pi-lock" /> Congelar
-          </button>
-          <button
-            v-else
-            class="btn btn-sm"
-            :disabled="loading"
-            @click="emitAction('unfreeze')"
-          >
+          </BaseButton>
+          <BaseButton v-else variant="ghost" size="sm" :disabled="loading" @click="emitAction('unfreeze')">
             <i class="pi pi-lock-open" /> Descongelar
-          </button>
+          </BaseButton>
         </div>
 
         <div class="tabs">
