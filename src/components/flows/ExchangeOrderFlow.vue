@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import BaseButton from '@/components/atoms/BaseButton.vue'
 
 export interface OrderData {
   side: 'buy' | 'sell'
@@ -29,65 +28,48 @@ watch(step, (s) => {
       if (progress.value >= 100) {
         progress.value = 100
         clearInterval(intervalId!)
-        setTimeout(() => {
-          step.value = 2
-        }, 200)
+        setTimeout(() => { step.value = 2 }, 200)
       }
     }, 60)
   } else {
-    if (intervalId) {
-      clearInterval(intervalId)
-      intervalId = null
-    }
+    if (intervalId) { clearInterval(intervalId); intervalId = null }
   }
 })
 
-onUnmounted(() => {
-  if (intervalId) clearInterval(intervalId)
-})
+onUnmounted(() => { if (intervalId) clearInterval(intervalId) })
 
 const matched = computed(() => Math.floor(progress.value))
-const counterparts = computed(() => Math.floor((progress.value / 100) * 3))
+const counterparts = computed(() => Math.floor(progress.value / 100 * 3))
 
 const orderId = 'ORD-' + Math.random().toString(36).slice(2, 9).toUpperCase()
-const fillColor = computed(() => (isBuy.value ? 'var(--success)' : 'var(--danger)'))
+const fillColor = computed(() => isBuy.value ? 'var(--success)' : 'var(--danger)')
 </script>
 
 <template>
   <div class="modal-scrim" @click.self="emit('close')">
-    <div class="modal" style="width: 480px">
+    <div class="modal" style="width:480px">
       <div class="modal-h">
         <h2>
           {{ step === 2 ? 'Orden ejecutada' : isBuy ? `Comprar ${base}` : `Vender ${base}` }}
         </h2>
         <p>
-          {{
-            step === 0
-              ? 'Revisá los detalles antes de enviar al libro.'
-              : step === 1
-                ? 'Buscando contraparte en el libro de órdenes…'
-                : 'Tu orden se ejecutó completa.'
-          }}
+          {{ step === 0
+            ? 'Revisá los detalles antes de enviar al libro.'
+            : step === 1
+              ? 'Buscando contraparte en el libro de órdenes…'
+              : 'Tu orden se ejecutó completa.' }}
         </p>
       </div>
 
       <div class="modal-b">
         <!-- Step 0: Review -->
         <template v-if="step === 0">
-          <div class="flow-card" style="padding: 14px">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px">
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 4px;
-                  font-size: 13px;
-                  font-weight: 600;
-                "
-              >
+          <div class="flow-card" style="padding:14px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600">
                 {{ base }} → {{ quote }}
               </div>
-              <div style="flex: 1; text-align: right">
+              <div style="flex:1;text-align:right">
                 <span class="bdg" :class="isBuy ? 'bdg-active' : 'bdg-banned'">
                   {{ isBuy ? 'Compra' : 'Venta' }} · {{ data.orderType }}
                 </span>
@@ -103,10 +85,7 @@ const fillColor = computed(() => (isBuy.value ? 'var(--success)' : 'var(--danger
               ] as [string, string, boolean][]"
               :key="i"
               class="detail-row"
-              :style="{
-                borderBottom: i < 4 ? '1px solid var(--border)' : 'none',
-                fontSize: '12.5px',
-              }"
+              :style="{ borderBottom: i < 4 ? '1px solid var(--border)' : 'none', fontSize: '12.5px' }"
             >
               <span class="muted">{{ label }}</span>
               <span class="mono" :style="{ fontWeight: bold ? 600 : 500 }">{{ value }}</span>
@@ -114,26 +93,22 @@ const fillColor = computed(() => (isBuy.value ? 'var(--success)' : 'var(--danger
           </div>
 
           <div class="dry-run">
-            <span class="pi pi-info-circle" style="font-size: 13px" />
+            <span class="pi pi-info-circle" style="font-size:13px" />
             <span>Recibirás:</span>
-            <span class="mono" style="color: var(--text); font-weight: 600">
-              {{
-                isBuy
-                  ? `${data.amount} ${base}`
-                  : `${(parseFloat(data.total.replace(',', '')) - 3.38).toFixed(2)} ${quote}`
-              }}
+            <span class="mono" style="color:var(--text);font-weight:600">
+              {{ isBuy ? `${data.amount} ${base}` : `${(parseFloat(data.total.replace(',','')) - 3.38).toFixed(2)} ${quote}` }}
             </span>
           </div>
         </template>
 
         <!-- Step 1: Executing -->
         <template v-else-if="step === 1">
-          <div style="text-align: center; padding: 24px 0 16px">
+          <div style="text-align:center;padding:24px 0 16px">
             <div class="spinner-wrap">
-              <div class="spinner" style="width: 24px; height: 24px" />
+              <div class="spinner" style="width:24px;height:24px" />
             </div>
-            <div style="font-size: 16px; font-weight: 600">Ejecutando orden</div>
-            <div class="muted" style="font-size: 12.5px; margin-top: 4px">
+            <div style="font-size:16px;font-weight:600">Ejecutando orden</div>
+            <div class="muted" style="font-size:12.5px;margin-top:4px">
               Matched {{ matched }}% · {{ counterparts }} contrapartes
             </div>
           </div>
@@ -144,16 +119,16 @@ const fillColor = computed(() => (isBuy.value ? 'var(--success)' : 'var(--danger
 
         <!-- Step 2: Filled -->
         <template v-else>
-          <div style="text-align: center; padding: 20px 0 8px">
+          <div style="text-align:center;padding:20px 0 8px">
             <div class="success-circle">
-              <span class="pi pi-check" style="font-size: 32px" />
+              <span class="pi pi-check" style="font-size:32px" />
             </div>
-            <div class="mono" style="font-size: 22px; font-weight: 600; letter-spacing: -0.015em">
+            <div class="mono" style="font-size:22px;font-weight:600;letter-spacing:-0.015em">
               {{ isBuy ? '+' : '−' }}{{ data.amount }} {{ base }}
             </div>
-            <div class="muted" style="font-size: 13px">≈ ${{ data.total }} {{ quote }}</div>
+            <div class="muted" style="font-size:13px">≈ ${{ data.total }} {{ quote }}</div>
           </div>
-          <div class="flow-card" style="padding: 14px; margin-top: 14px">
+          <div class="flow-card" style="padding:14px;margin-top:14px">
             <div
               v-for="([label, value], i) in [
                 ['Tipo', `${data.orderType} · ${isBuy ? 'Compra' : 'Venta'}`],
@@ -165,13 +140,10 @@ const fillColor = computed(() => (isBuy.value ? 'var(--success)' : 'var(--danger
               ]"
               :key="label"
               class="detail-row"
-              :style="{
-                borderBottom: i < 5 ? '1px solid var(--border)' : 'none',
-                fontSize: '12px',
-              }"
+              :style="{ borderBottom: i < 5 ? '1px solid var(--border)' : 'none', fontSize: '12px' }"
             >
               <span class="muted">{{ label }}</span>
-              <span class="mono" style="font-weight: 500">{{ value }}</span>
+              <span class="mono" style="font-weight:500">{{ value }}</span>
             </div>
           </div>
         </template>
@@ -179,28 +151,21 @@ const fillColor = computed(() => (isBuy.value ? 'var(--success)' : 'var(--danger
 
       <div class="modal-f">
         <template v-if="step === 0">
-          <BaseButton variant="ghost" @click="emit('close')">Cancelar</BaseButton>
-          <BaseButton
+          <button class="btn" @click="emit('close')">Cancelar</button>
+          <button
+            class="btn btn-primary"
             :style="{ background: fillColor, borderColor: 'transparent' }"
-            variant="primary"
             @click="step = 1"
           >
             Confirmar {{ isBuy ? 'compra' : 'venta' }}
-          </BaseButton>
+          </button>
         </template>
         <template v-else-if="step === 1">
-          <BaseButton variant="ghost" @click="emit('close')">Cerrar (sigue corriendo)</BaseButton>
+          <button class="btn" @click="emit('close')">Cerrar (sigue corriendo)</button>
         </template>
         <template v-else>
-          <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
-          <BaseButton
-            variant="primary"
-            @click="
-              emit('complete')
-              emit('close')
-            "
-            >Ver en historial</BaseButton
-          >
+          <button class="btn" @click="emit('close')">Cerrar</button>
+          <button class="btn btn-primary" @click="emit('complete'); emit('close')">Ver en historial</button>
         </template>
       </div>
     </div>
