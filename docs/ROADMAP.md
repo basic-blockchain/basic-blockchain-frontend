@@ -322,7 +322,7 @@ stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
 | 7.6 | UserDrawer + WalletDrawer unification into one detail-panel pattern with breadcrumb-style entity nav. | pending | — |
 | 7.7 | ChainView / MempoolView / NodesView refresh. | pending | — |
 | 7.8 | Treasury distribution + dual-sign mint flows (consumer of `Stepper`; depends on new simulator endpoints proposed in DESIGN-v2 §7). | pending | — |
-| 7.9 | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView. | pending | — |
+| 7.9 | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView. | pending | — |
 
 **Iteration rules** (captured in DESIGN-v2 §6):
 - One screen or one base component per PR.
