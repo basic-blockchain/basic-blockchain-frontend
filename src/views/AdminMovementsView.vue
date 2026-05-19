@@ -4,6 +4,10 @@ import { getConfirmed, getPending } from '@/api/mempool'
 import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
 import { listAllWallets, listExchangeRates } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const QUOTE = 'USDT'
 
@@ -75,16 +79,29 @@ interface Row {
   timestamp?: string
 }
 
+interface MovementColumn {
+  key: string
+  label: string
+  num?: boolean
+}
+
+const movementColumns: MovementColumn[] = [
+  { key: 'type', label: 'Tipo' },
+  { key: 'sender', label: 'De' },
+  { key: 'receiver', label: 'Para' },
+  { key: 'amount', label: 'Monto', num: true },
+  { key: 'usd', label: 'USD', num: true },
+  { key: 'status', label: 'Estado' },
+  { key: 'when', label: 'Bloque / Cuando' },
+]
+
 function rowFromTx(
   t: Transaction & { blockIndex?: number; blockTimestamp?: string },
-  status: 'completed' | 'pending',
+  status: 'completed' | 'pending'
 ): Row {
   // Sender first — owner side carries the source currency; receiver
   // is the fallback (mint/coinbase rows have an empty sender wallet).
-  const currency =
-    pubkeyToCurrency.value[t.sender] ??
-    pubkeyToCurrency.value[t.receiver] ??
-    null
+  const currency = pubkeyToCurrency.value[t.sender] ?? pubkeyToCurrency.value[t.receiver] ?? null
   let amountUsd: number | null = null
   if (currency && rateByCurrency.value[currency] !== undefined) {
     const rate = rateByCurrency.value[currency]
@@ -107,7 +124,9 @@ const rows = computed<Row[]>(() => {
   const p: Row[] = pending.value.map((t) => rowFromTx(t, 'pending'))
   const all = [...p, ...c]
   const q = searchQuery.value.toLowerCase()
-  const filtered = q ? all.filter((r) => r.sender.toLowerCase().includes(q) || r.receiver.toLowerCase().includes(q)) : all
+  const filtered = q
+    ? all.filter((r) => r.sender.toLowerCase().includes(q) || r.receiver.toLowerCase().includes(q))
+    : all
   if (activeTab.value === 'pending') return filtered.filter((r) => r.status === 'pending')
   if (activeTab.value === 'confirmed') return filtered.filter((r) => r.status === 'completed')
   return filtered
@@ -122,6 +141,10 @@ function fmtUsd(value: number | null): string {
   return `$${value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+function statusTone(status: Row['status']): 'success' | 'warning' {
+  return status === 'completed' ? 'success' : 'warning'
+}
+
 onMounted(load)
 </script>
 
@@ -133,37 +156,62 @@ onMounted(load)
         <p>Historial consolidado · transacciones confirmadas y pendientes en la plataforma.</p>
       </div>
       <div class="page-h-actions">
-        <button class="btn-ghost" :disabled="loading" @click="load">
-          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          :loading="loading"
+          @click="load"
+        >
+          <template #leading>
+            <span
+              class="pi pi-refresh"
+              :class="{ 'pi-spin': loading }"
+              aria-hidden="true"
+            />
+          </template>
           Actualizar
-        </button>
+        </BaseButton>
       </div>
     </div>
 
     <!-- Big stats -->
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="bigstat-lb">Operaciones totales</div>
-        <div class="bigstat-vl">{{ stats.total.toLocaleString('es-AR') }}</div>
-        <div class="bigstat-ds">Confirmadas + pendientes</div>
-      </div>
-      <div class="bigstat">
-        <div class="bigstat-lb">Confirmadas</div>
-        <div class="bigstat-vl" style="color: var(--success)">{{ stats.confirmed.toLocaleString('es-AR') }}</div>
-        <div class="bigstat-ds">En bloques minados</div>
-      </div>
-      <div class="bigstat">
-        <div class="bigstat-lb">Pendientes</div>
-        <div class="bigstat-vl" :style="stats.pending > 0 ? { color: 'var(--warning)' } : {}">
-          {{ stats.pending }}
-        </div>
-        <div class="bigstat-ds">En mempool</div>
-      </div>
-      <div class="bigstat">
-        <div class="bigstat-lb">Mostrando</div>
-        <div class="bigstat-vl">{{ rows.length }}</div>
-        <div class="bigstat-ds">Con filtros actuales</div>
-      </div>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Operaciones totales</span>
+        </template>
+        {{ stats.total.toLocaleString('es-AR') }}
+        <template #footer>
+          Confirmadas + pendientes
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Confirmadas</span>
+        </template>
+        <span class="kpi-success">{{ stats.confirmed.toLocaleString('es-AR') }}</span>
+        <template #footer>
+          En bloques minados
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Pendientes</span>
+        </template>
+        <span :class="{ 'kpi-warning': stats.pending > 0 }">{{ stats.pending }}</span>
+        <template #footer>
+          En mempool
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Mostrando</span>
+        </template>
+        {{ rows.length }}
+        <template #footer>
+          Con filtros actuales
+        </template>
+      </BaseCard>
     </div>
 
     <!-- Toolbar -->
@@ -178,179 +226,303 @@ onMounted(load)
           :key="t.key"
           class="tab-btn"
           :class="{ active: activeTab === t.key }"
-          @click="activeTab = (t.key as 'all' | 'pending' | 'confirmed')"
+          @click="activeTab = t.key as 'all' | 'pending' | 'confirmed'"
         >
           {{ t.label }}
         </button>
       </div>
       <div class="toolbar-search">
-        <span class="pi pi-search" aria-hidden="true" />
-        <input v-model="searchQuery" placeholder="Buscar por sender, receiver o hash…" />
+        <span
+          class="pi pi-search"
+          aria-hidden="true"
+        />
+        <input
+          v-model="searchQuery"
+          placeholder="Buscar por sender, receiver o hash…"
+        >
       </div>
     </div>
 
     <!-- Table -->
-    <div v-if="loading" class="loading-row">
-      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+    <div
+      v-if="loading"
+      class="loading-row"
+    >
+      <span
+        class="pi pi-spin pi-spinner"
+        aria-hidden="true"
+      /> Cargando…
     </div>
-    <div v-else class="panel table-panel">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>De</th>
-            <th>Para</th>
-            <th class="num">Monto</th>
-            <th class="num">USD</th>
-            <th>Estado</th>
-            <th>Bloque / Cuando</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(r, i) in rows"
-            :key="i"
-            class="data-row"
-          >
-            <td>
-              <div class="mv-type">
-                <span class="mv-ic" :class="r.status === 'completed' ? 'mv-buy' : 'mv-pending'" aria-hidden="true">
-                  <span class="pi" :class="r.status === 'completed' ? 'pi-arrow-right' : 'pi-clock'" />
-                </span>
-                {{ r.status === 'completed' ? 'Transferencia' : 'Pendiente' }}
-              </div>
-            </td>
-            <td class="mono cell-addr">{{ truncate(r.sender) }}</td>
-            <td class="mono cell-addr">{{ truncate(r.receiver) }}</td>
-            <td class="num mono">
-              {{ r.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}
-              <span v-if="r.currency" class="cell-currency">{{ r.currency }}</span>
-            </td>
-            <td class="num mono usd-cell">
-              <template v-if="r.amountUsd !== null">{{ fmtUsd(r.amountUsd) }}</template>
-              <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
-            </td>
-            <td>
-              <span class="status-badge" :class="r.status">
-                {{ r.status === 'completed' ? 'Confirmado' : 'Pendiente' }}
-              </span>
-            </td>
-            <td class="text-dim mono">
-              <template v-if="r.blockIndex != null">Bloque #{{ r.blockIndex }}</template>
-              <template v-else-if="r.timestamp">{{ r.timestamp }}</template>
-              <template v-else>—</template>
-            </td>
-          </tr>
-          <tr v-if="rows.length === 0">
-            <td colspan="7" class="empty-row">Sin movimientos.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <BaseCard
+      v-else
+      class="table-panel"
+      variant="default"
+      padding="none"
+    >
+      <BaseTable
+        :columns="movementColumns"
+        :rows="rows"
+      >
+        <template #cell-type="{ row }">
+          <div class="mv-type">
+            <span
+              class="mv-ic"
+              :class="row.status === 'completed' ? 'mv-buy' : 'mv-pending'"
+              aria-hidden="true"
+            >
+              <span
+                class="pi"
+                :class="row.status === 'completed' ? 'pi-arrow-right' : 'pi-clock'"
+              />
+            </span>
+            {{ row.status === 'completed' ? 'Transferencia' : 'Pendiente' }}
+          </div>
+        </template>
+        <template #cell-sender="{ row }">
+          <span class="mono cell-addr">{{ truncate(row.sender) }}</span>
+        </template>
+        <template #cell-receiver="{ row }">
+          <span class="mono cell-addr">{{ truncate(row.receiver) }}</span>
+        </template>
+        <template #cell-amount="{ row }">
+          <span class="mono">
+            {{ row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}
+            <span
+              v-if="row.currency"
+              class="cell-currency"
+            >{{ row.currency }}</span>
+          </span>
+        </template>
+        <template #cell-usd="{ row }">
+          <span class="mono usd-cell">
+            <template v-if="row.amountUsd !== null">{{ fmtUsd(row.amountUsd) }}</template>
+            <span
+              v-else
+              class="usd-missing"
+              title="Sin tasa FX para esta moneda"
+            >—</span>
+          </span>
+        </template>
+        <template #cell-status="{ row }">
+          <BaseBadge :tone="statusTone(row.status)">
+            {{ row.status === 'completed' ? 'Confirmado' : 'Pendiente' }}
+          </BaseBadge>
+        </template>
+        <template #cell-when="{ row }">
+          <span class="text-dim mono">
+            <template v-if="row.blockIndex != null">Bloque #{{ row.blockIndex }}</template>
+            <template v-else-if="row.timestamp">{{ row.timestamp }}</template>
+            <template v-else>—</template>
+          </span>
+        </template>
+        <template #empty>
+          Sin movimientos.
+        </template>
+      </BaseTable>
+    </BaseCard>
   </div>
 </template>
 
 <style scoped>
-.movements-view { display: flex; flex-direction: column; gap: 14px; }
-
-.page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
-.page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
-.page-h-actions { display: flex; gap: 8px; }
-
-.btn-ghost {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 13px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: background 0.12s, color 0.12s; font-family: var(--font-sans);
+.movements-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-.btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
-.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.page-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.page-h h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.page-h-actions {
+  display: flex;
+  gap: 8px;
+}
 
 /* Big stats */
-.bigstat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.bigstat {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 16px 18px;
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
-.bigstat-lb { font-size: 11.5px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
-.bigstat-vl { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); line-height: 1; }
-.bigstat-ds { font-size: 11.5px; color: var(--text-2); margin-top: 6px; }
+.kpi-success {
+  color: var(--success);
+}
+.kpi-warning {
+  color: var(--warning);
+}
 
 /* Toolbar */
-.toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-.tabstrip-inline { display: flex; gap: 2px; }
-.tab-btn {
-  padding: 6px 12px; font-size: 12.5px; font-weight: 500;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); color: var(--text-2);
-  cursor: pointer; font-family: var(--font-sans); transition: background 0.12s, color 0.12s;
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
-.tab-btn:hover { background: var(--hover); color: var(--text); }
-.tab-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.tabstrip-inline {
+  display: flex;
+  gap: 2px;
+}
+.tab-btn {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.tab-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.tab-btn.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
 
 .toolbar-search {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 7px 10px; flex: 1; min-width: 200px;
-  color: var(--text-3); font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  flex: 1;
+  min-width: 200px;
+  color: var(--text-3);
+  font-size: 12.5px;
 }
 .toolbar-search input {
-  border: 0; outline: 0; background: transparent; flex: 1;
-  font: inherit; color: var(--text); font-family: var(--font-sans); font-size: 13px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  flex: 1;
+  font: inherit;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
 }
-.toolbar-search input::placeholder { color: var(--text-3); }
-.toolbar-search .pi { font-size: 12px; flex-shrink: 0; }
+.toolbar-search input::placeholder {
+  color: var(--text-3);
+}
+.toolbar-search .pi {
+  font-size: 12px;
+  flex-shrink: 0;
+}
 
-.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; padding: 16px; }
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+  padding: 16px;
+}
 
 /* Table */
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th {
-  text-align: left; padding: 8px 14px; font-size: 11.5px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); background: var(--surface-2);
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
-.data-table th.num, .data-table td.num { text-align: right; }
-.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
-.data-table tr:last-child td { border-bottom: none; }
-.data-row { cursor: default; transition: background 0.08s; }
-.data-row:hover { background: var(--hover); }
-
-.mono { font-family: var(--font-mono); font-size: 12px; }
-.text-dim { color: var(--text-3); }
-.cell-addr { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-dim {
+  color: var(--text-3);
+}
+.cell-addr {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cell-currency {
-  margin-left: 4px; font-size: 10.5px; font-weight: 500;
-  color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em;
+  margin-left: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.usd-cell { font-variant-numeric: tabular-nums; }
-.usd-missing { color: var(--text-3); }
-.empty-row { padding: 24px; text-align: center; color: var(--text-3); }
+.usd-cell {
+  font-variant-numeric: tabular-nums;
+}
+.usd-missing {
+  color: var(--text-3);
+}
 
 /* Movement type */
-.mv-type { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; }
+.mv-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
 .mv-ic {
-  width: 26px; height: 26px; border-radius: 50%;
-  display: grid; place-items: center; flex-shrink: 0; font-size: 11px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 11px;
 }
-.mv-buy    { background: var(--success-soft); color: var(--success); }
-.mv-sell   { background: var(--danger-soft);  color: var(--danger); }
-.mv-pending { background: var(--warning-soft); color: var(--warning); }
-.mv-dep    { background: var(--accent-soft);  color: var(--accent-text); }
-
-/* Status badge */
-.status-badge {
-  padding: 2px 8px; border-radius: 20px; font-size: 11.5px; font-weight: 500;
+.mv-buy {
+  background: var(--success-soft);
+  color: var(--success);
 }
-.status-badge.completed { background: var(--success-soft); color: var(--success); }
-.status-badge.pending   { background: var(--warning-soft); color: var(--warning); }
+.mv-sell {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.mv-pending {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.mv-dep {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
 
-@media (max-width: 900px) { .bigstat-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) {
+  .bigstat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 @media (max-width: 640px) {
-  .bigstat-row { grid-template-columns: 1fr; }
-  .page-h { flex-direction: column; align-items: flex-start; }
-  .data-table th:nth-child(7), .data-table td:nth-child(7) { display: none; }
+  .bigstat-row {
+    grid-template-columns: 1fr;
+  }
+  .page-h {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  :deep(.base-tbl__head th:nth-child(7)),
+  :deep(.base-tbl__body td:nth-child(7)) {
+    display: none;
+  }
 }
 </style>
