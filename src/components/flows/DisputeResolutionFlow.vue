@@ -99,9 +99,9 @@ const autoChecks = [
               {{ data.amount }} {{ data.asset }} · vía Mercado Pago · abierta hace 3h 56m
             </p>
           </div>
-          <button class="btn btn-icon btn-ghost" @click="emit('close')">
+          <BaseButton class="btn-icon" variant="ghost" @click="emit('close')">
             <span class="pi pi-times" />
-          </button>
+          </BaseButton>
         </div>
       </div>
 
@@ -247,21 +247,21 @@ const autoChecks = [
       </div>
 
       <div class="modal-f" style="flex-wrap: wrap; gap: 6px">
-        <button class="btn btn-danger" @click="resolve('buyer')">
+        <BaseButton variant="danger" @click="resolve('buyer')">
           <span class="pi pi-arrow-down" style="font-size: 11px" />
           Reembolsar al comprador
-        </button>
-        <button class="btn" @click="resolve('seller')">
+        </BaseButton>
+        <BaseButton variant="ghost" @click="resolve('seller')">
           <span class="pi pi-check" style="font-size: 11px" />
           Liberar al vendedor
-        </button>
-        <button class="btn" @click="resolve('split')">Dividir 50/50</button>
+        </BaseButton>
+        <BaseButton variant="ghost" @click="resolve('split')">Dividir 50/50</BaseButton>
         <div style="flex: 1" />
-        <button class="btn" @click="emit('close')">Cancelar</button>
-        <button class="btn btn-primary" @click="resolve('escalate')">
+        <BaseButton variant="ghost" @click="emit('close')">Cancelar</BaseButton>
+        <BaseButton variant="primary" @click="resolve('escalate')">
           <span class="pi pi-exclamation-triangle" style="font-size: 11px" />
           Escalar a legales
-        </button>
+        </BaseButton>
       </div>
     </div>
   </div>

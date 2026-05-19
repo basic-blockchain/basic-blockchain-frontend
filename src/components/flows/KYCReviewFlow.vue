@@ -130,9 +130,9 @@ const firstName = props.data.user.split(' ')[0]?.toUpperCase() ?? ''
             <span class="muted">SLA en 3h 12m</span>
           </div>
         </div>
-        <button class="btn btn-icon btn-ghost" @click="emit('close')">
+        <BaseButton class="btn-icon" variant="ghost" @click="emit('close')">
           <span class="pi pi-times" />
-        </button>
+        </BaseButton>
       </div>
 
       <div class="modal-b" style="padding-top: 4px">

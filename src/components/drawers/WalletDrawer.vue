@@ -41,7 +41,9 @@ const tab = ref<TabKey>('overview')
 
 watch(
   () => props.data?.wallet.wallet_id,
-  () => { tab.value = 'overview' },
+  () => {
+    tab.value = 'overview'
+  }
 )
 
 function copy(value: string) {
@@ -64,11 +66,15 @@ function emitAction(a: WalletDrawerAction) {
 
 const totalIn = computed(() => {
   if (!props.data) return 0
-  return props.data.movements.filter((m) => m.direction === 'in').reduce((s, m) => s + m.amountUsd, 0)
+  return props.data.movements
+    .filter((m) => m.direction === 'in')
+    .reduce((s, m) => s + m.amountUsd, 0)
 })
 const totalOut = computed(() => {
   if (!props.data) return 0
-  return props.data.movements.filter((m) => m.direction === 'out').reduce((s, m) => s + m.amountUsd, 0)
+  return props.data.movements
+    .filter((m) => m.direction === 'out')
+    .reduce((s, m) => s + m.amountUsd, 0)
 })
 
 function fmt(n: number): string {
@@ -81,26 +87,15 @@ function onOpenChange(value: boolean) {
 </script>
 
 <template>
-  <BaseDrawer
-    :open="open"
-    :width="640"
-    @update:open="onOpenChange"
-  >
+  <BaseDrawer :open="open" :width="640" @update:open="onOpenChange">
     <template v-if="data">
       <div class="drawer-head">
         <div class="head-row">
           <span class="mono id">{{ shortHash(data.wallet.wallet_id, 16, 8) }}</span>
-          <button
-            class="copy-btn"
-            aria-label="Copy wallet id"
-            @click="copy(data.wallet.wallet_id)"
-          >
+          <button class="copy-btn" aria-label="Copy wallet id" @click="copy(data.wallet.wallet_id)">
             <i class="pi pi-copy" />
           </button>
-          <span
-            class="bdg"
-            :class="data.wallet.frozen ? 'bdg-info' : 'bdg-active'"
-          >
+          <span class="bdg" :class="data.wallet.frozen ? 'bdg-info' : 'bdg-active'">
             {{ data.wallet.frozen ? 'Congelada' : 'Activa' }}
           </span>
           <span class="bdg bdg-pending_kyc">{{ data.wallet.wallet_type }}</span>
@@ -129,35 +124,35 @@ function onOpenChange(value: boolean) {
         </div>
 
         <div class="actions">
-          <BaseButton v-if="!data.wallet.frozen" variant="ghost" size="sm" :disabled="loading" @click="emitAction('freeze')">
+          <BaseButton
+            v-if="!data.wallet.frozen"
+            variant="ghost"
+            size="sm"
+            :disabled="loading"
+            @click="emitAction('freeze')"
+          >
             <i class="pi pi-lock" /> Congelar
           </BaseButton>
-          <BaseButton v-else variant="ghost" size="sm" :disabled="loading" @click="emitAction('unfreeze')">
+          <BaseButton
+            v-else
+            variant="ghost"
+            size="sm"
+            :disabled="loading"
+            @click="emitAction('unfreeze')"
+          >
             <i class="pi pi-lock-open" /> Descongelar
           </BaseButton>
         </div>
 
         <div class="tabs">
-          <button
-            class="tab"
-            :class="{ active: tab === 'overview' }"
-            @click="tab = 'overview'"
-          >
+          <button class="tab" :class="{ active: tab === 'overview' }" @click="tab = 'overview'">
             Resumen
           </button>
-          <button
-            class="tab"
-            :class="{ active: tab === 'movements' }"
-            @click="tab = 'movements'"
-          >
+          <button class="tab" :class="{ active: tab === 'movements' }" @click="tab = 'movements'">
             Movimientos
             <span class="count-badge sm">{{ data.movements.length }}</span>
           </button>
-          <button
-            class="tab"
-            :class="{ active: tab === 'audit' }"
-            @click="tab = 'audit'"
-          >
+          <button class="tab" :class="{ active: tab === 'audit' }" @click="tab = 'audit'">
             Auditoría
             <span class="count-badge sm">{{ data.audit.length }}</span>
           </button>
@@ -165,14 +160,8 @@ function onOpenChange(value: boolean) {
       </div>
 
       <div class="drawer-body">
-        <div
-          v-if="loading"
-          class="loading-row"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="loading" class="loading-row">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
 
         <!-- Overview -->
@@ -195,7 +184,9 @@ function onOpenChange(value: boolean) {
             </div>
             <div class="field-readout">
               <span class="field-label">Owner</span>
-              <span class="value">{{ data.wallet.display_name }} · @{{ data.wallet.username }}</span>
+              <span class="value"
+                >{{ data.wallet.display_name }} · @{{ data.wallet.username }}</span
+              >
             </div>
             <div class="field-readout">
               <span class="field-label">Currency</span>
@@ -209,62 +200,40 @@ function onOpenChange(value: boolean) {
 
           <div class="bigstat-row two">
             <div class="bigstat">
-              <div class="lb">
-                Entradas
-              </div>
+              <div class="lb">Entradas</div>
               <div class="vl">
                 {{ fmt(totalIn) }}
               </div>
-              <div class="ds">
-                recibidas
-              </div>
+              <div class="ds">recibidas</div>
             </div>
             <div class="bigstat">
-              <div class="lb">
-                Salidas
-              </div>
+              <div class="lb">Salidas</div>
               <div class="vl">
                 {{ fmt(totalOut) }}
               </div>
-              <div class="ds">
-                enviadas
-              </div>
+              <div class="ds">enviadas</div>
             </div>
           </div>
         </template>
 
         <!-- Movements -->
         <template v-if="tab === 'movements'">
-          <div
-            v-if="data.movements.length === 0 && !loading"
-            class="empty"
-          >
+          <div v-if="data.movements.length === 0 && !loading" class="empty">
             Sin movimientos para esta wallet.
           </div>
-          <table
-            v-else
-            class="tbl"
-          >
+          <table v-else class="tbl">
             <thead>
               <tr>
                 <th>Dir</th>
                 <th>Contraparte</th>
-                <th class="right">
-                  Monto
-                </th>
+                <th class="right">Monto</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="m in data.movements"
-                :key="m.id"
-              >
+              <tr v-for="m in data.movements" :key="m.id">
                 <td>
-                  <span
-                    class="dir-pill"
-                    :class="m.direction"
-                  >
+                  <span class="dir-pill" :class="m.direction">
                     {{ m.direction === 'in' ? 'IN' : 'OUT' }}
                   </span>
                 </td>
@@ -289,32 +258,17 @@ function onOpenChange(value: boolean) {
 
         <!-- Audit -->
         <template v-if="tab === 'audit'">
-          <div
-            v-if="data.audit.length === 0 && !loading"
-            class="empty"
-          >
+          <div v-if="data.audit.length === 0 && !loading" class="empty">
             Sin entradas de auditoría asociadas a esta wallet.
           </div>
-          <ul
-            v-else
-            class="audit-list"
-          >
-            <li
-              v-for="e in data.audit"
-              :key="e.id"
-              class="audit-item"
-            >
+          <ul v-else class="audit-list">
+            <li v-for="e in data.audit" :key="e.id" class="audit-item">
               <div class="audit-head">
                 <span class="audit-action">{{ e.action }}</span>
                 <span class="audit-time muted">{{ e.at }}</span>
               </div>
-              <div class="audit-actor mono">
-                por {{ e.actor }}
-              </div>
-              <div
-                v-if="e.meta"
-                class="audit-meta mono"
-              >
+              <div class="audit-actor mono">por {{ e.actor }}</div>
+              <div v-if="e.meta" class="audit-meta mono">
                 {{ e.meta }}
               </div>
             </li>
