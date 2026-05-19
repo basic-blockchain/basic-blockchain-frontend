@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import BaseButton from '@/components/atoms/BaseButton.vue'
 import Stepper, { type Step } from '@/components/atoms/Stepper.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 export interface TreasuryData {
   source: string
@@ -93,9 +93,12 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
               Requiere doble aprobación (2 de 5 administradores).
             </p>
           </div>
-            <BaseButton class="btn-icon" variant="ghost" @click="emit('close')">
-              <span class="pi pi-times" />
-            </BaseButton>
+          <button
+            class="btn btn-icon btn-ghost"
+            @click="emit('close')"
+          >
+            <span class="pi pi-times" />
+          </button>
         </div>
         <Stepper
           :steps="stepsWithStatus"
@@ -121,32 +124,89 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
             style="padding:14px"
           >
             <div
-          <div class="modal-f">
-            <template v-if="step === 0">
-              <BaseButton variant="ghost" @click="emit('close')">Cancelar</BaseButton>
-              <BaseButton variant="primary" @click="step = 1">Firmar y enviar</BaseButton>
-            </template>
-            <template v-else-if="step === 1">
-              <BaseButton variant="ghost" @click="step = 0">Atrás</BaseButton>
-              <BaseButton variant="primary" :disabled="!pwd" @click="step = 2">Firmar operación</BaseButton>
-            </template>
-            <template v-else-if="step === 2">
-              <BaseButton variant="ghost" @click="emit('close')">Cerrar (queda en cola)</BaseButton>
-              <BaseButton v-if="!approver2Signed && cancelledStep === null" variant="danger" @click="cancel">Cancelar operación</BaseButton>
-              <BaseButton v-if="!approver2Signed && cancelledStep === null" variant="primary" @click="approver2Signed = true">
-                <span style="font-size:10.5px;font-weight:400;margin-right:6px;color:rgba(250,249,246,0.65)">(demo)</span>
-                Simular firma de Sergio
-              </BaseButton>
-              <BaseButton v-else-if="approver2Signed && cancelledStep === null" variant="primary" @click="step = 3">Ejecutar ahora</BaseButton>
-            </template>
-            <template v-else-if="step === 3">
-              <BaseButton variant="ghost" @click="emit('close')">Cerrar (sigue corriendo)</BaseButton>
-            </template>
-            <template v-else>
-              <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
-              <BaseButton variant="primary" @click="emit('complete'); emit('close')">Ver en auditoría</BaseButton>
-            </template>
+              v-for="([label, value], i) in [
+                ['Operación', 'Distribución a usuarios (lote)'],
+                ['Origen', `${data.source} · 4.8M disponible`],
+                ['Destino', data.destination],
+                ['Monto total', `${data.amount} ${data.asset}`],
+                ['Por wallet', `${data.perWallet} ${data.asset}`],
+                ['Valor USD', `≈ $${data.amount} USD`],
+                ['Solicitante', 'admin@cadena.io'],
+              ]"
+              :key="label"
+              class="detail-row"
+              :style="{ borderBottom: i < 6 ? '1px solid var(--border)' : 'none', fontSize: '12.5px' }"
+            >
+              <span class="muted">{{ label }}</span>
+              <span
+                class="mono"
+                style="font-weight:500"
+              >{{ value }}</span>
+            </div>
           </div>
+
+          <div class="warn-box warn-box-info">
+            <span
+              class="pi pi-shield"
+              style="font-size:14px;flex-shrink:0;margin-top:1px"
+            />
+            <div>
+              <b>Política de aprobación dual.</b> Esta operación va a la cola hasta que un segundo administrador firme.
+              Si nadie firma en 24 h, expira.
+            </div>
+          </div>
+        </template>
+
+        <!-- Step 1: Sign -->
+        <template v-else-if="step === 1">
+          <div style="text-align:center;padding:8px 0 16px">
+            <div class="lock-icon">
+              <span
+                class="pi pi-lock"
+                style="font-size:22px"
+              />
+            </div>
+            <div style="font-size:16px;font-weight:600">
+              Firmá la operación
+            </div>
+            <div
+              class="muted"
+              style="font-size:12.5px;margin-top:4px"
+            >
+              Ingresá tu clave de transacción + código del autenticador.
+            </div>
+          </div>
+          <div class="fld">
+            <label>Clave de transacción</label>
+            <input
+              v-model="pwd"
+              type="password"
+              placeholder="••••••••••"
+              autofocus
+            >
+          </div>
+          <div class="fld">
+            <label>Código 2FA</label>
+            <div class="otp-grid">
+              <div
+                v-for="d in ['4','9','2','7','1','3']"
+                :key="d"
+                class="otp-cell filled"
+                style="pointer-events:none"
+              >
+                {{ d }}
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Steps 2-3: Waiting / Executing -->
+        <template v-else-if="step === 2 || step === 3">
+          <div style="text-align:center;padding:8px 0 16px">
+            <div
+              class="status-icon"
+              :class="approver2Signed ? 'signed' : 'waiting'"
+            >
               <div
                 v-if="!approver2Signed"
                 class="spinner"
@@ -251,32 +311,89 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
             style="padding:14px;margin-top:14px"
           >
             <div
-              <div class="modal-f">
-                <template v-if="step === 0">
-                  <BaseButton variant="ghost" @click="emit('close')">Cancelar</BaseButton>
-                  <BaseButton variant="primary" @click="step = 1">Firmar y enviar</BaseButton>
-                </template>
-                <template v-else-if="step === 1">
-                  <BaseButton variant="ghost" @click="step = 0">Atrás</BaseButton>
-                  <BaseButton variant="primary" :disabled="!pwd" @click="step = 2">Firmar operación</BaseButton>
-                </template>
-                <template v-else-if="step === 2">
-                  <BaseButton variant="ghost" @click="emit('close')">Cerrar (queda en cola)</BaseButton>
-                  <BaseButton v-if="!approver2Signed && cancelledStep === null" variant="danger" @click="cancel">Cancelar operación</BaseButton>
-                  <BaseButton v-if="!approver2Signed && cancelledStep === null" variant="primary" @click="approver2Signed = true">
-                    <span style="font-size:10.5px;font-weight:400;margin-right:6px;color:rgba(250,249,246,0.65)">(demo)</span>
-                    Simular firma de Sergio
-                  </BaseButton>
-                  <BaseButton v-else-if="approver2Signed && cancelledStep === null" variant="primary" @click="step = 3">Ejecutar ahora</BaseButton>
-                </template>
-                <template v-else-if="step === 3">
-                  <BaseButton variant="ghost" @click="emit('close')">Cerrar (sigue corriendo)</BaseButton>
-                </template>
-                <template v-else>
-                  <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
-                  <BaseButton variant="primary" @click="emit('complete'); emit('close')">Ver en auditoría</BaseButton>
-                </template>
-              </div>
+              v-for="([label, value], i) in [
+                ['Wallets impactadas', '41'],
+                ['Total emitido', `${data.amount} ${data.asset}`],
+                ['Comisión de red', '0.0021 ETH ≈ $7.25'],
+                ['Firmas', 'María A. · Sergio R.'],
+                ['Hash de aprobación', '0xa8c4…11e9'],
+                ['Anclado en auditoría', '✓ inmutable'],
+              ]"
+              :key="label"
+              class="detail-row"
+              :style="{ borderBottom: i < 5 ? '1px solid var(--border)' : 'none', fontSize: '12.5px' }"
+            >
+              <span class="muted">{{ label }}</span>
+              <span
+                class="mono"
+                style="font-weight:500"
+              >{{ value }}</span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="modal-f">
+        <template v-if="step === 0">
+          <button
+            class="btn"
+            @click="emit('close')"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn btn-primary"
+            @click="step = 1"
+          >
+            Firmar y enviar
+          </button>
+        </template>
+        <template v-else-if="step === 1">
+          <button
+            class="btn"
+            @click="step = 0"
+          >
+            Atrás
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="!pwd"
+            @click="step = 2"
+          >
+            Firmar operación
+          </button>
+        </template>
+        <template v-else-if="step === 2">
+          <button
+            class="btn"
+            @click="emit('close')"
+          >
+            Cerrar (queda en cola)
+          </button>
+          <BaseButton
+            v-if="!approver2Signed && cancelledStep === null"
+            variant="danger"
+            @click="cancel"
+          >
+            Cancelar operación
+          </BaseButton>
+          <button
+            v-if="!approver2Signed && cancelledStep === null"
+            class="btn btn-primary"
+            @click="approver2Signed = true"
+          >
+            <span style="font-size:10.5px;font-weight:400;margin-right:6px;color:rgba(250,249,246,0.65)">(demo)</span>
+            Simular firma de Sergio
+          </button>
+          <button
+            v-else-if="approver2Signed && cancelledStep === null"
+            class="btn btn-primary"
+            @click="step = 3"
+          >
+            Ejecutar ahora
+          </button>
+        </template>
+        <template v-else-if="step === 3">
           <button
             class="btn"
             @click="emit('close')"
