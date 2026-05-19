@@ -8,6 +8,8 @@ import { useNodesStore } from '@/stores/nodes'
 import { validateTransaction } from '@/domain/transaction'
 import { useToast } from '@/composables/useToast'
 import { useValidationHistoryStore } from '@/stores/validationHistory'
+import BaseButton from '@/components/atoms/BaseButton.vue'
+import BaseCard from '@/components/atoms/BaseCard.vue'
 
 const chainStore = useChainStore()
 const nodesStore = useNodesStore()
@@ -26,9 +28,7 @@ const selectedBlock = computed(() => {
   return chainStore.blocks.find((b) => b.index === blockForm.index) ?? null
 })
 
-const blockNotFound = computed(
-  () => blockForm.index !== null && selectedBlock.value === null,
-)
+const blockNotFound = computed(() => blockForm.index !== null && selectedBlock.value === null)
 
 const blockChecks = computed(() => {
   if (!selectedBlock.value) return []
@@ -68,7 +68,7 @@ const nodeChecks = computed(() => {
 })
 
 const txHasInput = computed(
-  () => txForm.sender.trim() !== '' || txForm.receiver.trim() !== '' || txForm.amount !== null,
+  () => txForm.sender.trim() !== '' || txForm.receiver.trim() !== '' || txForm.amount !== null
 )
 
 const txChecks = computed(() => {
@@ -135,10 +135,10 @@ onMounted(async () => {
         <p>Verificación de integridad de la cadena, bloques y transacciones</p>
       </div>
       <div class="page-actions">
-        <button
-          class="btn btn-primary"
-          type="button"
-          :disabled="loadingChainValidation"
+        <BaseButton
+          variant="primary"
+          size="sm"
+          :loading="loadingChainValidation"
           @click="validateCurrentChain"
         >
           <span
@@ -147,49 +147,55 @@ onMounted(async () => {
             aria-hidden="true"
           />
           Validar cadena
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           v-if="historyStore.total > 0"
-          class="btn btn-ghost"
-          type="button"
+          variant="ghost"
+          size="sm"
           @click="downloadHistory"
         >
           <span class="pi pi-download" aria-hidden="true" />
           Exportar historial
-        </button>
+        </BaseButton>
       </div>
     </div>
 
     <!-- KPI bigstat row -->
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Validaciones</div>
-        <div class="vl">{{ historyStore.total }}</div>
-        <div class="ds">en esta sesión</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Cadena</div>
-        <div class="vl" :class="chainValidation === null ? '' : chainValidation.valid ? 'vl-ok' : 'vl-err'">
+      <BaseCard variant="bigstat">
+        <template #header> Validaciones </template>
+        {{ historyStore.total }}
+        <template #footer> en esta sesión </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header> Cadena </template>
+        <span :class="chainValidation === null ? '' : chainValidation.valid ? 'vl-ok' : 'vl-err'">
           {{ chainValidation === null ? '—' : chainValidation.valid ? 'Válida' : 'Inválida' }}
-        </div>
-        <div class="ds">último resultado</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Correctas</div>
-        <div class="vl vl-ok">{{ historyStore.events.filter((e: any) => e.status === 'valid').length }}</div>
-        <div class="ds">validaciones OK</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Fallidas</div>
-        <div class="vl" :class="historyStore.events.filter((e: any) => e.status !== 'valid').length > 0 ? 'vl-err' : ''">
+        </span>
+        <template #footer> último resultado </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header> Correctas </template>
+        <span class="vl-ok">{{
+          historyStore.events.filter((e: any) => e.status === 'valid').length
+        }}</span>
+        <template #footer> validaciones OK </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header> Fallidas </template>
+        <span
+          :class="
+            historyStore.events.filter((e: any) => e.status !== 'valid').length > 0 ? 'vl-err' : ''
+          "
+        >
           {{ historyStore.events.filter((e: any) => e.status !== 'valid').length }}
-        </div>
-        <div class="ds">errores o inválidas</div>
-      </div>
+        </span>
+        <template #footer> errores o inválidas </template>
+      </BaseCard>
     </div>
 
     <!-- Chain status -->
-    <section class="panel">
+    <BaseCard variant="default" padding="none">
       <div class="panel-h">Estado de la cadena</div>
       <div class="chain-status-body">
         <div
@@ -198,21 +204,31 @@ onMounted(async () => {
         >
           <span
             class="pi"
-            :class="chainValidation?.valid ? 'pi-check-circle' : chainValidation ? 'pi-times-circle' : 'pi-circle'"
+            :class="
+              chainValidation?.valid
+                ? 'pi-check-circle'
+                : chainValidation
+                  ? 'pi-times-circle'
+                  : 'pi-circle'
+            "
             aria-hidden="true"
           />
           <span>
-            {{ chainValidation ? chainValidation.message : 'Ejecuta la validación para verificar la integridad de la cadena.' }}
+            {{
+              chainValidation
+                ? chainValidation.message
+                : 'Ejecuta la validación para verificar la integridad de la cadena.'
+            }}
           </span>
         </div>
         <p class="endpoint-note">Endpoint: <code>/valid</code></p>
       </div>
-    </section>
+    </BaseCard>
 
     <!-- Validation grid -->
     <div class="val-grid">
       <!-- Block validation -->
-      <section class="panel">
+      <BaseCard variant="default" padding="none">
         <div class="panel-h">Validación de bloque</div>
         <div class="panel-body">
           <InputNumber
@@ -228,7 +244,11 @@ onMounted(async () => {
               class="check-item"
               :class="check.ok ? 'ok' : 'fail'"
             >
-              <span class="pi" :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'" aria-hidden="true" />
+              <span
+                class="pi"
+                :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'"
+                aria-hidden="true"
+              />
               <span>{{ check.label }}</span>
             </div>
           </div>
@@ -240,17 +260,13 @@ onMounted(async () => {
             Ingresa un índice (1–{{ chainStore.length || '?' }}) para inspeccionar el bloque.
           </p>
         </div>
-      </section>
+      </BaseCard>
 
       <!-- Node validation -->
-      <section class="panel">
+      <BaseCard variant="default" padding="none">
         <div class="panel-h">Validación de nodo</div>
         <div class="panel-body">
-          <InputText
-            v-model="nodeForm.url"
-            placeholder="http://peer:5000"
-            class="val-input"
-          />
+          <InputText v-model="nodeForm.url" placeholder="http://peer:5000" class="val-input" />
           <div v-if="nodeChecks.length > 0" class="check-list">
             <div
               v-for="check in nodeChecks"
@@ -258,16 +274,20 @@ onMounted(async () => {
               class="check-item"
               :class="check.ok ? 'ok' : 'fail'"
             >
-              <span class="pi" :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'" aria-hidden="true" />
+              <span
+                class="pi"
+                :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'"
+                aria-hidden="true"
+              />
               <span>{{ check.label }}</span>
             </div>
           </div>
           <p v-else class="hint">Ingresa una URL para evaluar su formato y estado de registro.</p>
         </div>
-      </section>
+      </BaseCard>
 
       <!-- TX validation -->
-      <section class="panel tx-panel">
+      <BaseCard variant="default" padding="none" class="tx-panel">
         <div class="panel-h">Validación de transacción</div>
         <div class="panel-body">
           <div class="tx-grid">
@@ -288,17 +308,23 @@ onMounted(async () => {
               class="check-item"
               :class="check.ok ? 'ok' : 'fail'"
             >
-              <span class="pi" :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'" aria-hidden="true" />
+              <span
+                class="pi"
+                :class="check.ok ? 'pi-check-circle' : 'pi-times-circle'"
+                aria-hidden="true"
+              />
               <span>{{ check.label }}</span>
             </div>
           </div>
-          <p v-else class="hint">Rellena sender, receiver y amount para validar las reglas de negocio.</p>
+          <p v-else class="hint">
+            Rellena sender, receiver y amount para validar las reglas de negocio.
+          </p>
         </div>
-      </section>
+      </BaseCard>
     </div>
 
     <!-- Validation history -->
-    <section v-if="historyStore.total > 0" class="panel">
+    <BaseCard v-if="historyStore.total > 0" variant="default" padding="none">
       <div class="panel-h">
         <span>Historial de validaciones</span>
         <span class="count-badge sm">{{ historyStore.total }}</span>
@@ -327,7 +353,7 @@ onMounted(async () => {
           <span class="ev-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
         </div>
       </div>
-    </section>
+    </BaseCard>
   </div>
 </template>
 
@@ -357,7 +383,10 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--text-2);
 }
-.page-actions { display: flex; gap: 8px; }
+.page-actions {
+  display: flex;
+  gap: 8px;
+}
 
 /* Bigstat KPI row */
 .bigstat-row {
@@ -365,25 +394,14 @@ onMounted(async () => {
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
-.bigstat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+.vl-ok {
+  color: var(--success);
 }
-.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
-.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
-.ds { font-size: 11.5px; color: var(--text-3); }
-.vl-ok  { color: var(--success); }
-.vl-err { color: var(--danger); }
+.vl-err {
+  color: var(--danger);
+}
 
 /* Panels */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
 .panel-h {
   display: flex;
   align-items: center;
@@ -397,10 +415,20 @@ onMounted(async () => {
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
 }
-.panel-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.panel-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 /* Chain status */
-.chain-status-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.chain-status-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .chain-result {
   display: flex;
   align-items: center;
@@ -412,11 +440,32 @@ onMounted(async () => {
   color: var(--text-2);
   background: var(--surface-2);
 }
-.chain-result.ok   { border-color: var(--success); background: var(--success-soft); color: var(--success); }
-.chain-result.fail { border-color: var(--danger);  background: var(--danger-soft);  color: var(--danger);  }
-.chain-result .pi  { font-size: 15px; flex-shrink: 0; }
-.endpoint-note { font-size: 12px; color: var(--text-3); margin: 0; }
-.endpoint-note code { font-family: var(--font-mono); background: var(--surface-2); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); }
+.chain-result.ok {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.chain-result.fail {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.chain-result .pi {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.endpoint-note {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 0;
+}
+.endpoint-note code {
+  font-family: var(--font-mono);
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
 
 /* Grid */
 .val-grid {
@@ -424,10 +473,14 @@ onMounted(async () => {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.tx-panel { grid-column: 1 / -1; }
+.tx-panel {
+  grid-column: 1 / -1;
+}
 
 /* Inputs */
-.val-input { width: 100%; }
+.val-input {
+  width: 100%;
+}
 .tx-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -435,7 +488,11 @@ onMounted(async () => {
 }
 
 /* Check lists */
-.check-list { display: flex; flex-direction: column; gap: 6px; }
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .check-item {
   display: flex;
   align-items: center;
@@ -447,9 +504,20 @@ onMounted(async () => {
   background: var(--surface-2);
   color: var(--text-2);
 }
-.check-item.ok   { border-color: var(--success); background: var(--success-soft); color: var(--success); }
-.check-item.fail { border-color: var(--danger);  background: var(--danger-soft);  color: var(--danger);  }
-.check-item .pi  { font-size: 13px; flex-shrink: 0; }
+.check-item.ok {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.check-item.fail {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.check-item .pi {
+  font-size: 13px;
+  flex-shrink: 0;
+}
 
 .inline-alert {
   display: flex;
@@ -460,9 +528,17 @@ onMounted(async () => {
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
-.inline-alert.fail { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
+.inline-alert.fail {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
 
-.hint { font-size: 13px; color: var(--text-3); margin: 0; }
+.hint {
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 0;
+}
 
 /* History */
 .history-list {
@@ -479,15 +555,38 @@ onMounted(async () => {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
 }
-.history-item:last-child { border-bottom: none; }
-.history-item.valid   { background: var(--success-soft); }
-.history-item.invalid { background: var(--danger-soft); }
-.history-item.error   { background: var(--warning-soft); }
-.history-icon { font-size: 14px; flex-shrink: 0; }
-.history-item.valid   .history-icon { color: var(--success); }
-.history-item.invalid .history-icon { color: var(--danger); }
-.history-item.error   .history-icon { color: var(--warning); }
-.history-body { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; align-items: center; }
+.history-item:last-child {
+  border-bottom: none;
+}
+.history-item.valid {
+  background: var(--success-soft);
+}
+.history-item.invalid {
+  background: var(--danger-soft);
+}
+.history-item.error {
+  background: var(--warning-soft);
+}
+.history-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.history-item.valid .history-icon {
+  color: var(--success);
+}
+.history-item.invalid .history-icon {
+  color: var(--danger);
+}
+.history-item.error .history-icon {
+  color: var(--warning);
+}
+.history-body {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+}
 .ev-type {
   font-size: 11px;
   font-weight: 600;
@@ -498,16 +597,37 @@ onMounted(async () => {
   padding: 1px 6px;
   border-radius: 4px;
 }
-.ev-target { color: var(--text-2); }
-.ev-message { color: var(--text); }
-.ev-time { color: var(--text-3); font-size: 12px; margin-left: auto; flex-shrink: 0; }
+.ev-target {
+  color: var(--text-2);
+}
+.ev-message {
+  color: var(--text);
+}
+.ev-time {
+  color: var(--text-3);
+  font-size: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
 
-.count-badge.sm { font-size: 11px; padding: 1px 7px; }
+.count-badge.sm {
+  font-size: 11px;
+  padding: 1px 7px;
+}
 
 @media (max-width: 900px) {
-  .val-grid  { grid-template-columns: 1fr; }
-  .tx-grid   { grid-template-columns: 1fr; }
-  .tx-panel  { grid-column: auto; }
-  .page-h    { flex-direction: column; align-items: flex-start; }
+  .val-grid {
+    grid-template-columns: 1fr;
+  }
+  .tx-grid {
+    grid-template-columns: 1fr;
+  }
+  .tx-panel {
+    grid-column: auto;
+  }
+  .page-h {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
