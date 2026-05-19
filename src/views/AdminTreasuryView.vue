@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { listAllWallets, createTreasuryWallet, listCurrencies, type WalletAdminRecord, type CurrencyRecord } from '@/api/admin'
+import {
+  listAllWallets,
+  createTreasuryWallet,
+  listCurrencies,
+  type WalletAdminRecord,
+  type CurrencyRecord,
+} from '@/api/admin'
 import HashChip from '@/components/atoms/HashChip.vue'
 import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
 import { useToast } from 'primevue/usetoast'
@@ -47,10 +53,20 @@ async function createTreasury() {
   creating.value = true
   try {
     await createTreasuryWallet(selectedCurrency.value)
-    toast.add({ severity: 'success', summary: 'Wallet de tesorería creada', detail: selectedCurrency.value, life: 3000 })
+    toast.add({
+      severity: 'success',
+      summary: 'Wallet de tesorería creada',
+      detail: selectedCurrency.value,
+      life: 3000,
+    })
     await load()
   } catch (e: unknown) {
-    toast.add({ severity: 'error', summary: 'Error al crear', detail: e instanceof Error ? e.message : 'Error', life: 4000 })
+    toast.add({
+      severity: 'error',
+      summary: 'Error al crear',
+      detail: e instanceof Error ? e.message : 'Error',
+      life: 4000,
+    })
   } finally {
     creating.value = false
   }
@@ -60,13 +76,59 @@ onMounted(load)
 
 const treasuryFlowData = ref<TreasuryData | null>(null)
 
+const treasurySourceWallet = computed(
+  () =>
+    treasuryWallets.value.find((w) => w.currency === 'USDT' && w.wallet_type === 'TREASURY') ??
+    treasuryWallets.value[0] ??
+    null
+)
+
+const treasuryRecipients = computed(() => {
+  const sourceCurrency = treasurySourceWallet.value?.currency
+  if (!sourceCurrency) {
+    return []
+  }
+
+  return wallets.value.filter((w) => w.wallet_type === 'USER' && w.currency === sourceCurrency)
+})
+
 function openDistribution() {
+  const source = treasurySourceWallet.value
+  const recipients = treasuryRecipients.value
+
+  if (!source) {
+    toast.add({
+      severity: 'error',
+      summary: 'Sin wallet de tesorería',
+      detail: 'No hay una wallet de tesorería disponible para distribuir.',
+      life: 4000,
+    })
+    return
+  }
+  if (!recipients.length) {
+    toast.add({
+      severity: 'error',
+      summary: 'Sin destinatarios',
+      detail: 'No hay wallets de usuarios compatibles con esa moneda.',
+      life: 4000,
+    })
+    return
+  }
+
+  const totalBalance = Number(source.balance)
+  const recipientCount = recipients.length
+  const perWallet = Math.max(1, Math.min(5000, Math.floor(totalBalance / recipientCount)))
+  const totalAmount = perWallet * recipientCount
+
   treasuryFlowData.value = {
-    source: 'USDT Treasury',
-    destination: '41 wallets de usuarios activos',
-    amount: '205,000',
-    perWallet: '5,000',
-    asset: 'USDT',
+    source: `${source.currency} Treasury`,
+    destination: `${recipientCount} wallets de usuarios activos`,
+    amount: totalAmount.toLocaleString('es-ES'),
+    perWallet: perWallet.toLocaleString('es-ES'),
+    asset: source.currency,
+    source_wallet_id: source.wallet_id,
+    recipient_user_ids: recipients.map((w) => w.user_id),
+    currency: source.currency,
   }
 }
 
@@ -94,19 +156,8 @@ function rowKey(w: WalletAdminRecord): string {
         <p>Wallets de reserva de la plataforma por moneda</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="openDistribution"
-        >
-          Distribuir
-        </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" @click="openDistribution"> Distribuir </BaseButton>
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           Actualizar
         </BaseButton>
       </div>
@@ -119,144 +170,89 @@ function rowKey(w: WalletAdminRecord): string {
           <span>Wallets tesorería</span>
         </template>
         {{ totalTreasury }}
-        <template #footer>
-          wallets activas
-        </template>
+        <template #footer> wallets activas </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Monedas</span>
         </template>
         {{ currencies_count }}
-        <template #footer>
-          tipos distintos
-        </template>
+        <template #footer> tipos distintos </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Balance NATIVE</span>
         </template>
         {{ totalNative }}
-        <template #footer>
-          NATIVE en reserva
-        </template>
+        <template #footer> NATIVE en reserva </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Estado</span>
         </template>
         {{ loading ? 'Cargando' : 'OK' }}
-        <template #footer>
-          sincronizado
-        </template>
+        <template #footer> sincronizado </template>
       </BaseCard>
     </div>
 
     <!-- Create treasury panel -->
-    <BaseCard
-      variant="default"
-      padding="default"
-    >
+    <BaseCard variant="default" padding="default">
       <template #header>
-        <div class="section-h">
-          Crear wallet de tesorería
-        </div>
+        <div class="section-h">Crear wallet de tesorería</div>
       </template>
       <div class="inline-form">
         <div class="field">
-          <label
-            class="field-label"
-            for="currency"
-          >Moneda</label>
+          <label class="field-label" for="currency">Moneda</label>
           <select
             id="currency"
             v-model="selectedCurrency"
             class="field-select"
             :disabled="creating"
           >
-            <option
-              v-for="c in currencies"
-              :key="c.code"
-              :value="c.code"
-            >
+            <option v-for="c in currencies" :key="c.code" :value="c.code">
               {{ c.code }} · {{ c.name }}
             </option>
           </select>
         </div>
-        <BaseButton
-          variant="primary"
-          :loading="creating"
-          @click="createTreasury"
-        >
+        <BaseButton variant="primary" :loading="creating" @click="createTreasury">
           Crear
         </BaseButton>
       </div>
     </BaseCard>
 
     <!-- Treasury wallets table -->
-    <BaseCard
-      variant="default"
-      padding="none"
-    >
+    <BaseCard variant="default" padding="none">
       <template #header>
         <div class="panel-h">
           <span>Wallets de tesorería</span>
           <span class="count-badge sm">{{ treasuryWallets.length }}</span>
         </div>
       </template>
-      <div
-        v-if="loading"
-        class="loading-row"
-      >
-        <span
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        /> Cargando…
+      <div v-if="loading" class="loading-row">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <BaseTable
-        v-else
-        :columns="treasuryColumns"
-        :rows="treasuryWallets"
-        :row-key="rowKey"
-      >
+      <BaseTable v-else :columns="treasuryColumns" :rows="treasuryWallets" :row-key="rowKey">
         <template #cell-wallet_id="{ row }">
           <span class="mono">
-            <HashChip
-              :hash="row.wallet_id"
-              :length="16"
-              label="wallet id"
-            />
+            <HashChip :hash="row.wallet_id" :length="16" label="wallet id" />
           </span>
         </template>
         <template #cell-currency="{ row }">
-          <BaseBadge
-            variant="outline"
-            tone="warning"
-          >
+          <BaseBadge variant="outline" tone="warning">
             {{ row.currency }}
           </BaseBadge>
         </template>
         <template #cell-balance="{ row }">
           <span class="mono">
-            <AmountDisplay
-              :amount="Number(row.balance)"
-              :precision="8"
-              :unit="row.currency"
-            />
+            <AmountDisplay :amount="Number(row.balance)" :precision="8" :unit="row.currency" />
           </span>
         </template>
         <template #cell-pub_key="{ row }">
           <span class="mono text-dim">
-            <HashChip
-              :hash="row.public_key"
-              :length="14"
-              label="public key"
-            />
+            <HashChip :hash="row.public_key" :length="14" label="public key" />
           </span>
         </template>
-        <template #empty>
-          Sin wallets de tesorería todavía.
-        </template>
+        <template #empty> Sin wallets de tesorería todavía. </template>
       </BaseTable>
     </BaseCard>
   </div>
