@@ -103,6 +103,33 @@ All CI checks must be green before a PR can merge.
 
 ---
 
+## Local validation before pushing
+
+Run `npm run build` as the **last** step before `git push` — not as an
+intermediate check.
+
+`npm run build` runs `vue-tsc --noEmit && vite build`. `vue-tsc` reads
+`tsconfig.json`, which includes `src/**/*.ts`, `src/**/*.vue`, **and**
+`tests/**/*.ts` (the include list is the source of truth). A typecheck
+run earlier in the flow does NOT cover files added after that point —
+the test files for a new component, the snapshot helpers, etc. CI
+catches these, but a final local `npm run build` saves the round trip.
+
+The minimum local gate before pushing a feature branch:
+
+```bash
+npm run build              # vue-tsc + vite, covers src/ and tests/
+npx vitest run             # full suite (host the new tests + regressions)
+npx eslint <new files> --max-warnings 0   # lint clean on what you wrote
+```
+
+Repo-wide `npx eslint src tests --max-warnings 0` is NOT the gate —
+the codebase carries ~2,400 pre-existing warnings that get fixed in
+their own PR/branch per CLAUDE.md ("Doing tasks" rule). Lint only the
+files your branch changed.
+
+---
+
 ## DevSecOps Scripts
 
 | Script                                     | Purpose                                                         |

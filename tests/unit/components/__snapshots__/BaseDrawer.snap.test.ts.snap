@@ -1,0 +1,43 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BaseDrawer snapshots > renders the default right-anchored drawer at 720px 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-drawer-right" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--drawer-right" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--drawer-right" role="dialog" aria-modal="true" style="width: 720px; max-width: 96vw;" tabindex="-1">
+        <!--v-if-->
+        <div data-v-78c0434b="" class="base-modal__body">Drawer body</div>
+        <!--v-if-->
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;
+
+exports[`BaseDrawer snapshots > renders the left-anchored drawer 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-drawer-left" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--drawer-left" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--drawer-left" role="dialog" aria-modal="true" style="width: 720px; max-width: 96vw;" tabindex="-1">
+        <!--v-if-->
+        <div data-v-78c0434b="" class="base-modal__body">Drawer body</div>
+        <!--v-if-->
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;
+
+exports[`BaseDrawer snapshots > renders with a custom width 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-drawer-right" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--drawer-right" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--drawer-right" role="dialog" aria-modal="true" style="width: 480px; max-width: 96vw;" tabindex="-1">
+        <!--v-if-->
+        <div data-v-78c0434b="" class="base-modal__body">Drawer body</div>
+        <!--v-if-->
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;
