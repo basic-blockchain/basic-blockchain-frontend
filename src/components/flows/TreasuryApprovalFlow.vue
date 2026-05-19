@@ -20,11 +20,15 @@ const approver2Signed = ref(false)
 const progress = ref(0)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-// Phase 7.8: rejection path. When a second approver rejects, that
-// step's status flips to 'error' in the Stepper. Local UX state only;
-// backend wiring (POST /api/v1/admin/treasury/distribute/.../reject)
-// lands in Phase 7.8.1 alongside the simulator endpoints.
-const rejectedStep = ref<number | null>(null)
+// Phase 7.8: cancellation path. The simulator's treasury state
+// machine is `pending_approval → executed | cancelled` — there is
+// no rejection by second approver; instead, the INITIATOR can
+// cancel via POST /api/v1/admin/treasury/distribute/<op_id>/cancel
+// (BR-TR-06). This local state mirrors that semantics: a
+// "Cancelar" affordance flips the current Stepper step to error,
+// shows a "Operación cancelada" banner. Backend wiring lands in
+// Phase 7.8.1.
+const cancelledStep = ref<number | null>(null)
 
 const baseSteps: Step[] = [
   { key: 'review', label: 'Revisar' },
@@ -35,12 +39,12 @@ const baseSteps: Step[] = [
 
 const stepsWithStatus = computed<Step[]>(() =>
   baseSteps.map((s, i) =>
-    i === rejectedStep.value ? { ...s, status: 'error' as const } : s,
+    i === cancelledStep.value ? { ...s, status: 'error' as const } : s,
   ),
 )
 
-function reject() {
-  rejectedStep.value = step.value
+function cancel() {
+  cancelledStep.value = step.value
 }
 
 watch(step, (s) => {
@@ -101,14 +105,14 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
           :current="Math.min(step, 3)"
         />
         <div
-          v-if="rejectedStep !== null"
+          v-if="cancelledStep !== null"
           class="reject-banner"
         >
           <span
             class="pi pi-times-circle"
             aria-hidden="true"
           />
-          <span>Operación rechazada. Cerrá esta ventana para volver al panel.</span>
+          <span>Operación cancelada por el iniciador. Cerrá esta ventana para volver al panel.</span>
         </div>
       </div>
 
@@ -367,14 +371,14 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
             Cerrar (queda en cola)
           </button>
           <BaseButton
-            v-if="!approver2Signed && rejectedStep === null"
+            v-if="!approver2Signed && cancelledStep === null"
             variant="danger"
-            @click="reject"
+            @click="cancel"
           >
-            Rechazar
+            Cancelar operación
           </BaseButton>
           <button
-            v-if="!approver2Signed && rejectedStep === null"
+            v-if="!approver2Signed && cancelledStep === null"
             class="btn btn-primary"
             @click="approver2Signed = true"
           >
@@ -382,7 +386,7 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
             Simular firma de Sergio
           </button>
           <button
-            v-else-if="approver2Signed && rejectedStep === null"
+            v-else-if="approver2Signed && cancelledStep === null"
             class="btn btn-primary"
             @click="step = 3"
           >
