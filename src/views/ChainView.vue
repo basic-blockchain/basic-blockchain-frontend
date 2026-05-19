@@ -3,6 +3,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useChainStore } from '@/stores/chain'
 import { formatHash, type Block } from '@/domain/block'
 import MineBlockFlow, { type MineBlockData } from '@/components/flows/MineBlockFlow.vue'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const chainStore = useChainStore()
 const showMineFlow = ref(false)
@@ -65,6 +69,26 @@ const mineData = computed<MineBlockData>(() => ({
   pendingCount: 3,
   prevHash: chainStore.latestBlock?.previousHash ?? '',
 }))
+
+interface TxColumn {
+  key: string
+  label: string
+  num?: boolean
+}
+const txColumns: TxColumn[] = [
+  { key: 'sender', label: 'De' },
+  { key: 'receiver', label: 'Para' },
+  { key: 'amount', label: 'Monto', num: true },
+]
+
+interface BlockTxRow {
+  sender: string
+  receiver: string
+  amount: string | number
+}
+function txRowKey(t: BlockTxRow): string {
+  return `${t.sender}-${t.receiver}-${t.amount}`
+}
 </script>
 
 <template>
@@ -77,50 +101,83 @@ const mineData = computed<MineBlockData>(() => ({
         </p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-sm" @click="chainStore.fetchChain()">
-          <i class="pi pi-refresh" />
-          <span>Sincronizar</span>
-        </button>
-        <button class="btn btn-sm btn-primary" @click="showMineFlow = true">
-          <span>⛏</span>
-          <span>Minar bloque</span>
-        </button>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          @click="chainStore.fetchChain()"
+        >
+          Sincronizar
+        </BaseButton>
+        <BaseButton
+          variant="primary"
+          size="sm"
+          @click="showMineFlow = true"
+        >
+          Minar bloque
+        </BaseButton>
       </div>
     </div>
 
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Altura</div>
-        <div class="vl">{{ heightLabel }}</div>
-        <div class="ds">{{ chainStore.length }} bloques</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Tiempo medio</div>
-        <div class="vl">5m 42s</div>
-        <div class="ds">objetivo: 6m</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Dificultad</div>
-        <div class="vl">{{ chainStore.latestBlock?.proof ?? '—' }}</div>
-        <div class="ds">nonce · PoW</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Último bloque</div>
-        <div class="vl">{{ latestTime }}</div>
-        <div class="ds">timestamp on-chain</div>
-      </div>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Altura</span>
+        </template>
+        {{ heightLabel }}
+        <template #footer>
+          {{ chainStore.length }} bloques
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Tiempo medio</span>
+        </template>
+        5m 42s
+        <template #footer>
+          objetivo: 6m
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Dificultad</span>
+        </template>
+        {{ chainStore.latestBlock?.proof ?? '—' }}
+        <template #footer>
+          nonce · PoW
+        </template>
+      </BaseCard>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Último bloque</span>
+        </template>
+        {{ latestTime }}
+        <template #footer>
+          timestamp on-chain
+        </template>
+      </BaseCard>
     </div>
 
-    <div v-if="chainStore.loading" class="loading-wrap">
+    <div
+      v-if="chainStore.loading"
+      class="loading-wrap"
+    >
       <div class="spinner" />
     </div>
 
-    <div v-else class="explorer">
-      <div class="flow-card">
-        <div class="list-h">
-          <span>Bloques recientes</span>
-          <span class="muted">{{ chainStore.length }} bloques</span>
-        </div>
+    <div
+      v-else
+      class="explorer"
+    >
+      <BaseCard
+        variant="default"
+        padding="none"
+      >
+        <template #header>
+          <div class="list-h">
+            <span>Bloques recientes</span>
+            <span class="muted">{{ chainStore.length }} bloques</span>
+          </div>
+        </template>
         <div class="list-body">
           <div
             v-for="b in reversedBlocks"
@@ -136,59 +193,88 @@ const mineData = computed<MineBlockData>(() => ({
               #{{ b.index }}
             </div>
             <div class="bi">
-              <div class="mono small">PREV {{ formatHash(b.previousHash, 8) }}</div>
-              <div class="mono small">MERKLE {{ formatHash(b.merkleRoot, 8) }}</div>
+              <div class="mono small">
+                PREV {{ formatHash(b.previousHash, 8) }}
+              </div>
+              <div class="mono small">
+                MERKLE {{ formatHash(b.merkleRoot, 8) }}
+              </div>
             </div>
             <div class="bs">
               <div>{{ b.transactions.length }} tx · proof {{ b.proof }}</div>
-              <div class="muted xs">{{ timeAgo(b.timestamp) }}</div>
+              <div class="muted xs">
+                {{ timeAgo(b.timestamp) }}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </BaseCard>
 
-      <div class="flow-card detail">
+      <BaseCard
+        variant="default"
+        padding="default"
+      >
         <template v-if="selectedBlock">
           <div class="detail-h">
-            <div class="hash-box mono">#{{ selectedBlock.index }}</div>
+            <div class="hash-box mono">
+              #{{ selectedBlock.index }}
+            </div>
             <div class="grow">
-              <div class="title">Bloque #{{ selectedBlock.index }}</div>
+              <div class="title">
+                Bloque #{{ selectedBlock.index }}
+              </div>
               <div class="muted small">
                 {{ selectedBlock.timestamp }} · minado proof {{ selectedBlock.proof }}
               </div>
             </div>
-            <span class="bdg bdg-active">Confirmado</span>
+            <BaseBadge tone="success">
+              Confirmado
+            </BaseBadge>
           </div>
 
           <div class="kvs">
-            <div v-for="(row, i) in kvs" :key="row[0]" class="kv" :class="{ last: i === kvs.length - 1 }">
+            <div
+              v-for="(row, i) in kvs"
+              :key="row[0]"
+              class="kv"
+              :class="{ last: i === kvs.length - 1 }"
+            >
               <span class="muted">{{ row[0] }}</span>
               <span class="mono">{{ row[1] }}</span>
             </div>
           </div>
 
-          <div v-if="selectedBlock.transactions.length" class="txs">
-            <div class="section-h">Transacciones</div>
-            <table class="tbl">
-              <thead>
-                <tr>
-                  <th>De</th>
-                  <th>Para</th>
-                  <th class="num">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(tx, i) in selectedBlock.transactions" :key="i">
-                  <td class="mono small">{{ tx.sender }}</td>
-                  <td class="mono small">{{ tx.receiver }}</td>
-                  <td class="num mono">{{ tx.amount }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div
+            v-if="selectedBlock.transactions.length"
+            class="txs"
+          >
+            <div class="section-h">
+              Transacciones
+            </div>
+            <BaseTable
+              :columns="txColumns"
+              :rows="selectedBlock.transactions"
+              :row-key="txRowKey"
+            >
+              <template #cell-sender="{ row }">
+                <span class="mono small">{{ row.sender }}</span>
+              </template>
+              <template #cell-receiver="{ row }">
+                <span class="mono small">{{ row.receiver }}</span>
+              </template>
+              <template #cell-amount="{ row }">
+                <span class="mono">{{ row.amount }}</span>
+              </template>
+            </BaseTable>
           </div>
         </template>
-        <div v-else class="empty muted">Selecciona un bloque para ver el detalle.</div>
-      </div>
+        <div
+          v-else
+          class="empty muted"
+        >
+          Selecciona un bloque para ver el detalle.
+        </div>
+      </BaseCard>
     </div>
 
     <MineBlockFlow
@@ -233,29 +319,6 @@ const mineData = computed<MineBlockData>(() => ({
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
-.bigstat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-}
-.lb {
-  font-size: 11.5px;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.vl {
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 4px 0;
-  color: var(--text);
-}
-.ds {
-  font-size: 11.5px;
-  color: var(--text-3);
-}
 .explorer {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
@@ -263,12 +326,12 @@ const mineData = computed<MineBlockData>(() => ({
 }
 .list-h {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: 600;
   color: var(--text);
+  border-bottom: 1px solid var(--border);
 }
 .list-body {
   max-height: 460px;
@@ -303,9 +366,6 @@ const mineData = computed<MineBlockData>(() => ({
   font-size: 10.5px;
   margin-top: 2px;
 }
-.detail {
-  padding: 16px;
-}
 .detail-h {
   display: flex;
   gap: 10px;
@@ -333,6 +393,16 @@ const mineData = computed<MineBlockData>(() => ({
 .small {
   font-size: 11.5px;
 }
+.muted {
+  color: var(--text-3);
+}
+.mono {
+  font-family: var(--font-mono);
+}
+.xs {
+  font-size: 10.5px;
+  margin-top: 2px;
+}
 .kvs {
   display: flex;
   flex-direction: column;
@@ -354,21 +424,6 @@ const mineData = computed<MineBlockData>(() => ({
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 14px 0 8px;
-}
-.txs .tbl {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.tbl th,
-.tbl td {
-  text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-}
-.tbl th.num,
-.tbl td.num {
-  text-align: right;
 }
 .empty {
   padding: 40px;

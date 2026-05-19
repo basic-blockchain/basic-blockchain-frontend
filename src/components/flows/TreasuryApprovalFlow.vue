@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
-import Stepper from '@/components/atoms/Stepper.vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
+import Stepper, { type Step } from '@/components/atoms/Stepper.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 export interface TreasuryData {
   source: string
@@ -19,7 +20,32 @@ const approver2Signed = ref(false)
 const progress = ref(0)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-const steps = ['Revisar', 'Firmar', '2ª aprobación', 'Ejecutado']
+// Phase 7.8: cancellation path. The simulator's treasury state
+// machine is `pending_approval → executed | cancelled` — there is
+// no rejection by second approver; instead, the INITIATOR can
+// cancel via POST /api/v1/admin/treasury/distribute/<op_id>/cancel
+// (BR-TR-06). This local state mirrors that semantics: a
+// "Cancelar" affordance flips the current Stepper step to error,
+// shows a "Operación cancelada" banner. Backend wiring lands in
+// Phase 7.8.1.
+const cancelledStep = ref<number | null>(null)
+
+const baseSteps: Step[] = [
+  { key: 'review', label: 'Revisar' },
+  { key: 'sign', label: 'Firmar' },
+  { key: 'approve', label: '2ª aprobación' },
+  { key: 'execute', label: 'Ejecutado' },
+]
+
+const stepsWithStatus = computed<Step[]>(() =>
+  baseSteps.map((s, i) =>
+    i === cancelledStep.value ? { ...s, status: 'error' as const } : s,
+  ),
+)
+
+function cancel() {
+  cancelledStep.value = step.value
+}
 
 watch(step, (s) => {
   if (s === 3) {
@@ -48,23 +74,55 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
 </script>
 
 <template>
-  <div class="modal-scrim" @click.self="emit('close')">
-    <div class="modal" style="width:600px">
-      <div class="modal-h" style="padding-bottom:18px">
+  <div
+    class="modal-scrim"
+    @click.self="emit('close')"
+  >
+    <div
+      class="modal"
+      style="width:600px"
+    >
+      <div
+        class="modal-h"
+        style="padding-bottom:18px"
+      >
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <h2>Distribución de tesorería</h2>
-            <p style="margin-top:4px">Requiere doble aprobación (2 de 5 administradores).</p>
+            <p style="margin-top:4px">
+              Requiere doble aprobación (2 de 5 administradores).
+            </p>
           </div>
-          <button class="btn btn-icon btn-ghost" @click="emit('close')"><span class="pi pi-times" /></button>
+          <button
+            class="btn btn-icon btn-ghost"
+            @click="emit('close')"
+          >
+            <span class="pi pi-times" />
+          </button>
         </div>
-        <Stepper :steps="steps" :current="Math.min(step, 3)" />
+        <Stepper
+          :steps="stepsWithStatus"
+          :current="Math.min(step, 3)"
+        />
+        <div
+          v-if="cancelledStep !== null"
+          class="reject-banner"
+        >
+          <span
+            class="pi pi-times-circle"
+            aria-hidden="true"
+          />
+          <span>Operación cancelada por el iniciador. Cerrá esta ventana para volver al panel.</span>
+        </div>
       </div>
 
       <div class="modal-b">
         <!-- Step 0: Review -->
         <template v-if="step === 0">
-          <div class="flow-card" style="padding:14px">
+          <div
+            class="flow-card"
+            style="padding:14px"
+          >
             <div
               v-for="([label, value], i) in [
                 ['Operación', 'Distribución a usuarios (lote)'],
@@ -80,12 +138,18 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
               :style="{ borderBottom: i < 6 ? '1px solid var(--border)' : 'none', fontSize: '12.5px' }"
             >
               <span class="muted">{{ label }}</span>
-              <span class="mono" style="font-weight:500">{{ value }}</span>
+              <span
+                class="mono"
+                style="font-weight:500"
+              >{{ value }}</span>
             </div>
           </div>
 
           <div class="warn-box warn-box-info">
-            <span class="pi pi-shield" style="font-size:14px;flex-shrink:0;margin-top:1px" />
+            <span
+              class="pi pi-shield"
+              style="font-size:14px;flex-shrink:0;margin-top:1px"
+            />
             <div>
               <b>Política de aprobación dual.</b> Esta operación va a la cola hasta que un segundo administrador firme.
               Si nadie firma en 24 h, expira.
@@ -96,18 +160,42 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
         <!-- Step 1: Sign -->
         <template v-else-if="step === 1">
           <div style="text-align:center;padding:8px 0 16px">
-            <div class="lock-icon"><span class="pi pi-lock" style="font-size:22px" /></div>
-            <div style="font-size:16px;font-weight:600">Firmá la operación</div>
-            <div class="muted" style="font-size:12.5px;margin-top:4px">Ingresá tu clave de transacción + código del autenticador.</div>
+            <div class="lock-icon">
+              <span
+                class="pi pi-lock"
+                style="font-size:22px"
+              />
+            </div>
+            <div style="font-size:16px;font-weight:600">
+              Firmá la operación
+            </div>
+            <div
+              class="muted"
+              style="font-size:12.5px;margin-top:4px"
+            >
+              Ingresá tu clave de transacción + código del autenticador.
+            </div>
           </div>
           <div class="fld">
             <label>Clave de transacción</label>
-            <input v-model="pwd" type="password" placeholder="••••••••••" autofocus />
+            <input
+              v-model="pwd"
+              type="password"
+              placeholder="••••••••••"
+              autofocus
+            >
           </div>
           <div class="fld">
             <label>Código 2FA</label>
             <div class="otp-grid">
-              <div v-for="d in ['4','9','2','7','1','3']" :key="d" class="otp-cell filled" style="pointer-events:none">{{ d }}</div>
+              <div
+                v-for="d in ['4','9','2','7','1','3']"
+                :key="d"
+                class="otp-cell filled"
+                style="pointer-events:none"
+              >
+                {{ d }}
+              </div>
             </div>
           </div>
         </template>
@@ -119,16 +207,27 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
               class="status-icon"
               :class="approver2Signed ? 'signed' : 'waiting'"
             >
-              <div v-if="!approver2Signed" class="spinner" style="width:22px;height:22px" />
-              <span v-else class="pi pi-check" style="font-size:20px" />
+              <div
+                v-if="!approver2Signed"
+                class="spinner"
+                style="width:22px;height:22px"
+              />
+              <span
+                v-else
+                class="pi pi-check"
+                style="font-size:20px"
+              />
             </div>
             <div style="font-size:16px;font-weight:600">
               {{ step === 3 ? 'Ejecutando en blockchain…' : approver2Signed ? 'Ambas firmas listas' : 'Esperando 2ª aprobación' }}
             </div>
-            <div class="muted" style="font-size:12.5px;margin-top:4px">
+            <div
+              class="muted"
+              style="font-size:12.5px;margin-top:4px"
+            >
               {{ step === 3 ? 'Emitiendo a 41 wallets · podés cerrar este modal'
                 : approver2Signed ? 'Tocá "Ejecutar ahora" para emitir'
-                : 'Sergio R. y Daniela K. están en línea' }}
+                  : 'Sergio R. y Daniela K. están en línea' }}
             </div>
           </div>
 
@@ -139,16 +238,37 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
               class="approver-row"
               :style="{ borderBottom: i < approvers.length - 1 ? '1px solid var(--border)' : 'none' }"
             >
-              <div class="approver-avatar">{{ a.name[0] }}</div>
+              <div class="approver-avatar">
+                {{ a.name[0] }}
+              </div>
               <div style="flex:1">
-                <div style="font-size:13px;font-weight:500">{{ a.name }} <span v-if="a.me" class="muted" style="font-weight:400">(vos)</span></div>
-                <div class="muted mono" style="font-size:11px">{{ a.email }}</div>
+                <div style="font-size:13px;font-weight:500">
+                  {{ a.name }} <span
+                    v-if="a.me"
+                    class="muted"
+                    style="font-weight:400"
+                  >(vos)</span>
+                </div>
+                <div
+                  class="muted mono"
+                  style="font-size:11px"
+                >
+                  {{ a.email }}
+                </div>
               </div>
               <div style="text-align:right">
-                <span class="bdg" :class="a.status === 'signed' ? 'bdg-active' : a.status === 'pending' ? 'bdg-pending_kyc' : 'bdg-deleted'">
+                <span
+                  class="bdg"
+                  :class="a.status === 'signed' ? 'bdg-active' : a.status === 'pending' ? 'bdg-pending_kyc' : 'bdg-deleted'"
+                >
                   {{ a.status === 'signed' ? 'Firmado' : a.status === 'pending' ? 'Notificado' : '—' }}
                 </span>
-                <div class="muted" style="font-size:10.5px;margin-top:3px">{{ a.when }}</div>
+                <div
+                  class="muted"
+                  style="font-size:10.5px;margin-top:3px"
+                >
+                  {{ a.when }}
+                </div>
               </div>
             </div>
           </div>
@@ -159,7 +279,10 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
               <span>{{ Math.floor(progress) }}%</span>
             </div>
             <div class="progress-track">
-              <div class="progress-fill success" :style="{ width: progress + '%' }" />
+              <div
+                class="progress-fill success"
+                :style="{ width: progress + '%' }"
+              />
             </div>
           </template>
         </template>
@@ -168,12 +291,25 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
         <template v-else>
           <div style="text-align:center;padding:20px 0 8px">
             <div class="success-circle">
-              <span class="pi pi-check" style="font-size:32px" />
+              <span
+                class="pi pi-check"
+                style="font-size:32px"
+              />
             </div>
-            <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px">Operación ejecutada</div>
-            <div class="muted" style="font-size:13px">41 wallets recibieron {{ data.perWallet }} {{ data.asset }} · TX 0x4f1a…d77e</div>
+            <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px">
+              Operación ejecutada
+            </div>
+            <div
+              class="muted"
+              style="font-size:13px"
+            >
+              41 wallets recibieron {{ data.perWallet }} {{ data.asset }} · TX 0x4f1a…d77e
+            </div>
           </div>
-          <div class="flow-card" style="padding:14px;margin-top:14px">
+          <div
+            class="flow-card"
+            style="padding:14px;margin-top:14px"
+          >
             <div
               v-for="([label, value], i) in [
                 ['Wallets impactadas', '41'],
@@ -188,7 +324,10 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
               :style="{ borderBottom: i < 5 ? '1px solid var(--border)' : 'none', fontSize: '12.5px' }"
             >
               <span class="muted">{{ label }}</span>
-              <span class="mono" style="font-weight:500">{{ value }}</span>
+              <span
+                class="mono"
+                style="font-weight:500"
+              >{{ value }}</span>
             </div>
           </div>
         </template>
@@ -196,27 +335,85 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
 
       <div class="modal-f">
         <template v-if="step === 0">
-          <button class="btn" @click="emit('close')">Cancelar</button>
-          <button class="btn btn-primary" @click="step = 1">Firmar y enviar</button>
+          <button
+            class="btn"
+            @click="emit('close')"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn btn-primary"
+            @click="step = 1"
+          >
+            Firmar y enviar
+          </button>
         </template>
         <template v-else-if="step === 1">
-          <button class="btn" @click="step = 0">Atrás</button>
-          <button class="btn btn-primary" :disabled="!pwd" @click="step = 2">Firmar operación</button>
+          <button
+            class="btn"
+            @click="step = 0"
+          >
+            Atrás
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="!pwd"
+            @click="step = 2"
+          >
+            Firmar operación
+          </button>
         </template>
         <template v-else-if="step === 2">
-          <button class="btn" @click="emit('close')">Cerrar (queda en cola)</button>
-          <button v-if="!approver2Signed" class="btn btn-primary" @click="approver2Signed = true">
+          <button
+            class="btn"
+            @click="emit('close')"
+          >
+            Cerrar (queda en cola)
+          </button>
+          <BaseButton
+            v-if="!approver2Signed && cancelledStep === null"
+            variant="danger"
+            @click="cancel"
+          >
+            Cancelar operación
+          </BaseButton>
+          <button
+            v-if="!approver2Signed && cancelledStep === null"
+            class="btn btn-primary"
+            @click="approver2Signed = true"
+          >
             <span style="font-size:10.5px;font-weight:400;margin-right:6px;color:rgba(250,249,246,0.65)">(demo)</span>
             Simular firma de Sergio
           </button>
-          <button v-else class="btn btn-primary" @click="step = 3">Ejecutar ahora</button>
+          <button
+            v-else-if="approver2Signed && cancelledStep === null"
+            class="btn btn-primary"
+            @click="step = 3"
+          >
+            Ejecutar ahora
+          </button>
         </template>
         <template v-else-if="step === 3">
-          <button class="btn" @click="emit('close')">Cerrar (sigue corriendo)</button>
+          <button
+            class="btn"
+            @click="emit('close')"
+          >
+            Cerrar (sigue corriendo)
+          </button>
         </template>
         <template v-else>
-          <button class="btn" @click="emit('close')">Cerrar</button>
-          <button class="btn btn-primary" @click="emit('complete'); emit('close')">Ver en auditoría</button>
+          <button
+            class="btn"
+            @click="emit('close')"
+          >
+            Cerrar
+          </button>
+          <button
+            class="btn btn-primary"
+            @click="emit('complete'); emit('close')"
+          >
+            Ver en auditoría
+          </button>
         </template>
       </div>
     </div>
@@ -224,6 +421,18 @@ const confirmations = () => Math.floor(progress.value / 100 * 12)
 </template>
 
 <style scoped>
+.reject-banner {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .detail-row {
   display: flex;
   align-items: center;

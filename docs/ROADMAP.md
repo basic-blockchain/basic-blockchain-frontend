@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-17 (Phase 6j admin consistency — Phase 6 closed)
+Last updated: 2026-05-17 (Phase 7.0 design-v2 contract opens)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -306,10 +306,30 @@ ISO timestamp on soft-delete.
 
 ## 3. In flight
 
-*(nothing — the batch from May 2026 is fully landed.)*
+### Phase 7 — Cadena v2
 
-When the next phase opens, this section gets the corresponding PR
-references and an honest list of what's still open.
+**Goal**: visual + UX refresh against the same backend / framework
+stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
+
+| Sub-phase | Step | Status | PR |
+| --- | --- | --- | --- |
+| 7.0 | DESIGN-v2.md contract + token deltas (`--surface-3`, `--radius-pill`, `--space-*`, `--duration-*`, `--ease-*`) added to `src/assets/design-system.css`. Additive only — every v1 component keeps rendering. | in flight | _TBD_ |
+| 7.1 | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`, consolidated `AddrChip`/`AssetPill`). Each one a separate PR. | pending | — |
+| 7.2 | Login / Register migration. | pending | — |
+| 7.3 | AdminView dashboard refresh. | pending | — |
+| 7.4 | AdminUsersView (row-actions, bulk-action footer). | pending | — |
+| 7.5 | AdminWalletsView (USD/native toggle, row-actions). | pending | — |
+| 7.6 | UserDrawer + WalletDrawer unification into one detail-panel pattern with breadcrumb-style entity nav. | pending | — |
+| 7.7 | ChainView / MempoolView / NodesView refresh. | pending | — |
+| 7.8 | Treasury distribution + dual-sign mint flows (consumer of `Stepper`; depends on new simulator endpoints proposed in DESIGN-v2 §7). | pending | — |
+| 7.9 | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView. | pending | — |
+
+**Iteration rules** (captured in DESIGN-v2 §6):
+- One screen or one base component per PR.
+- Route filenames stay; the file is rewritten in place.
+- Tokens before components; components before screens.
+- No dead code at merge — v1 file deleted in the same commit as v2 lands.
+- Promotion chain runs at milestone boundaries (every 2–3 migrations), not after every PR.
 
 ---
 
@@ -394,15 +414,8 @@ review") and rules BR-KY-09..16 in business-rules.md.
     flags already rendered on the admin Users table). Selection is
     optional; empty submits behave as before.
 
-### Phase 7 — Interactive iteration ("Cadena v2")
-
-**Goal**: the next visual system mentioned in `propuesta_refactorizacion/`
-that adds interactive flows spanning multiple panels, revamped table
-chrome with bulk actions, segmented filters, deeper drawer composition.
-
-- Reference prototypes: `provisional/local-artifacts` branch (not
-  merged) — JSX prototypes preserved as design reference only.
-- Will get its own `DESIGN-v2.md` when work starts.
+*(Phase 7 was promoted from §5 Backlog to §3 In flight when the
+DESIGN-v2 contract opened. See §3.)*
 
 ---
 

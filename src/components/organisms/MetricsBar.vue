@@ -1,9 +1,27 @@
 <script setup lang="ts">
 import type { Metrics, Health } from '@/domain/metrics'
-import StatusBadge from '@/components/atoms/StatusBadge.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import MetricTile from '@/components/molecules/MetricTile.vue'
 
 defineProps<{ metrics: Metrics | null; health: Health | null }>()
+
+const HEALTH_LABEL: Record<string, string> = {
+  ok: 'Operativo',
+  degraded: 'Degradado',
+  error: 'Error',
+  'n/a': 'N/D',
+}
+
+function healthTone(status: string | null | undefined): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'ok') return 'success'
+  if (status === 'degraded') return 'warning'
+  if (status === 'error') return 'danger'
+  return 'neutral'
+}
+function healthLabel(status: string | null | undefined): string {
+  if (!status) return 'N/D'
+  return HEALTH_LABEL[status] ?? status
+}
 </script>
 
 <template>
@@ -30,10 +48,12 @@ defineProps<{ metrics: Metrics | null; health: Health | null }>()
       unit="s"
     />
     <div class="metric status-metric">
-      <StatusBadge
+      <BaseBadge
         v-if="health"
-        :status="health.status"
-      />
+        :tone="healthTone(health.status)"
+      >
+        {{ healthLabel(health.status) }}
+      </BaseBadge>
       <span
         v-else
         class="dash"
@@ -43,10 +63,12 @@ defineProps<{ metrics: Metrics | null; health: Health | null }>()
       </div>
     </div>
     <div class="metric status-metric">
-      <StatusBadge
+      <BaseBadge
         v-if="health"
-        :status="health.db"
-      />
+        :tone="healthTone(health.db)"
+      >
+        {{ healthLabel(health.db) }}
+      </BaseBadge>
       <span
         v-else
         class="dash"

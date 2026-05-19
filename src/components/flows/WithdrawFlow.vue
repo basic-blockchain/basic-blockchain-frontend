@@ -21,7 +21,12 @@ const otpInputs = ref<HTMLInputElement[]>([])
 
 const fee = '4.20'
 const network = computed(() => props.data.network ?? 'Ethereum (ERC-20)')
-const steps = ['Datos', 'Verificar', '2FA', 'Enviado']
+const steps = [
+  { key: 'data', label: 'Datos' },
+  { key: 'verify', label: 'Verificar' },
+  { key: '2fa', label: '2FA' },
+  { key: 'sent', label: 'Enviado' },
+]
 const addrMatches = computed(() => pasted.value.length > 0 && pasted.value === addr.value)
 const otpFilled = computed(() => otp.value.every((d) => d.length === 1))
 const totalDebit = computed(() => (parseFloat(amount.value.replace(',', '') || '0') + parseFloat(fee)).toFixed(2))
