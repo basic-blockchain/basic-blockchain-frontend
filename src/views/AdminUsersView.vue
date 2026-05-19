@@ -19,6 +19,11 @@ import WalletDrawer, {
 import { freezeWallet, unfreezeWallet } from '@/api/admin'
 import ConfirmUserModal from '@/components/modals/ConfirmUserModal.vue'
 import type { UserAction, ConfirmUserTarget } from '@/components/modals/ConfirmUserModal.vue'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseModal from '@/components/atoms/BaseModal.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const users = ref<AdminUser[]>([])
 const wallets = ref<WalletAdminRecord[]>([])
@@ -27,6 +32,12 @@ const error = ref('')
 
 const editTarget = ref<AdminUser | null>(null)
 const editForm = ref({ display_name: '', email: '' })
+const editOpen = computed({
+  get: () => editTarget.value !== null,
+  set: (open: boolean) => {
+    if (!open) editTarget.value = null
+  },
+})
 
 const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget; userId: string } | null>(null)
 
@@ -108,11 +119,6 @@ const kpis = computed(() => {
     if (hasPendingKyc(u)) kycPending += 1
     if (hasFrozenWallets(u.user_id)) restricted += 1
   }
-  // Phase 6i / 6i.1 — `balance_usd` carries the real USD via
-  // `get_rate_at(currency, USDT, now)`. Wallets without a rate are
-  // counted as unpriced (BR-AD-07), not folded as $1 = $1. The KPI
-  // is always the unified USD aggregate; `unpricedCount` powers a
-  // sub-label so the operator sees the gap.
   let totalUsd = 0
   let unpricedCount = 0
   for (const w of wallets.value) {
@@ -220,17 +226,12 @@ function userTotals(userId: string): {
 }
 
 function formatNative(value: number, currency: string): string {
-  // Crypto-style: up to 8 decimals, trim trailing zeros, group integers.
   const fixed = value.toFixed(8).replace(/\.?0+$/, '')
   const [intPart, frac] = fixed.split('.')
   const grouped = Number(intPart).toLocaleString('es-AR')
   return frac ? `${grouped}.${frac} ${currency}` : `${grouped} ${currency}`
 }
 
-/** Per-user "Saldo total" cell:
- *  - Wallets across a single currency → native amount + suffix (e.g. "613.3 SOL").
- *  - Multiple currencies → unified USD aggregate via `fmtUsd(totalUsd)`.
- *  - No wallets at all → $0,00. */
 function userTotalLabel(userId: string): string {
   const t = userTotals(userId)
   const currencies = Object.keys(t.nativeByCurrency)
@@ -285,10 +286,34 @@ async function load() {
 
 onMounted(load)
 
-function userStatus(u: AdminUser): 'deleted' | 'banned' | 'active' {
+type UserStatus = 'deleted' | 'banned' | 'active'
+function userStatus(u: AdminUser): UserStatus {
   if (u.deleted_at) return 'deleted'
   if (u.banned) return 'banned'
   return 'active'
+}
+
+const STATUS_LABEL: Record<UserStatus, string> = {
+  active: 'Activo',
+  banned: 'Baneado',
+  deleted: 'Eliminado',
+}
+const STATUS_TONE: Record<UserStatus, 'success' | 'danger' | 'neutral'> = {
+  active: 'success',
+  banned: 'danger',
+  deleted: 'neutral',
+}
+
+type KycLevel = 'L0' | 'L1' | 'L2' | 'L3'
+const KYC_TONE: Record<KycLevel, 'success' | 'info' | 'warning'> = {
+  L0: 'warning',
+  L1: 'warning',
+  L2: 'info',
+  L3: 'success',
+}
+function kycTone(level: string | null | undefined): 'success' | 'info' | 'warning' | 'neutral' {
+  if (level && level in KYC_TONE) return KYC_TONE[level as KycLevel]
+  return 'neutral'
 }
 
 function openEdit(u: AdminUser) {
@@ -533,6 +558,33 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
   walletDrawer.value = null
   await load()
 }
+
+// ── BaseTable column definitions ─────────────────────────────────────
+interface UserColumn {
+  key: string
+  label: string
+  width?: string | number
+  align?: 'left' | 'center' | 'right'
+  num?: boolean
+}
+const userColumns: UserColumn[] = [
+  { key: 'user', label: 'Usuario' },
+  { key: 'status', label: 'Estado' },
+  { key: 'kyc', label: 'KYC' },
+  { key: 'country', label: 'País' },
+  { key: 'wallets', label: 'Wallets', num: true },
+  { key: 'balance', label: 'Saldo total', num: true },
+  { key: 'last_active', label: 'Última actividad' },
+  { key: 'created_at', label: 'Registro' },
+]
+
+function rowClass(u: AdminUser): string | undefined {
+  return u.deleted_at ? 'row-muted' : undefined
+}
+
+function onRowClick(payload: { row: AdminUser }) {
+  void openDrawer(payload.row)
+}
 </script>
 
 <template>
@@ -542,142 +594,237 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
         <h1>Usuarios</h1>
         <p>Gestión de cuentas, wallets y movimientos en la plataforma.</p>
       </div>
-      <button class="btn btn-ghost" :disabled="loading" @click="load">
-        <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+      <BaseButton
+        variant="ghost"
+        size="sm"
+        :loading="loading"
+        @click="load"
+      >
         Actualizar
-      </button>
+      </BaseButton>
     </div>
 
     <!-- KPIs -->
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Usuarios totales</div>
-        <div class="vl">{{ kpis.total }}</div>
-        <div class="ds">{{ kpis.active }} activos</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Activos</div>
-        <div class="vl">{{ kpis.active }}</div>
-        <div class="ds">
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Usuarios totales</span>
+        </template>
+        {{ kpis.total }}
+        <template #footer>
+          {{ kpis.active }} activos
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Activos</span>
+        </template>
+        {{ kpis.active }}
+        <template #footer>
           {{ kpis.total ? Math.round((kpis.active / kpis.total) * 100) : 0 }}% del total
-        </div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Restringidos</div>
-        <div class="vl" :class="{ 'vl-warn': kpis.restricted > 0 }">{{ kpis.restricted }}</div>
-        <div class="ds">{{ kpis.banned }} baneados · {{ kpis.kycPending }} pend. KYC</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Saldo bajo gestión</div>
-        <div class="vl">{{ fmtUsd(kpis.totalUsd) }}</div>
-        <div class="ds">
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Restringidos</span>
+        </template>
+        <span :class="{ 'vl-warn': kpis.restricted > 0 }">{{ kpis.restricted }}</span>
+        <template #footer>
+          {{ kpis.banned }} baneados · {{ kpis.kycPending }} pend. KYC
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Saldo bajo gestión</span>
+        </template>
+        {{ fmtUsd(kpis.totalUsd) }}
+        <template #footer>
           {{ wallets.length }} wallets
           <template v-if="kpis.unpricedCount > 0">
             · <span class="unpriced">{{ kpis.unpricedCount }} sin tasa FX</span>
           </template>
-        </div>
-      </div>
+        </template>
+      </BaseCard>
     </div>
 
-    <!-- Toolbar: tabs + search + filters + show-deleted -->
+    <!-- Toolbar: tabs + search + filters + show-deleted (kept inline) -->
     <div class="toolbar">
       <div class="tabs filter-tabs">
-        <button class="tab" :class="{ active: filterTab === 'all' }" @click="filterTab = 'all'">
+        <button
+          class="tab"
+          :class="{ active: filterTab === 'all' }"
+          @click="filterTab = 'all'"
+        >
           Todos <span class="count-badge sm">{{ countsByTab.all }}</span>
         </button>
-        <button class="tab" :class="{ active: filterTab === 'active' }" @click="filterTab = 'active'">
+        <button
+          class="tab"
+          :class="{ active: filterTab === 'active' }"
+          @click="filterTab = 'active'"
+        >
           Activos <span class="count-badge sm">{{ countsByTab.active }}</span>
         </button>
-        <button class="tab" :class="{ active: filterTab === 'kyc' }" @click="filterTab = 'kyc'">
+        <button
+          class="tab"
+          :class="{ active: filterTab === 'kyc' }"
+          @click="filterTab = 'kyc'"
+        >
           KYC <span class="count-badge sm">{{ countsByTab.kyc }}</span>
         </button>
-        <button class="tab" :class="{ active: filterTab === 'frozen' }" @click="filterTab = 'frozen'">
+        <button
+          class="tab"
+          :class="{ active: filterTab === 'frozen' }"
+          @click="filterTab = 'frozen'"
+        >
           Congelados <span class="count-badge sm">{{ countsByTab.frozen }}</span>
         </button>
-        <button class="tab" :class="{ active: filterTab === 'banned' }" @click="filterTab = 'banned'">
+        <button
+          class="tab"
+          :class="{ active: filterTab === 'banned' }"
+          @click="filterTab = 'banned'"
+        >
           Baneados <span class="count-badge sm">{{ countsByTab.banned }}</span>
         </button>
       </div>
       <div class="toolbar-controls">
-        <input v-model="searchQuery" class="filter-input" placeholder="Buscar por nombre, email, ID…">
-        <select v-model="filterKyc" class="filter-select">
-          <option value="">KYC</option>
-          <option v-for="k in kycOptions" :key="k" :value="k">{{ k }}</option>
+        <input
+          v-model="searchQuery"
+          class="filter-input"
+          placeholder="Buscar por nombre, email, ID…"
+        >
+        <select
+          v-model="filterKyc"
+          class="filter-select"
+        >
+          <option value="">
+            KYC
+          </option>
+          <option
+            v-for="k in kycOptions"
+            :key="k"
+            :value="k"
+          >
+            {{ k }}
+          </option>
         </select>
-        <select v-model="filterCountry" class="filter-select">
-          <option value="">País</option>
-          <option v-for="c in countryOptions" :key="c" :value="c">{{ countryFlag(c) }} {{ c }}</option>
+        <select
+          v-model="filterCountry"
+          class="filter-select"
+        >
+          <option value="">
+            País
+          </option>
+          <option
+            v-for="c in countryOptions"
+            :key="c"
+            :value="c"
+          >
+            {{ countryFlag(c) }} {{ c }}
+          </option>
         </select>
         <label class="show-deleted">
-          <input v-model="showDeleted" type="checkbox">
+          <input
+            v-model="showDeleted"
+            type="checkbox"
+          >
           <span>Mostrar eliminados</span>
         </label>
       </div>
     </div>
 
-    <div v-if="error" class="inline-alert danger">{{ error }}</div>
-    <div v-if="loading" class="loading-row">
-      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+    <div
+      v-if="error"
+      class="inline-alert danger"
+    >
+      {{ error }}
+    </div>
+    <div
+      v-if="loading"
+      class="loading-row"
+    >
+      <span
+        class="pi pi-spin pi-spinner"
+        aria-hidden="true"
+      /> Cargando…
     </div>
 
-    <div v-else class="panel">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Usuario</th>
-            <th>Estado</th>
-            <th>KYC</th>
-            <th>País</th>
-            <th class="num">Wallets</th>
-            <th class="num">Saldo total</th>
-            <th>Última actividad</th>
-            <th>Registro</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="u in pagedUsers"
-            :key="u.user_id"
-            :class="{ 'row-muted': !!u.deleted_at }"
-            style="cursor:pointer"
-            @click="openDrawer(u)"
+    <BaseCard
+      v-else
+      variant="default"
+      padding="none"
+    >
+      <BaseTable
+        :columns="userColumns"
+        :rows="pagedUsers"
+        :row-key="(u: AdminUser) => u.user_id"
+        :row-class="rowClass"
+        @row-click="onRowClick"
+      >
+        <template #cell-user="{ row }">
+          <div class="user-cell">
+            <div
+              class="avatar"
+              :style="`background: hsl(${avatarHue(row.user_id)}, 60%, 92%); color: hsl(${avatarHue(row.user_id)}, 55%, 32%)`"
+            >
+              {{ avatarInitials(row.display_name) }}
+            </div>
+            <div class="user-meta">
+              <div class="display-name">
+                {{ row.display_name }}
+              </div>
+              <div class="user-sub">
+                <span class="username">@{{ row.username }}</span>
+                <span
+                  v-if="row.email"
+                  class="email"
+                >· {{ row.email }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template #cell-status="{ row }">
+          <BaseBadge :tone="STATUS_TONE[userStatus(row)]">
+            {{ STATUS_LABEL[userStatus(row)] }}
+          </BaseBadge>
+        </template>
+
+        <template #cell-kyc="{ row }">
+          <BaseBadge
+            variant="outline"
+            :tone="kycTone(row.kyc_level)"
           >
-            <td class="user-cell">
-              <div
-                class="avatar"
-                :style="`background: hsl(${avatarHue(u.user_id)}, 60%, 92%); color: hsl(${avatarHue(u.user_id)}, 55%, 32%)`"
-              >
-                {{ avatarInitials(u.display_name) }}
-              </div>
-              <div class="user-meta">
-                <div class="display-name">{{ u.display_name }}</div>
-                <div class="user-sub">
-                  <span class="username">@{{ u.username }}</span>
-                  <span v-if="u.email" class="email">· {{ u.email }}</span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="status-dot" :class="userStatus(u)">
-                {{ userStatus(u) === 'active' ? 'Activo' : userStatus(u) === 'banned' ? 'Baneado' : 'Eliminado' }}
-              </span>
-            </td>
-            <td>
-              <span class="kyc-badge" :class="`kyc-${u.kyc_level.toLowerCase()}`">{{ u.kyc_level }}</span>
-            </td>
-            <td>
-              <span class="country-cell">{{ countryFlag(u.country) }} <span class="muted">{{ u.country ?? '—' }}</span></span>
-            </td>
-            <td class="num mono">{{ userWalletCount(u.user_id) }}</td>
-            <td class="num mono">{{ userTotalLabel(u.user_id) }}</td>
-            <td class="muted">{{ relTime(u.last_active) }}</td>
-            <td class="muted">{{ fmtDate(u.created_at) }}</td>
-          </tr>
-          <tr v-if="pagedUsers.length === 0 && !loading">
-            <td colspan="8" class="empty-row">No se encontraron usuarios con los filtros actuales.</td>
-          </tr>
-        </tbody>
-      </table>
+            {{ row.kyc_level }}
+          </BaseBadge>
+        </template>
+
+        <template #cell-country="{ row }">
+          <span class="country-cell">{{ countryFlag(row.country) }} <span class="muted">{{ row.country ?? '—' }}</span></span>
+        </template>
+
+        <template #cell-wallets="{ row }">
+          <span class="mono">{{ userWalletCount(row.user_id) }}</span>
+        </template>
+
+        <template #cell-balance="{ row }">
+          <span class="mono">{{ userTotalLabel(row.user_id) }}</span>
+        </template>
+
+        <template #cell-last_active="{ row }">
+          <span class="muted">{{ relTime(row.last_active) }}</span>
+        </template>
+
+        <template #cell-created_at="{ row }">
+          <span class="muted">{{ fmtDate(row.created_at) }}</span>
+        </template>
+
+        <template #empty>
+          No se encontraron usuarios con los filtros actuales.
+        </template>
+      </BaseTable>
 
       <div class="paging">
         <span class="paging-info">
@@ -688,37 +835,68 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
             class="paging-btn"
             :disabled="currentPage <= 1"
             @click="currentPage--"
-          ><span class="pi pi-chevron-left" /></button>
+          >
+            <span class="pi pi-chevron-left" />
+          </button>
           <span class="paging-pos">Página {{ currentPage }} de {{ totalPages }}</span>
           <button
             class="paging-btn"
             :disabled="currentPage >= totalPages"
             @click="currentPage++"
-          ><span class="pi pi-chevron-right" /></button>
+          >
+            <span class="pi pi-chevron-right" />
+          </button>
         </div>
       </div>
-    </div>
+    </BaseCard>
 
     <!-- Edit modal -->
-    <div v-if="editTarget" class="modal-overlay" @click.self="closeEdit">
-      <div class="modal">
-        <div class="modal-h">Editar @{{ editTarget.username }}</div>
-        <div class="modal-body">
-          <div class="field">
-            <label class="field-label" for="edit-name">Nombre</label>
-            <input id="edit-name" v-model="editForm.display_name" class="field-input" type="text" maxlength="255" />
-          </div>
-          <div class="field">
-            <label class="field-label" for="edit-email">Email</label>
-            <input id="edit-email" v-model="editForm.email" class="field-input" type="email" maxlength="255" />
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-ghost" @click="closeEdit">Cancelar</button>
-          <button class="btn-primary" @click="submitEdit">Guardar</button>
-        </div>
+    <BaseModal
+      v-model:open="editOpen"
+      :title="editTarget ? `Editar @${editTarget.username}` : ''"
+    >
+      <div class="field">
+        <label
+          class="field-label"
+          for="edit-name"
+        >Nombre</label>
+        <input
+          id="edit-name"
+          v-model="editForm.display_name"
+          class="field-input"
+          type="text"
+          maxlength="255"
+        >
       </div>
-    </div>
+      <div class="field">
+        <label
+          class="field-label"
+          for="edit-email"
+        >Email</label>
+        <input
+          id="edit-email"
+          v-model="editForm.email"
+          class="field-input"
+          type="email"
+          maxlength="255"
+        >
+      </div>
+
+      <template #footer>
+        <BaseButton
+          variant="ghost"
+          @click="closeEdit"
+        >
+          Cancelar
+        </BaseButton>
+        <BaseButton
+          variant="primary"
+          @click="submitEdit"
+        >
+          Guardar
+        </BaseButton>
+      </template>
+    </BaseModal>
 
     <UserDrawer
       :user="drawerUser"
@@ -748,179 +926,300 @@ async function handleWalletDrawerAction(action: WalletDrawerAction, w: WalletAdm
 </template>
 
 <style scoped>
-.users-view { display: flex; flex-direction: column; gap: 14px; }
+.users-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-/* Phase 5 page header */
-.page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
-.page-h p { margin: 0; font-size: 13px; color: var(--text-2); }
+.page-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.page-h h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
 
-/* Bigstat row */
-.bigstat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.bigstat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
-.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
-.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); font-variant-numeric: tabular-nums; }
-.ds { font-size: 11.5px; color: var(--text-3); }
-.vl-warn { color: var(--warning); }
-.ds .unpriced { color: var(--warning); font-weight: 500; }
+/* Bigstat row layout (BaseCard handles cell chrome + typography) */
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.vl-warn {
+  color: var(--warning);
+}
+.unpriced {
+  color: var(--warning);
+  font-weight: 500;
+}
 
 /* Toolbar */
 .toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
 .tab {
-  padding: 6px 12px; font-size: 12.5px; font-weight: 500;
-  border: 1px solid transparent; border-radius: var(--radius);
-  background: transparent; color: var(--text-2);
-  cursor: pointer; font-family: var(--font-sans);
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: background 0.1s, color 0.1s;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
-.tab:hover { background: var(--hover); color: var(--text); }
-.tab.active { background: var(--surface); color: var(--text); border-color: var(--border); font-weight: 600; }
-.count-badge.sm { font-size: 10.5px; padding: 1px 6px; line-height: 1.2; }
+.tab:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.tab.active {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  font-weight: 600;
+}
+.count-badge.sm {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  line-height: 1.2;
+  background: var(--surface-2);
+  color: var(--text-3);
+  border-radius: var(--radius-pill);
+}
 
-.toolbar-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filter-input, .filter-select {
-  padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-2); color: var(--text); font-size: 13px; outline: none;
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-input,
+.filter-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
   font-family: var(--font-sans);
 }
-.filter-input { min-width: 240px; }
-.filter-input:focus, .filter-select:focus { border-color: var(--accent); }
+.filter-input {
+  min-width: 240px;
+}
+.filter-input:focus,
+.filter-select:focus {
+  border-color: var(--accent);
+}
 
 .show-deleted {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--text-2); cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
 }
-.show-deleted input { margin: 0; cursor: pointer; }
-
-.inline-alert { padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--border); font-size: 13px; }
-.inline-alert.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
-.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
-
-/* Panel + table */
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th {
-  text-align: left; padding: 8px 14px;
-  font-size: 11px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border); background: var(--surface-2);
+.show-deleted input {
+  margin: 0;
+  cursor: pointer;
 }
-.data-table th.num { text-align: right; }
-.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 13px; }
-.data-table td.num { text-align: right; }
-.data-table tr:last-child td { border-bottom: none; }
-.row-muted td { opacity: 0.55; }
-.empty-row { padding: 24px; text-align: center; color: var(--text-3); }
-.muted { color: var(--text-3); }
-.mono { font-family: var(--font-mono); font-size: 12.5px; }
+
+.inline-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.inline-alert.danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+/* BaseTable cell wrappers */
+.muted {
+  color: var(--text-3);
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
 
 /* User cell with avatar */
-.user-cell { display: flex; align-items: center; gap: 10px; }
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   flex-shrink: 0;
 }
-.user-meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.display-name { font-weight: 600; color: var(--text); font-size: 13px; }
-.user-sub { font-size: 11.5px; color: var(--text-2); display: flex; gap: 4px; flex-wrap: wrap; }
-.username { color: var(--text-2); }
-.email { color: var(--text-3); }
-
-/* Status pill */
-.status-dot {
-  font-size: 11.5px; font-weight: 500;
-  padding: 2px 8px; border-radius: 20px;
-  display: inline-block;
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
-.status-dot.active  { background: var(--success-soft); color: var(--success); }
-.status-dot.banned  { background: var(--danger-soft);  color: var(--danger);  }
-.status-dot.deleted { background: var(--muted-soft);   color: var(--muted);   }
-
-/* KYC badge */
-.kyc-badge {
-  display: inline-block;
-  padding: 2px 7px; border-radius: 4px;
-  font-size: 11px; font-weight: 700;
-  font-family: var(--font-mono); letter-spacing: 0.02em;
+.display-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
 }
-.kyc-l0 { background: var(--muted-soft);   color: var(--muted); }
-.kyc-l1 { background: var(--warning-soft); color: var(--warning); }
-.kyc-l2 { background: var(--info-soft);    color: var(--info); }
-.kyc-l3 { background: var(--success-soft); color: var(--success); }
+.user-sub {
+  font-size: 11.5px;
+  color: var(--text-2);
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.username {
+  color: var(--text-2);
+}
+.email {
+  color: var(--text-3);
+}
 
-.country-cell { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; }
+.country-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+}
+
+/* BaseTable row-muted (consumer-driven) */
+:deep(.row-muted) td {
+  opacity: 0.55;
+}
 
 /* Paging */
 .paging {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px; border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
   background: var(--surface-2);
-  font-size: 12px; color: var(--text-2);
+  font-size: 12px;
+  color: var(--text-2);
 }
-.paging-controls { display: flex; align-items: center; gap: 6px; }
-.paging-pos { font-size: 12px; color: var(--text-2); padding: 0 4px; }
+.paging-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.paging-pos {
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 0 4px;
+}
 .paging-btn {
-  width: 28px; height: 28px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text-2); cursor: pointer;
-  display: grid; place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
 }
-.paging-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
-.paging-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* Edit modal */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 200;
+.paging-btn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
 }
-.modal {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); width: 420px; max-width: 92vw;
-  overflow: hidden;
-}
-.modal-h {
-  padding: 14px 18px; font-size: 14px; font-weight: 600;
-  color: var(--text); border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-.modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
-.modal-actions {
-  display: flex; gap: 8px; justify-content: flex-end;
-  padding: 12px 18px; border-top: 1px solid var(--border);
-  background: var(--surface-2);
+.paging-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.field { display: flex; flex-direction: column; gap: 4px; }
-.field-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+/* Edit modal inputs */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
 .field-input {
-  padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-2); color: var(--text);
-  font-size: 13px; outline: none; font-family: var(--font-sans);
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  font-family: var(--font-sans);
 }
-.field-input:focus { border-color: var(--accent); }
+.field-input:focus {
+  border-color: var(--accent);
+}
 
 @media (max-width: 1100px) {
-  .bigstat-row { grid-template-columns: repeat(2, 1fr); }
-  .data-table th:nth-child(4),
-  .data-table td:nth-child(4),
-  .data-table th:nth-child(7),
-  .data-table td:nth-child(7) { display: none; }
+  .bigstat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (max-width: 760px) {
-  .bigstat-row { grid-template-columns: 1fr; }
-  .toolbar { flex-direction: column; align-items: stretch; }
-  .toolbar-controls { flex-direction: column; align-items: stretch; }
-  .filter-input { min-width: 0; }
-  .data-table th:nth-child(8),
-  .data-table td:nth-child(8) { display: none; }
+  .bigstat-row {
+    grid-template-columns: 1fr;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-input {
+    min-width: 0;
+  }
 }
 </style>

@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BaseModal snapshots > renders the built-in header when title is provided 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-centered" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--centered" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--centered" role="dialog" aria-modal="true" aria-label="Are you sure?" style="width: 480px; max-width: 92vw;" tabindex="-1">
+        <header data-v-78c0434b="" class="base-modal__header">
+          <h2 data-v-78c0434b="" class="base-modal__title">Are you sure?</h2><button data-v-78c0434b="" type="button" class="base-modal__close" aria-label="Cerrar"> × </button>
+        </header>
+        <div data-v-78c0434b="" class="base-modal__body">Confirmation body</div>
+        <!--v-if-->
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;
+
+exports[`BaseModal snapshots > renders the default centered modal with body only 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-centered" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--centered" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--centered" role="dialog" aria-modal="true" style="width: 480px; max-width: 92vw;" tabindex="-1">
+        <!--v-if-->
+        <div data-v-78c0434b="" class="base-modal__body">Body content</div>
+        <!--v-if-->
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;
+
+exports[`BaseModal snapshots > renders with custom width (number → px) 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-centered" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--centered" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--centered" role="dialog" aria-modal="true" aria-label="Wide modal" style="width: 640px; max-width: 92vw;" tabindex="-1">
+        <header data-v-78c0434b="" class="base-modal__header">
+          <h2 data-v-78c0434b="" class="base-modal__title">Wide modal</h2><button data-v-78c0434b="" type="button" class="base-modal__close" aria-label="Cerrar"> × </button>
+        </header>
+        <div data-v-78c0434b="" class="base-modal__body">Body</div>
+        <!--v-if-->
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;
+
+exports[`BaseModal snapshots > renders with header + footer slots 1`] = `
+"<teleport-stub data-v-78c0434b="" to="body">
+  <transition-stub data-v-78c0434b="" name="base-modal-centered" appear="false" persisted="false" css="true">
+    <div data-v-78c0434b="" class="base-modal__scrim base-modal__scrim--centered" aria-hidden="true">
+      <div data-v-78c0434b="" class="base-modal base-modal--centered" role="dialog" aria-modal="true" style="width: 480px; max-width: 92vw;" tabindex="-1">
+        <header data-v-78c0434b="" class="base-modal__header">
+          <div class="custom-header">Custom header</div>
+        </header>
+        <div data-v-78c0434b="" class="base-modal__body">Body content</div>
+        <footer data-v-78c0434b="" class="base-modal__footer"><button class="btn-cancel">Cancel</button><button class="btn-ok">OK</button></footer>
+      </div>
+    </div>
+  </transition-stub>
+</teleport-stub>"
+`;

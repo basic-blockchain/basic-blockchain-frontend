@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BaseCard snapshots > renders the bigstat variant with all three slots (label / value / sub) 1`] = `
+"<div data-v-3f4f1145="" class="base-card base-card--bigstat base-card--pad-default">
+  <div data-v-3f4f1145="" class="base-card__header"><span>En cola</span></div>
+  <div data-v-3f4f1145="" class="base-card__body">23</div>
+  <div data-v-3f4f1145="" class="base-card__footer"><span>4 prioritarias</span></div>
+</div>"
+`;
+
+exports[`BaseCard snapshots > renders the bigstat variant with value only (no label, no sub) 1`] = `
+"<div data-v-3f4f1145="" class="base-card base-card--bigstat base-card--pad-default">
+  <!--v-if-->
+  <div data-v-3f4f1145="" class="base-card__body">42</div>
+  <!--v-if-->
+</div>"
+`;
+
+exports[`BaseCard snapshots > renders the default variant with body slot only 1`] = `
+"<div data-v-3f4f1145="" class="base-card base-card--default base-card--pad-default">
+  <!--v-if-->
+  <div data-v-3f4f1145="" class="base-card__body">Card body</div>
+  <!--v-if-->
+</div>"
+`;
+
+exports[`BaseCard snapshots > renders the default variant with header + body + footer 1`] = `
+"<div data-v-3f4f1145="" class="base-card base-card--default base-card--pad-default">
+  <div data-v-3f4f1145="" class="base-card__header"><span>Header</span></div>
+  <div data-v-3f4f1145="" class="base-card__body">Card body</div>
+  <div data-v-3f4f1145="" class="base-card__footer"><button>OK</button></div>
+</div>"
+`;
+
+exports[`BaseCard snapshots > renders the default variant with padding='none' 1`] = `
+"<div data-v-3f4f1145="" class="base-card base-card--default base-card--pad-none">
+  <!--v-if-->
+  <div data-v-3f4f1145="" class="base-card__body">Flush body</div>
+  <!--v-if-->
+</div>"
+`;
+
+exports[`BaseCard snapshots > renders the default variant with padding='sm' 1`] = `
+"<div data-v-3f4f1145="" class="base-card base-card--default base-card--pad-sm">
+  <!--v-if-->
+  <div data-v-3f4f1145="" class="base-card__body">Compact body</div>
+  <!--v-if-->
+</div>"
+`;

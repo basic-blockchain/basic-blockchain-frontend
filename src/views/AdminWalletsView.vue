@@ -11,6 +11,10 @@ import WalletDrawer, {
   type DrawerWallet, type DrawerWalletMovement, type DrawerWalletAuditEvent,
   type WalletDrawerAction,
 } from '@/components/drawers/WalletDrawer.vue'
+import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 
 const wallets = ref<WalletAdminRecord[]>([])
 const totalBalanceUsd = ref('0')
@@ -42,10 +46,6 @@ async function load() {
 function formatUsd(value: string | number): string {
   const n = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(n)) return '—'
-  // Phase 6j — locale aligned with the rest of the admin surface
-  // (`es-AR` formats as `1.234,56`). Avoids the `1,234.56` /
-  // `1.234,56` mismatch operators saw when bouncing between Wallets
-  // and Users.
   return n.toLocaleString('es-AR', { maximumFractionDigits: 2 })
 }
 
@@ -56,9 +56,6 @@ function formatNative(value: number, currency: string): string {
   return frac ? `${grouped}.${frac} ${currency}` : `${grouped} ${currency}`
 }
 
-/** Native-by-currency aggregate built from the raw wallet list.
- * Used as a fallback when `total_balance_usd` is 0 because no FX
- * rate exists for any wallet's currency. */
 const nativeAggregate = computed(() => {
   const byCurrency: Record<string, number> = {}
   for (const w of wallets.value) {
@@ -164,6 +161,48 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
   drawer.value = null
   await load()
 }
+
+// ── BaseTable column definitions ─────────────────────────────────────
+interface WalletColumn {
+  key: string
+  label: string
+  num?: boolean
+}
+const walletColumns: WalletColumn[] = [
+  { key: 'asset', label: 'Activo' },
+  { key: 'wallet_id', label: 'Wallet ID' },
+  { key: 'user', label: 'Usuario' },
+  { key: 'balance', label: 'Balance' },
+  { key: 'usd', label: 'USD', num: true },
+  { key: 'type', label: 'Tipo' },
+  { key: 'pub_key', label: 'Clave pública' },
+  { key: 'status', label: 'Estado' },
+]
+
+// ── Status / Type tone mapping ───────────────────────────────────────
+type WalletStatusTone = 'success' | 'info'
+const STATUS_TONE: Record<'active' | 'frozen', WalletStatusTone> = {
+  active: 'success',
+  frozen: 'info',
+}
+
+type WalletTypeTone = 'neutral' | 'warning' | 'info'
+const TYPE_TONE: Record<string, WalletTypeTone> = {
+  USER: 'neutral',
+  TREASURY: 'warning',
+  FEE: 'info',
+}
+function typeTone(t: string): WalletTypeTone {
+  return TYPE_TONE[t] ?? 'neutral'
+}
+
+function rowClass(w: WalletAdminRecord): string | undefined {
+  return w.frozen ? 'row-muted' : undefined
+}
+
+function onRowClick(payload: { row: WalletAdminRecord }) {
+  void openDrawer(payload.row)
+}
 </script>
 
 <template>
@@ -174,124 +213,231 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
         <p>Gestión y congelamiento de wallets de la plataforma</p>
       </div>
       <div class="page-actions">
-        <button class="btn btn-sm" :disabled="loading" @click="load">
-          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
-          <span>Actualizar</span>
-        </button>
-        <button class="btn btn-sm">
-          <i class="pi pi-download" />
-          <span>Exportar</span>
-        </button>
-        <button class="btn btn-sm">
-          <i class="pi pi-lock" />
-          <span>Congelar selección</span>
-        </button>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          :loading="loading"
+          @click="load"
+        >
+          Actualizar
+        </BaseButton>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+        >
+          Exportar
+        </BaseButton>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+        >
+          Congelar selección
+        </BaseButton>
       </div>
     </div>
 
     <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Total</div>
-        <div class="vl">{{ wallets.length }}</div>
-        <div class="ds">{{ wallets.length }} registradas</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Activas</div>
-        <div class="vl">{{ wallets.filter(w => !w.frozen).length }}</div>
-        <div class="ds">en operación</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Congeladas</div>
-        <div class="vl">{{ wallets.filter(w => w.frozen).length }}</div>
-        <div class="ds">bloqueadas</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Saldo bajo gestión</div>
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Total</span>
+        </template>
+        {{ wallets.length }}
+        <template #footer>
+          {{ wallets.length }} registradas
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Activas</span>
+        </template>
+        {{ wallets.filter(w => !w.frozen).length }}
+        <template #footer>
+          en operación
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Congeladas</span>
+        </template>
+        {{ wallets.filter(w => w.frozen).length }}
+        <template #footer>
+          bloqueadas
+        </template>
+      </BaseCard>
+
+      <BaseCard variant="bigstat">
+        <template #header>
+          <span>Saldo bajo gestión</span>
+        </template>
         <template v-if="hasPricedBalance">
-          <div class="vl">${{ formatUsd(totalBalanceUsd) }}</div>
-          <div class="ds">
-            <template v-if="unpricedCurrencies.length">
-              <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
-              ({{ unpricedCurrencies.join(', ') }})
-            </template>
-            <template v-else>USD agregado</template>
-          </div>
+          ${{ formatUsd(totalBalanceUsd) }}
         </template>
         <template v-else-if="nativeAggregate">
-          <div class="vl vl-native" :title="nativeAggregate">{{ nativeAggregate }}</div>
-          <div class="ds unpriced">sin tasa FX para mostrar USD</div>
+          <span
+            class="vl-native"
+            :title="nativeAggregate"
+          >{{ nativeAggregate }}</span>
         </template>
         <template v-else>
-          <div class="vl">$0</div>
-          <div class="ds">sin balances</div>
+          $0
         </template>
-      </div>
+        <template #footer>
+          <template v-if="hasPricedBalance && unpricedCurrencies.length">
+            <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
+            ({{ unpricedCurrencies.join(', ') }})
+          </template>
+          <template v-else-if="hasPricedBalance">
+            USD agregado
+          </template>
+          <template v-else-if="nativeAggregate">
+            <span class="unpriced">sin tasa FX para mostrar USD</span>
+          </template>
+          <template v-else>
+            sin balances
+          </template>
+        </template>
+      </BaseCard>
     </div>
 
     <div class="filters-bar">
-      <input v-model="filterUser" class="filter-input" placeholder="Buscar por usuario…" />
-      <select v-model="filterFrozen" class="filter-select">
-        <option value="all">Todos los estados</option>
-        <option value="active">Activa</option>
-        <option value="frozen">Congelada</option>
+      <input
+        v-model="filterUser"
+        class="filter-input"
+        placeholder="Buscar por usuario…"
+      >
+      <select
+        v-model="filterFrozen"
+        class="filter-select"
+      >
+        <option value="all">
+          Todos los estados
+        </option>
+        <option value="active">
+          Activa
+        </option>
+        <option value="frozen">
+          Congelada
+        </option>
       </select>
       <span class="count-badge">{{ filtered.length }} wallet{{ filtered.length !== 1 ? 's' : '' }}</span>
     </div>
 
-    <div v-if="error" class="inline-alert danger">{{ error }}</div>
-    <div v-if="loading" class="loading-row">
-      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+    <div
+      v-if="error"
+      class="inline-alert danger"
+    >
+      {{ error }}
+    </div>
+    <div
+      v-if="loading"
+      class="loading-row"
+    >
+      <span
+        class="pi pi-spin pi-spinner"
+        aria-hidden="true"
+      /> Cargando…
     </div>
 
-    <div v-else class="panel">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Activo</th>
-            <th>Wallet ID</th>
-            <th>Usuario</th>
-            <th>Balance</th>
-            <th>USD</th>
-            <th>Tipo</th>
-            <th>Clave pública</th>
-            <th>Estado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="w in filtered" :key="w.wallet_id" :class="{ 'row-muted': w.frozen }" style="cursor:pointer" @click="openDrawer(w)">
-            <td><span class="asset-pill">{{ w.currency }}</span></td>
-            <td class="mono" @click.stop><HashChip :hash="w.wallet_id" :length="16" label="wallet id" /></td>
-            <td>
-              <span class="display-name">{{ w.display_name }}</span>
-              <span class="username"> @{{ w.username }}</span>
-            </td>
-            <td class="mono"><AmountDisplay :amount="parseBalance(w.balance)" :precision="8" :unit="w.currency" /></td>
-            <td class="mono usd-cell">
-              <template v-if="w.balance_usd !== null">${{ formatUsd(w.balance_usd) }}</template>
-              <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
-            </td>
-            <td>
-              <span class="type-badge" :class="`type-${w.wallet_type.toLowerCase()}`">{{ w.wallet_type }}</span>
-            </td>
-            <td class="mono text-dim" @click.stop><HashChip :hash="w.public_key" :length="14" label="public key" /></td>
-            <td>
-              <span class="status-dot" :class="w.frozen ? 'frozen' : 'active'">
-                {{ w.frozen ? 'Congelada' : 'Activa' }}
-              </span>
-            </td>
-            <td @click.stop>
-              <button class="btn-sm" :class="w.frozen ? 'btn-success' : 'btn-info'" @click="toggleFreeze(w)">
-                {{ w.frozen ? 'Descongelar' : 'Congelar' }}
-              </button>
-            </td>
-          </tr>
-          <tr v-if="filtered.length === 0 && !loading">
-            <td colspan="8" class="empty-row">No se encontraron wallets.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <BaseCard
+      v-else
+      variant="default"
+      padding="none"
+    >
+      <BaseTable
+        :columns="walletColumns"
+        :rows="filtered"
+        :row-key="(w: WalletAdminRecord) => w.wallet_id"
+        :row-class="rowClass"
+        @row-click="onRowClick"
+      >
+        <template #cell-asset="{ row }">
+          <span class="asset-pill">{{ row.currency }}</span>
+        </template>
+
+        <template #cell-wallet_id="{ row }">
+          <div
+            class="mono"
+            @click.stop
+          >
+            <HashChip
+              :hash="row.wallet_id"
+              :length="16"
+              label="wallet id"
+            />
+          </div>
+        </template>
+
+        <template #cell-user="{ row }">
+          <span class="display-name">{{ row.display_name }}</span>
+          <span class="username"> @{{ row.username }}</span>
+        </template>
+
+        <template #cell-balance="{ row }">
+          <span class="mono">
+            <AmountDisplay
+              :amount="parseBalance(row.balance)"
+              :precision="8"
+              :unit="row.currency"
+            />
+          </span>
+        </template>
+
+        <template #cell-usd="{ row }">
+          <span class="mono usd-cell">
+            <template v-if="row.balance_usd !== null">${{ formatUsd(row.balance_usd) }}</template>
+            <span
+              v-else
+              class="usd-missing"
+              title="Sin tasa FX para esta moneda"
+            >—</span>
+          </span>
+        </template>
+
+        <template #cell-type="{ row }">
+          <BaseBadge
+            :tone="typeTone(row.wallet_type)"
+            :dot="false"
+          >
+            {{ row.wallet_type }}
+          </BaseBadge>
+        </template>
+
+        <template #cell-pub_key="{ row }">
+          <div
+            class="mono text-dim"
+            @click.stop
+          >
+            <HashChip
+              :hash="row.public_key"
+              :length="14"
+              label="public key"
+            />
+          </div>
+        </template>
+
+        <template #cell-status="{ row }">
+          <BaseBadge :tone="row.frozen ? STATUS_TONE.frozen : STATUS_TONE.active">
+            {{ row.frozen ? 'Congelada' : 'Activa' }}
+          </BaseBadge>
+        </template>
+
+        <template #row-actions="{ row }">
+          <BaseButton
+            variant="secondary"
+            size="sm"
+            @click="toggleFreeze(row)"
+          >
+            {{ row.frozen ? 'Descongelar' : 'Congelar' }}
+          </BaseButton>
+        </template>
+
+        <template #empty>
+          No se encontraron wallets.
+        </template>
+      </BaseTable>
+    </BaseCard>
 
     <WalletDrawer
       :data="drawer"
@@ -304,24 +450,47 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
 </template>
 
 <style scoped>
-.wallets-view { display: flex; flex-direction: column; gap: 18px; }
+.wallets-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 
-.page-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.page-h h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 2px; color: var(--text); }
-.page-h p  { margin: 0; font-size: 13px; color: var(--text-2); }
-.page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.page-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.page-h h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+.page-h p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.page-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 
-.bigstat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.bigstat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
-.lb { font-size: 11.5px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
-.vl { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0; color: var(--text); }
-.ds { font-size: 11.5px; color: var(--text-3); }
-.ds .unpriced { color: var(--warning); font-weight: 500; }
-.ds.unpriced { color: var(--warning); }
-/* Native-currency breakdown rendered when no FX rate exists. Smaller
- * size + tabular nums keeps a multi-currency string like
- * "1.5 BTC · 200 USDT" readable inside a bigstat without truncating
- * silently. */
+.bigstat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* Native-currency multi-line fallback inside the 4th KPI value slot.
+ * BaseCard bigstat default body is 24px tabular-nums; this overrides
+ * for the multi-currency string so e.g. "1.5 BTC · 200 USDT" reads
+ * without truncating silently. */
 .vl-native {
   font-size: 16px;
   font-weight: 600;
@@ -330,67 +499,118 @@ async function handleDrawerAction(action: WalletDrawerAction, w: WalletAdminReco
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
 }
 
-.usd-cell { font-variant-numeric: tabular-nums; }
-.usd-missing { color: var(--text-3); }
+.unpriced {
+  color: var(--warning);
+  font-weight: 500;
+}
 
+.usd-cell {
+  font-variant-numeric: tabular-nums;
+}
+.usd-missing {
+  color: var(--text-3);
+}
+
+/* AssetPill candidate (DESIGN-v2 §4 "orden a definir"). Kept inline
+ * until a second consumer surfaces. */
 .asset-pill {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 36px; padding: 2px 7px; border-radius: 5px;
-  background: var(--accent-soft); color: var(--accent-text);
-  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
 }
 
 .filters-bar {
-  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
-.filter-input, .filter-select {
-  padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-2); color: var(--text); font-size: 13px; outline: none;
+.filter-input,
+.filter-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
   font-family: var(--font-sans);
 }
-.filter-input { min-width: 180px; }
-.filter-input:focus, .filter-select:focus { border-color: var(--accent); }
-
-.inline-alert { padding: 10px 14px; border-radius: var(--radius); border: 1px solid; font-size: 13px; }
-.inline-alert.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
-.loading-row { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
-
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th {
-  text-align: left; padding: 8px 14px; font-size: 11.5px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); background: var(--surface-2);
+.filter-input {
+  min-width: 180px;
 }
-.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 13px; }
-.data-table tr:last-child td { border-bottom: none; }
-.row-muted td { opacity: 0.6; }
-
-.mono { font-family: var(--font-mono); font-size: 12px; }
-.text-dim { color: var(--text-3); }
-.display-name { font-weight: 500; color: var(--text); }
-.username { color: var(--text-2); font-size: 12px; }
-.empty-row { padding: 24px; text-align: center; color: var(--text-3); }
-
-.type-badge {
-  padding: 2px 7px; border-radius: 20px; font-size: 11px;
-  font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+.filter-input:focus,
+.filter-select:focus {
+  border-color: var(--accent);
 }
-.type-user     { background: var(--muted-soft);    color: var(--muted); }
-.type-treasury { background: var(--warning-soft);  color: var(--warning); }
-.type-fee      { background: var(--info-soft);     color: var(--info); }
+.count-badge {
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
 
-.status-dot { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
-.status-dot.active { background: var(--success-soft); color: var(--success); }
-.status-dot.frozen { background: var(--info-soft);    color: var(--info); }
+.inline-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid;
+  font-size: 13px;
+}
+.inline-alert.danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+}
 
-.btn-sm { padding: 3px 10px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 12px; font-weight: 500; font-family: var(--font-sans); }
-.btn-success { background: var(--success-soft); color: var(--success); }
-.btn-info    { background: var(--info-soft);    color: var(--info); }
+/* BaseTable cell wrappers */
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.text-dim {
+  color: var(--text-3);
+}
+.display-name {
+  font-weight: 500;
+  color: var(--text);
+}
+.username {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+/* BaseTable row-muted (frozen wallets) */
+:deep(.row-muted) td {
+  opacity: 0.6;
+}
 
 @media (max-width: 640px) {
-  .page-h { flex-direction: column; align-items: flex-start; }
-  .bigstat-row { grid-template-columns: repeat(2, 1fr); }
+  .page-h {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bigstat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

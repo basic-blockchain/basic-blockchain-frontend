@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BaseBadge snapshots > renders accent / outline 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--accent base-bdg--outline">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders accent / soft 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--accent base-bdg--soft base-bdg--dot">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders danger / outline 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--danger base-bdg--outline">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders danger / soft 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--danger base-bdg--soft base-bdg--dot">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders info / outline 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--info base-bdg--outline">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders info / soft 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--info base-bdg--soft base-bdg--dot">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders neutral / outline 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--neutral base-bdg--outline">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders neutral / soft 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--neutral base-bdg--soft base-bdg--dot">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders success / outline 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--success base-bdg--outline">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders success / soft 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--success base-bdg--soft base-bdg--dot">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders warning / outline 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--warning base-bdg--outline">Label</span>"`;
+
+exports[`BaseBadge snapshots > renders warning / soft 1`] = `"<span data-v-ad154b56="" class="base-bdg base-bdg--warning base-bdg--soft base-bdg--dot">Label</span>"`;
