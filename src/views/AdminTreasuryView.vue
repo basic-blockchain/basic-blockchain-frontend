@@ -13,9 +13,9 @@ import { useToast } from 'primevue/usetoast'
 import TreasuryApprovalFlow from '@/components/flows/TreasuryApprovalFlow.vue'
 import type { TreasuryData } from '@/components/flows/TreasuryApprovalFlow.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
 const wallets = ref<WalletAdminRecord[]>([])
@@ -231,7 +231,7 @@ function rowKey(w: WalletAdminRecord): string {
       <div v-if="loading" class="loading-row">
         <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <BaseTable v-else :columns="treasuryColumns" :rows="treasuryWallets" :row-key="rowKey">
+      <PaginatedTable v-else :columns="treasuryColumns" :rows="treasuryWallets" :row-key="rowKey">
         <template #cell-wallet_id="{ row }">
           <span class="mono">
             <HashChip :hash="row.wallet_id" :length="16" label="wallet id" />
@@ -253,7 +253,7 @@ function rowKey(w: WalletAdminRecord): string {
           </span>
         </template>
         <template #empty> Sin wallets de tesorería todavía. </template>
-      </BaseTable>
+      </PaginatedTable>
     </BaseCard>
   </div>
 

@@ -5,9 +5,9 @@ import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
 import { listAllWallets, listExchangeRates } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const QUOTE = 'USDT'
 
@@ -156,18 +156,9 @@ onMounted(load)
         <p>Historial consolidado · transacciones confirmadas y pendientes en la plataforma.</p>
       </div>
       <div class="page-h-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           <template #leading>
-            <span
-              class="pi pi-refresh"
-              :class="{ 'pi-spin': loading }"
-              aria-hidden="true"
-            />
+            <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
           </template>
           Actualizar
         </BaseButton>
@@ -181,36 +172,28 @@ onMounted(load)
           <span>Operaciones totales</span>
         </template>
         {{ stats.total.toLocaleString('es-AR') }}
-        <template #footer>
-          Confirmadas + pendientes
-        </template>
+        <template #footer> Confirmadas + pendientes </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Confirmadas</span>
         </template>
         <span class="kpi-success">{{ stats.confirmed.toLocaleString('es-AR') }}</span>
-        <template #footer>
-          En bloques minados
-        </template>
+        <template #footer> En bloques minados </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Pendientes</span>
         </template>
         <span :class="{ 'kpi-warning': stats.pending > 0 }">{{ stats.pending }}</span>
-        <template #footer>
-          En mempool
-        </template>
+        <template #footer> En mempool </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Mostrando</span>
         </template>
         {{ rows.length }}
-        <template #footer>
-          Con filtros actuales
-        </template>
+        <template #footer> Con filtros actuales </template>
       </BaseCard>
     </div>
 
@@ -232,37 +215,17 @@ onMounted(load)
         </button>
       </div>
       <div class="toolbar-search">
-        <span
-          class="pi pi-search"
-          aria-hidden="true"
-        />
-        <input
-          v-model="searchQuery"
-          placeholder="Buscar por sender, receiver o hash…"
-        >
+        <span class="pi pi-search" aria-hidden="true" />
+        <input v-model="searchQuery" placeholder="Buscar por sender, receiver o hash…" />
       </div>
     </div>
 
     <!-- Table -->
-    <div
-      v-if="loading"
-      class="loading-row"
-    >
-      <span
-        class="pi pi-spin pi-spinner"
-        aria-hidden="true"
-      /> Cargando…
+    <div v-if="loading" class="loading-row">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
-    <BaseCard
-      v-else
-      class="table-panel"
-      variant="default"
-      padding="none"
-    >
-      <BaseTable
-        :columns="movementColumns"
-        :rows="rows"
-      >
+    <BaseCard v-else class="table-panel" variant="default" padding="none">
+      <PaginatedTable :columns="movementColumns" :rows="rows">
         <template #cell-type="{ row }">
           <div class="mv-type">
             <span
@@ -287,20 +250,13 @@ onMounted(load)
         <template #cell-amount="{ row }">
           <span class="mono">
             {{ row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}
-            <span
-              v-if="row.currency"
-              class="cell-currency"
-            >{{ row.currency }}</span>
+            <span v-if="row.currency" class="cell-currency">{{ row.currency }}</span>
           </span>
         </template>
         <template #cell-usd="{ row }">
           <span class="mono usd-cell">
             <template v-if="row.amountUsd !== null">{{ fmtUsd(row.amountUsd) }}</template>
-            <span
-              v-else
-              class="usd-missing"
-              title="Sin tasa FX para esta moneda"
-            >—</span>
+            <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
           </span>
         </template>
         <template #cell-status="{ row }">
@@ -315,10 +271,8 @@ onMounted(load)
             <template v-else>—</template>
           </span>
         </template>
-        <template #empty>
-          Sin movimientos.
-        </template>
-      </BaseTable>
+        <template #empty> Sin movimientos. </template>
+      </PaginatedTable>
     </BaseCard>
   </div>
 </template>
