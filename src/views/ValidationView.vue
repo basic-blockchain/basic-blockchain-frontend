@@ -414,7 +414,7 @@ onMounted(async () => {
             <span style="margin-left:6px">{{ row.status }}</span>
           </template>
           <template #cell-timestamp="{ value }">
-            {{ new Date(value).toLocaleString() }}
+            {{ formatTime(value) }}
           </template>
         </BaseTable>
       </div>
