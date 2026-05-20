@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useNodesStore } from '@/stores/nodes'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const nodesStore = useNodesStore()
 
@@ -66,7 +66,7 @@ const peerRows = computed<PeerRow[]>(() =>
       status,
       lastSync: 'hace 12s',
     }
-  }),
+  })
 )
 
 const STATUS_TONE: Record<PeerStatus, 'success' | 'warning' | 'neutral'> = {
@@ -78,6 +78,14 @@ const STATUS_LABEL: Record<PeerStatus, string> = {
   online: 'Online',
   syncing: 'Sincronizando',
   offline: 'Offline',
+}
+
+function peerStatusTone(status: PeerStatus): 'success' | 'warning' | 'neutral' {
+  return STATUS_TONE[status]
+}
+
+function peerStatusLabel(status: PeerStatus): string {
+  return STATUS_LABEL[status]
 }
 
 interface PeerColumn {
@@ -104,12 +112,7 @@ const peerColumns: PeerColumn[] = [
         <p>Peers conectados, sincronización y consenso PoW.</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="primary"
-          size="sm"
-          :loading="resolving"
-          @click="resolveConsensus"
-        >
+        <BaseButton variant="primary" size="sm" :loading="resolving" @click="resolveConsensus">
           Resolver consenso
         </BaseButton>
       </div>
@@ -121,9 +124,7 @@ const peerColumns: PeerColumn[] = [
           <span>Peers totales</span>
         </template>
         {{ nodesStore.total }}
-        <template #footer>
-          {{ nodesStore.peers.length }} registrados
-        </template>
+        <template #footer> {{ nodesStore.peers.length }} registrados </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -131,9 +132,7 @@ const peerColumns: PeerColumn[] = [
           <span>Altura consenso</span>
         </template>
         11
-        <template #footer>
-          3 nodos coinciden
-        </template>
+        <template #footer> 3 nodos coinciden </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -141,9 +140,7 @@ const peerColumns: PeerColumn[] = [
           <span>Latencia media</span>
         </template>
         62ms
-        <template #footer>
-          peers online
-        </template>
+        <template #footer> peers online </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -151,29 +148,18 @@ const peerColumns: PeerColumn[] = [
           <span>Estado red</span>
         </template>
         <span class="ok">Saludable</span>
-        <template #footer>
-          consenso estable
-        </template>
+        <template #footer> consenso estable </template>
       </BaseCard>
     </div>
 
-    <div
-      v-if="nodesStore.loading"
-      class="loading-wrap"
-    >
+    <div v-if="nodesStore.loading" class="loading-wrap">
       <div class="spinner" />
     </div>
 
-    <div
-      v-if="nodesStore.consensusReplaced === true"
-      class="banner banner-success"
-    >
+    <div v-if="nodesStore.consensusReplaced === true" class="banner banner-success">
       Consenso aplicado: la cadena local fue reemplazada por una más larga.
     </div>
-    <div
-      v-else-if="nodesStore.consensusReplaced === false"
-      class="banner banner-info"
-    >
+    <div v-else-if="nodesStore.consensusReplaced === false" class="banner banner-info">
       La cadena local ya es la más larga.
     </div>
 
@@ -182,15 +168,8 @@ const peerColumns: PeerColumn[] = [
         <span class="section-h">Peers registrados</span>
         <span class="muted xs">Auto-sync cada 30s</span>
       </div>
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
-        <BaseTable
-          :columns="peerColumns"
-          :rows="peerRows"
-          :row-key="(p: PeerRow) => p.url"
-        >
+      <BaseCard variant="default" padding="none">
+        <PaginatedTable :columns="peerColumns" :rows="peerRows" :row-key="(p: PeerRow) => p.url">
           <template #cell-url="{ row }">
             <span class="mono xs">{{ row.url }}</span>
           </template>
@@ -207,51 +186,34 @@ const peerColumns: PeerColumn[] = [
             <span class="mono xs">{{ row.latency }}</span>
           </template>
           <template #cell-status="{ row }">
-            <BaseBadge :tone="STATUS_TONE[row.status]">
-              {{ STATUS_LABEL[row.status] }}
+            <BaseBadge :tone="peerStatusTone(row.status)">
+              {{ peerStatusLabel(row.status) }}
             </BaseBadge>
           </template>
           <template #cell-lastSync="{ row }">
             <span class="muted xs">{{ row.lastSync }}</span>
           </template>
           <template #row-actions>
-            <BaseButton
-              variant="ghost"
-              size="sm"
-              icon-only
-              aria-label="Más acciones"
-            >
+            <BaseButton variant="ghost" size="sm" icon-only aria-label="Más acciones">
               ⋯
             </BaseButton>
           </template>
-          <template #empty>
-            No hay peers registrados todavía.
-          </template>
-        </BaseTable>
+          <template #empty> No hay peers registrados todavía. </template>
+        </PaginatedTable>
       </BaseCard>
     </section>
 
     <section>
-      <div class="section-h">
-        Registrar nuevo peer
-      </div>
-      <BaseCard
-        variant="default"
-        padding="default"
-      >
+      <div class="section-h">Registrar nuevo peer</div>
+      <BaseCard variant="default" padding="default">
         <div class="reg-row">
           <input
             v-model="newUrl"
             class="reg-input mono"
             placeholder="http://node.example.io:5000"
             @keyup.enter="registerPeer"
-          >
-          <BaseButton
-            variant="primary"
-            @click="registerPeer"
-          >
-            Registrar
-          </BaseButton>
+          />
+          <BaseButton variant="primary" @click="registerPeer"> Registrar </BaseButton>
         </div>
         <div class="muted xs hint">
           Al registrar, el nodo intercambia su altura y hash de cabecera. Si la cadena remota es más

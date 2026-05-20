@@ -20,7 +20,7 @@ import { useDashboardFetchSteps } from '@/composables/useDashboardFetchSteps'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 import Stepper from '@/components/atoms/Stepper.vue'
 
 const router = useRouter()
@@ -223,25 +223,11 @@ onMounted(() => {
         <p>Panel de administración de la plataforma</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="refreshAll"
-        >
-          Actualizar
-        </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="router.push('/admin/users')"
-        >
+        <BaseButton variant="ghost" size="sm" @click="refreshAll"> Actualizar </BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="router.push('/admin/users')">
           Ver usuarios
         </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="router.push('/admin/audit')"
-        >
+        <BaseButton variant="ghost" size="sm" @click="router.push('/admin/audit')">
           Ver auditoría
         </BaseButton>
       </div>
@@ -249,14 +235,8 @@ onMounted(() => {
 
     <!-- Stepper refresh indicator -->
     <Transition name="fade">
-      <div
-        v-if="fetch.hasStarted.value && !fetch.refreshComplete.value"
-        class="refresh-indicator"
-      >
-        <Stepper
-          :steps="fetch.steps.value"
-          :current="fetch.currentIndex.value"
-        />
+      <div v-if="fetch.hasStarted.value && !fetch.refreshComplete.value" class="refresh-indicator">
+        <Stepper :steps="fetch.steps.value" :current="fetch.currentIndex.value" />
       </div>
     </Transition>
 
@@ -274,9 +254,7 @@ onMounted(() => {
           </BaseBadge>
         </template>
         {{ statsStore.stats?.users.total ?? '—' }}
-        <template #footer>
-          {{ statsStore.stats?.users.active ?? '—' }} activos
-        </template>
+        <template #footer> {{ statsStore.stats?.users.active ?? '—' }} activos </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -291,9 +269,7 @@ onMounted(() => {
           </BaseBadge>
         </template>
         {{ statsStore.stats?.users.active ?? '—' }}
-        <template #footer>
-          {{ statsStore.stats?.users.banned ?? 0 }} baneados
-        </template>
+        <template #footer> {{ statsStore.stats?.users.banned ?? 0 }} baneados </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -309,32 +285,23 @@ onMounted(() => {
       <BaseCard variant="bigstat">
         <template #header>
           <span>Transacciones · 7d</span>
-          <BaseBadge
-            v-if="txTrend"
-            variant="outline"
-            :tone="trendBadgeTone(txTrend.delta_pct)"
-          >
+          <BaseBadge v-if="txTrend" variant="outline" :tone="trendBadgeTone(txTrend.delta_pct)">
             {{ formatPct(txTrend.delta_pct) }}
           </BaseBadge>
         </template>
         {{ txTrend?.current ?? '—' }}
-        <template #footer>
-          vs {{ txTrend?.previous ?? '—' }} previo
-        </template>
+        <template #footer> vs {{ txTrend?.previous ?? '—' }} previo </template>
       </BaseCard>
     </div>
 
     <!-- Volume chart -->
-    <BaseCard
-      variant="default"
-      padding="none"
-    >
+    <BaseCard variant="default" padding="none">
       <template #header>
         <div class="panel-h chart-h">
           <span>Volumen confirmado · USD</span>
           <div class="range-tabs">
             <button
-              v-for="r in (['30d', '90d', '1y'] as VolumeRange[])"
+              v-for="r in ['30d', '90d', '1y'] as VolumeRange[]"
               :key="r"
               type="button"
               class="range-tab"
@@ -347,40 +314,18 @@ onMounted(() => {
         </div>
       </template>
       <div class="chart-body">
-        <div
-          v-if="fetch.status.volume === 'current'"
-          class="chart-loading"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="fetch.status.volume === 'current'" class="chart-loading">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
-        <VChart
-          v-else-if="volume"
-          class="chart"
-          :option="volumeOptions"
-          autoresize
-        />
-        <div
-          v-else
-          class="chart-empty"
-        >
-          Sin datos en el rango.
-        </div>
+        <VChart v-else-if="volume" class="chart" :option="volumeOptions" autoresize />
+        <div v-else class="chart-empty">Sin datos en el rango.</div>
       </div>
-      <div
-        v-if="volume"
-        class="chart-totals"
-      >
+      <div v-if="volume" class="chart-totals">
         <span>
           Total <strong>${{ formatUsd(volume.totals.volume_usd) }}</strong>
         </span>
         <span>· {{ volume.totals.tx_count }} tx</span>
-        <span
-          v-if="volume.totals.unpriced_count > 0"
-          class="unpriced-note"
-        >
+        <span v-if="volume.totals.unpriced_count > 0" class="unpriced-note">
           · {{ volume.totals.unpriced_count }} sin tasa FX
         </span>
       </div>
@@ -388,50 +333,28 @@ onMounted(() => {
 
     <!-- Critical events + Top movements -->
     <div class="content-grid">
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
-          <div class="panel-h">
-            Eventos críticos · 24h
-          </div>
+          <div class="panel-h">Eventos críticos · 24h</div>
         </template>
-        <div
-          v-if="fetch.status['critical-events'] === 'current'"
-          class="panel-loading"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="fetch.status['critical-events'] === 'current'" class="panel-loading">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
-        <div
-          v-else-if="criticalEvents.length === 0"
-          class="panel-empty"
-        >
+        <div v-else-if="criticalEvents.length === 0" class="panel-empty">
           Sin eventos críticos en las últimas 24h.
         </div>
-        <ul
-          v-else
-          class="event-list"
-        >
-          <li
-            v-for="e in criticalEvents"
-            :key="e.id"
-            class="event-row"
-          >
-            <span
-              class="event-dot"
-              :class="`sev-${e.severity ?? 'info'}`"
-            />
+        <ul v-else class="event-list">
+          <li v-for="e in criticalEvents" :key="e.id" class="event-row">
+            <span class="event-dot" :class="`sev-${e.severity ?? 'info'}`" />
             <div class="event-body">
               <div class="event-action mono">
                 {{ e.action }}
               </div>
               <div class="event-meta">
                 <span class="mono">{{ shortenId(e.actor_id) }}</span>
-                <span v-if="e.target_id">→ <span class="mono">{{ shortenId(e.target_id) }}</span></span>
+                <span v-if="e.target_id"
+                  >→ <span class="mono">{{ shortenId(e.target_id) }}</span></span
+                >
               </div>
             </div>
             <div class="event-ts">
@@ -441,31 +364,17 @@ onMounted(() => {
         </ul>
       </BaseCard>
 
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
-          <div class="panel-h">
-            Top movimientos · 24h
-          </div>
+          <div class="panel-h">Top movimientos · 24h</div>
         </template>
-        <div
-          v-if="fetch.status['top-movements'] === 'current'"
-          class="panel-loading"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="fetch.status['top-movements'] === 'current'" class="panel-loading">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
-        <div
-          v-else-if="topMovements.length === 0"
-          class="panel-empty"
-        >
+        <div v-else-if="topMovements.length === 0" class="panel-empty">
           Sin movimientos en las últimas 24h.
         </div>
-        <BaseTable
+        <PaginatedTable
           v-else
           :columns="movementColumns"
           :rows="topMovements"
@@ -487,65 +396,41 @@ onMounted(() => {
           <template #cell-confirmed_at="{ row }">
             <span class="ts mono">{{ relativeTime(row.confirmed_at) }}</span>
           </template>
-        </BaseTable>
+        </PaginatedTable>
       </BaseCard>
     </div>
 
     <!-- Blockchain KPIs + Mint -->
     <div class="content-grid">
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
-          <div class="panel-h">
-            Blockchain
-          </div>
+          <div class="panel-h">Blockchain</div>
         </template>
         <div class="chain-kpis">
           <div class="chain-kpi">
             <div class="ck-val">
               {{ metricsStore.metrics?.chainHeight ?? '—' }}
             </div>
-            <div class="ck-lbl">
-              Altura de cadena
-            </div>
-            <div class="ck-sub">
-              bloques confirmados
-            </div>
+            <div class="ck-lbl">Altura de cadena</div>
+            <div class="ck-sub">bloques confirmados</div>
           </div>
           <div class="chain-kpi">
             <div class="ck-val">
               {{ metricsStore.metrics?.pendingTransactions ?? '—' }}
             </div>
-            <div class="ck-lbl">
-              Txs pendientes
-            </div>
-            <div class="ck-sub">
-              en mempool
-            </div>
+            <div class="ck-lbl">Txs pendientes</div>
+            <div class="ck-sub">en mempool</div>
           </div>
         </div>
       </BaseCard>
 
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
-          <div class="panel-h">
-            Mintear tokens
-          </div>
+          <div class="panel-h">Mintear tokens</div>
         </template>
-        <form
-          class="mint-form"
-          @submit.prevent="submitMint"
-        >
+        <form class="mint-form" @submit.prevent="submitMint">
           <div class="field">
-            <label
-              class="field-label"
-              for="wallet-id"
-            >Wallet ID</label>
+            <label class="field-label" for="wallet-id">Wallet ID</label>
             <input
               id="wallet-id"
               v-model="mintForm.walletId"
@@ -553,13 +438,10 @@ onMounted(() => {
               type="text"
               placeholder="ID de la wallet destinataria"
               required
-            >
+            />
           </div>
           <div class="field">
-            <label
-              class="field-label"
-              for="mint-amount"
-            >Cantidad</label>
+            <label class="field-label" for="mint-amount">Cantidad</label>
             <input
               id="mint-amount"
               v-model="mintForm.amount"
@@ -569,15 +451,9 @@ onMounted(() => {
               step="any"
               placeholder="100"
               required
-            >
+            />
           </div>
-          <BaseButton
-            variant="primary"
-            type="submit"
-            :loading="minting"
-          >
-            Mintear
-          </BaseButton>
+          <BaseButton variant="primary" type="submit" :loading="minting"> Mintear </BaseButton>
         </form>
       </BaseCard>
     </div>
@@ -589,9 +465,7 @@ onMounted(() => {
       padding="none"
     >
       <template #header>
-        <div class="panel-h">
-          Balances en circulación
-        </div>
+        <div class="panel-h">Balances en circulación</div>
       </template>
       <div class="balances-grid">
         <div
