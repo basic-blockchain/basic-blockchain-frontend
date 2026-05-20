@@ -462,7 +462,10 @@ const confirmations = () => Math.floor((progress.value / 100) * 12)
         </template>
         <template v-else>
           <button class="btn" @click="emit('close')">Cerrar</button>
-          <button class="btn btn-primary" @click="emit('complete'); emit('close')">
+          <button
+            class="btn btn-primary"
+            @click="emit('complete'); emit('close')"
+          >
             Ver en auditoría
           </button>
         </template>
