@@ -196,8 +196,10 @@ onMounted(async () => {
 
     <!-- Chain status -->
     <BaseCard variant="default" padding="none">
-      <div class="panel-h">Estado de la cadena</div>
-      <div class="chain-status-body">
+      <template #header>
+        <span>Estado de la cadena</span>
+      </template>
+      <div class="section-body">
         <div
           class="chain-result"
           :class="chainValidation === null ? 'neutral' : chainValidation.valid ? 'ok' : 'fail'"
@@ -229,8 +231,10 @@ onMounted(async () => {
     <div class="val-grid">
       <!-- Block validation -->
       <BaseCard variant="default" padding="none">
-        <div class="panel-h">Validación de bloque</div>
-        <div class="panel-body">
+        <template #header>
+          <span>Validación de bloque</span>
+        </template>
+        <div class="section-body">
           <InputNumber
             v-model="blockForm.index"
             placeholder="Índice de bloque"
@@ -264,8 +268,10 @@ onMounted(async () => {
 
       <!-- Node validation -->
       <BaseCard variant="default" padding="none">
-        <div class="panel-h">Validación de nodo</div>
-        <div class="panel-body">
+        <template #header>
+          <span>Validación de nodo</span>
+        </template>
+        <div class="section-body">
           <InputText v-model="nodeForm.url" placeholder="http://peer:5000" class="val-input" />
           <div v-if="nodeChecks.length > 0" class="check-list">
             <div
@@ -288,8 +294,10 @@ onMounted(async () => {
 
       <!-- TX validation -->
       <BaseCard variant="default" padding="none" class="tx-panel">
-        <div class="panel-h">Validación de transacción</div>
-        <div class="panel-body">
+        <template #header>
+          <span>Validación de transacción</span>
+        </template>
+        <div class="section-body">
           <div class="tx-grid">
             <InputText v-model="txForm.sender" placeholder="Sender" class="val-input" />
             <InputText v-model="txForm.receiver" placeholder="Receiver" class="val-input" />
@@ -325,32 +333,34 @@ onMounted(async () => {
 
     <!-- Validation history -->
     <BaseCard v-if="historyStore.total > 0" variant="default" padding="none">
-      <div class="panel-h">
+      <template #header>
         <span>Historial de validaciones</span>
         <span class="count-badge sm">{{ historyStore.total }}</span>
-      </div>
-      <div class="history-list">
-        <div
-          v-for="ev in [...historyStore.events].reverse()"
-          :key="ev.id"
-          class="history-item"
-          :class="ev.status"
-        >
-          <span
-            class="pi history-icon"
-            :class="{
-              'pi-check-circle': ev.status === 'valid',
-              'pi-times-circle': ev.status === 'invalid',
-              'pi-exclamation-triangle': ev.status === 'error',
-            }"
-            aria-hidden="true"
-          />
-          <div class="history-body">
-            <span class="ev-type">{{ ev.type }}</span>
-            <span class="ev-target">{{ ev.target }}</span>
-            <span class="ev-message">{{ ev.message }}</span>
+      </template>
+      <div class="section-body history-list-shell">
+        <div class="history-list">
+          <div
+            v-for="ev in [...historyStore.events].reverse()"
+            :key="ev.id"
+            class="history-item"
+            :class="ev.status"
+          >
+            <span
+              class="pi history-icon"
+              :class="{
+                'pi-check-circle': ev.status === 'valid',
+                'pi-times-circle': ev.status === 'invalid',
+                'pi-exclamation-triangle': ev.status === 'error',
+              }"
+              aria-hidden="true"
+            />
+            <div class="history-body">
+              <span class="ev-type">{{ ev.type }}</span>
+              <span class="ev-target">{{ ev.target }}</span>
+              <span class="ev-message">{{ ev.message }}</span>
+            </div>
+            <span class="ev-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
           </div>
-          <span class="ev-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
         </div>
       </div>
     </BaseCard>
@@ -402,20 +412,7 @@ onMounted(async () => {
 }
 
 /* Panels */
-.panel-h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-.panel-body {
+.section-body {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -423,12 +420,6 @@ onMounted(async () => {
 }
 
 /* Chain status */
-.chain-status-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .chain-result {
   display: flex;
   align-items: center;
@@ -541,6 +532,9 @@ onMounted(async () => {
 }
 
 /* History */
+.history-list-shell {
+  gap: 0;
+}
 .history-list {
   display: flex;
   flex-direction: column;
