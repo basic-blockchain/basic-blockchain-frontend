@@ -5,7 +5,7 @@ import { useToast } from 'primevue/usetoast'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
 const currencies = ref<CurrencyRecord[]>([])
@@ -96,19 +96,10 @@ onMounted(load)
         <p>Gestión de monedas soportadas por la plataforma</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           Actualizar
         </BaseButton>
-        <BaseButton
-          variant="primary"
-          size="sm"
-          @click="scrollToForm"
-        >
+        <BaseButton variant="primary" size="sm" @click="scrollToForm">
           <i class="pi pi-plus" />
           <span>Agregar moneda</span>
         </BaseButton>
@@ -117,70 +108,41 @@ onMounted(load)
 
     <div class="bigstat-row">
       <BaseCard variant="bigstat">
-        <template #header>
-          Total
-        </template>
+        <template #header> Total </template>
         {{ currencies.length }}
-        <template #footer>
-          registradas
-        </template>
+        <template #footer> registradas </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          Activas
-        </template>
+        <template #header> Activas </template>
         {{ currencies.filter((c) => c.active).length }}
-        <template #footer>
-          habilitadas
-        </template>
+        <template #footer> habilitadas </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          Inactivas
-        </template>
+        <template #header> Inactivas </template>
         {{ currencies.filter((c) => !c.active).length }}
-        <template #footer>
-          deshabilitadas
-        </template>
+        <template #footer> deshabilitadas </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          Tipos
-        </template>
+        <template #header> Tipos </template>
         3
-        <template #footer>
-          native / stable / platform
-        </template>
+        <template #footer> native / stable / platform </template>
       </BaseCard>
     </div>
 
-    <div
-      v-if="error"
-      class="inline-alert danger"
-    >
+    <div v-if="error" class="inline-alert danger">
       {{ error }}
     </div>
 
     <div class="catalog-grid">
-      <BaseCard
-        variant="default"
-        padding="none"
-        class="catalog-card"
-      >
+      <BaseCard variant="default" padding="none" class="catalog-card">
         <div class="panel-h">
           <span>Monedas registradas</span>
           <span class="count-badge sm">{{ currencies.length }}</span>
         </div>
-        <div
-          v-if="loading"
-          class="loading-row"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="loading" class="loading-row">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
-        <BaseTable
+        <PaginatedTable
           v-else
           :columns="currencyColumns"
           :rows="currencies"
@@ -205,55 +167,30 @@ onMounted(load)
               {{ row.active ? 'Activa' : 'Inactiva' }}
             </BaseBadge>
           </template>
-          <template #empty>
-            Sin monedas todavía.
-          </template>
-        </BaseTable>
+          <template #empty> Sin monedas todavía. </template>
+        </PaginatedTable>
       </BaseCard>
 
       <div ref="formAnchor">
-        <BaseCard
-          variant="default"
-          padding="none"
-          class="form-panel"
-        >
-          <div class="panel-h">
-            Añadir moneda
-          </div>
-          <form
-            class="panel-form"
-            @submit.prevent="submit"
-          >
+        <BaseCard variant="default" padding="none" class="form-panel">
+          <div class="panel-h">Añadir moneda</div>
+          <form class="panel-form" @submit.prevent="submit">
             <div class="field">
-              <label
-                class="field-label"
-                for="code"
-              >Código</label>
+              <label class="field-label" for="code">Código</label>
               <input
                 id="code"
                 v-model="form.code"
                 class="field-input"
                 maxlength="10"
                 placeholder="USD"
-              >
+              />
             </div>
             <div class="field">
-              <label
-                class="field-label"
-                for="name"
-              >Nombre</label>
-              <input
-                id="name"
-                v-model="form.name"
-                class="field-input"
-                placeholder="US Dollar"
-              >
+              <label class="field-label" for="name">Nombre</label>
+              <input id="name" v-model="form.name" class="field-input" placeholder="US Dollar" />
             </div>
             <div class="field">
-              <label
-                class="field-label"
-                for="decimals"
-              >Decimales</label>
+              <label class="field-label" for="decimals">Decimales</label>
               <input
                 id="decimals"
                 v-model.number="form.decimals"
@@ -261,31 +198,16 @@ onMounted(load)
                 type="number"
                 min="0"
                 max="18"
-              >
+              />
             </div>
             <div class="field">
-              <label
-                class="field-label"
-                for="active"
-              >Estado</label>
-              <select
-                id="active"
-                v-model="form.active"
-                class="field-select"
-              >
-                <option :value="true">
-                  Activa
-                </option>
-                <option :value="false">
-                  Inactiva
-                </option>
+              <label class="field-label" for="active">Estado</label>
+              <select id="active" v-model="form.active" class="field-select">
+                <option :value="true">Activa</option>
+                <option :value="false">Inactiva</option>
               </select>
             </div>
-            <BaseButton
-              variant="primary"
-              size="sm"
-              type="submit"
-            >
+            <BaseButton variant="primary" size="sm" type="submit">
               <i class="pi pi-check" />
               <span>Crear moneda</span>
             </BaseButton>

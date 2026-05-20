@@ -10,6 +10,7 @@ import { useToast } from '@/composables/useToast'
 import { useValidationHistoryStore } from '@/stores/validationHistory'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
 
 const chainStore = useChainStore()
 const nodesStore = useNodesStore()
@@ -18,6 +19,8 @@ const historyStore = useValidationHistoryStore()
 
 const loadingChainValidation = ref(false)
 const chainValidation = ref<{ valid: boolean; message: string } | null>(null)
+const page = ref(1)
+const pageSize = ref(10)
 
 const blockForm = reactive({ index: null as number | null })
 const nodeForm = reactive({ url: '' })
@@ -122,6 +125,38 @@ function downloadHistory() {
   URL.revokeObjectURL(url)
 }
 
+function downloadCsv() {
+  const rows = [...historyStore.events].reverse()
+  if (rows.length === 0) return
+  const headers = ['id', 'type', 'status', 'target', 'message', 'timestamp']
+  const csv = [headers.join(',')]
+    .concat(
+      rows.map((r: any) =>
+        [r.id, r.type, r.status, r.target, `"${String(r.message).replace(/"/g, '""')}"`, r.timestamp].join(',')
+      )
+    )
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `validation-history-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function formatTime(value: unknown) {
+  return new Date(String(value)).toLocaleString()
+}
+
+const totalPages = computed(() => Math.max(1, Math.ceil(historyStore.total / pageSize.value)))
+const pagedEvents = computed(() => {
+  const all = [...historyStore.events].reverse()
+  const start = (page.value - 1) * pageSize.value
+  return all.slice(start, start + pageSize.value)
+})
+
 onMounted(async () => {
   await Promise.all([chainStore.fetchChain(), nodesStore.fetchNodes()])
 })
@@ -156,6 +191,15 @@ onMounted(async () => {
         >
           <span class="pi pi-download" aria-hidden="true" />
           Exportar historial
+        </BaseButton>
+        <BaseButton
+          v-if="historyStore.total > 0"
+          variant="ghost"
+          size="sm"
+          @click="downloadCsv"
+        >
+          <span class="pi pi-file-o" aria-hidden="true" />
+          Export CSV
         </BaseButton>
       </div>
     </div>
@@ -196,8 +240,10 @@ onMounted(async () => {
 
     <!-- Chain status -->
     <BaseCard variant="default" padding="none">
-      <div class="panel-h">Estado de la cadena</div>
-      <div class="chain-status-body">
+      <template #header>
+        <span>Estado de la cadena</span>
+      </template>
+      <div class="section-body">
         <div
           class="chain-result"
           :class="chainValidation === null ? 'neutral' : chainValidation.valid ? 'ok' : 'fail'"
@@ -229,8 +275,10 @@ onMounted(async () => {
     <div class="val-grid">
       <!-- Block validation -->
       <BaseCard variant="default" padding="none">
-        <div class="panel-h">Validación de bloque</div>
-        <div class="panel-body">
+        <template #header>
+          <span>Validación de bloque</span>
+        </template>
+        <div class="section-body">
           <InputNumber
             v-model="blockForm.index"
             placeholder="Índice de bloque"
@@ -264,8 +312,10 @@ onMounted(async () => {
 
       <!-- Node validation -->
       <BaseCard variant="default" padding="none">
-        <div class="panel-h">Validación de nodo</div>
-        <div class="panel-body">
+        <template #header>
+          <span>Validación de nodo</span>
+        </template>
+        <div class="section-body">
           <InputText v-model="nodeForm.url" placeholder="http://peer:5000" class="val-input" />
           <div v-if="nodeChecks.length > 0" class="check-list">
             <div
@@ -288,8 +338,10 @@ onMounted(async () => {
 
       <!-- TX validation -->
       <BaseCard variant="default" padding="none" class="tx-panel">
-        <div class="panel-h">Validación de transacción</div>
-        <div class="panel-body">
+        <template #header>
+          <span>Validación de transacción</span>
+        </template>
+        <div class="section-body">
           <div class="tx-grid">
             <InputText v-model="txForm.sender" placeholder="Sender" class="val-input" />
             <InputText v-model="txForm.receiver" placeholder="Receiver" class="val-input" />
@@ -325,33 +377,46 @@ onMounted(async () => {
 
     <!-- Validation history -->
     <BaseCard v-if="historyStore.total > 0" variant="default" padding="none">
-      <div class="panel-h">
+      <template #header>
         <span>Historial de validaciones</span>
         <span class="count-badge sm">{{ historyStore.total }}</span>
-      </div>
-      <div class="history-list">
-        <div
-          v-for="ev in [...historyStore.events].reverse()"
-          :key="ev.id"
-          class="history-item"
-          :class="ev.status"
-        >
-          <span
-            class="pi history-icon"
-            :class="{
-              'pi-check-circle': ev.status === 'valid',
-              'pi-times-circle': ev.status === 'invalid',
-              'pi-exclamation-triangle': ev.status === 'error',
-            }"
-            aria-hidden="true"
-          />
-          <div class="history-body">
-            <span class="ev-type">{{ ev.type }}</span>
-            <span class="ev-target">{{ ev.target }}</span>
-            <span class="ev-message">{{ ev.message }}</span>
+      </template>
+      <div class="section-body history-list-shell">
+        <div class="history-controls" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label class="hint">Page size</label>
+            <select v-model="pageSize" @change="page = 1">
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+            </select>
           </div>
-          <span class="ev-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" class="btn" :disabled="page <= 1" @click="page = page - 1">Prev</button>
+            <span class="hint">Page {{ page }} / {{ totalPages }}</span>
+            <button type="button" class="btn" :disabled="page >= totalPages" @click="page = page + 1">Next</button>
+          </div>
         </div>
+
+        <BaseTable
+          :columns="[
+            { key: 'type', label: 'Type' },
+            { key: 'target', label: 'Target' },
+            { key: 'message', label: 'Message' },
+            { key: 'status', label: 'Status', width: 120, align: 'center' },
+            { key: 'timestamp', label: 'Time', width: 140 }
+          ]"
+          :rows="pagedEvents"
+          row-key="id"
+        >
+          <template #cell-status="{ row }">
+            <span :class="['pi', row.status === 'valid' ? 'pi-check-circle' : row.status === 'invalid' ? 'pi-times-circle' : 'pi-exclamation-triangle']" aria-hidden="true"></span>
+            <span style="margin-left:6px">{{ row.status }}</span>
+          </template>
+          <template #cell-timestamp="{ value }">
+            {{ formatTime(value) }}
+          </template>
+        </BaseTable>
       </div>
     </BaseCard>
   </div>
@@ -402,20 +467,7 @@ onMounted(async () => {
 }
 
 /* Panels */
-.panel-h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-.panel-body {
+.section-body {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -423,12 +475,6 @@ onMounted(async () => {
 }
 
 /* Chain status */
-.chain-status-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .chain-result {
   display: flex;
   align-items: center;
@@ -541,6 +587,9 @@ onMounted(async () => {
 }
 
 /* History */
+.history-list-shell {
+  gap: 0;
+}
 .history-list {
   display: flex;
   flex-direction: column;

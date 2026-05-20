@@ -189,6 +189,61 @@ export async function createTreasuryWallet(currency: string): Promise<{
   return data
 }
 
+export interface TreasuryDistributionRecord {
+  op_id: string
+  status: 'pending_approval' | 'executed' | 'cancelled'
+  currency: string
+  source_wallet_id: string
+  amount_per_wallet: string
+  recipient_user_ids: string[]
+  recipient_count: number
+  total_amount: string
+  initiated_by: string
+  initiated_at: string
+  memo: string | null
+  approved_by?: string
+  approved_at?: string
+  executed_at?: string
+  tx_ids?: string[]
+  cancelled_at?: string
+}
+
+export interface InitiateTreasuryDistributionPayload {
+  source_wallet_id: string
+  currency: string
+  amount_per_wallet: string
+  recipient_user_ids: string[]
+  memo?: string | null
+}
+
+export async function initiateTreasuryDistribution(
+  payload: InitiateTreasuryDistributionPayload
+): Promise<TreasuryDistributionRecord> {
+  const { data } = await client.post<TreasuryDistributionRecord>(
+    '/admin/treasury/distribute',
+    payload
+  )
+  return data
+}
+
+export async function approveTreasuryDistribution(
+  opId: string
+): Promise<TreasuryDistributionRecord> {
+  const { data } = await client.post<TreasuryDistributionRecord>(
+    `/admin/treasury/distribute/${opId}/approve`
+  )
+  return data
+}
+
+export async function cancelTreasuryDistribution(
+  opId: string
+): Promise<TreasuryDistributionRecord> {
+  const { data } = await client.post<TreasuryDistributionRecord>(
+    `/admin/treasury/distribute/${opId}/cancel`
+  )
+  return data
+}
+
 // ── Exchange rates (MC-3) ─────────────────────────────────────────────────
 
 export async function listExchangeRates(params?: {
@@ -245,7 +300,9 @@ export interface AuditParams {
   since?: AuditSinceWindow
 }
 
-export async function listAuditLog(params?: AuditParams): Promise<{ entries: AuditEntry[]; count: number }> {
+export async function listAuditLog(
+  params?: AuditParams
+): Promise<{ entries: AuditEntry[]; count: number }> {
   const { data } = await client.get('/admin/audit', { params })
   return data
 }
