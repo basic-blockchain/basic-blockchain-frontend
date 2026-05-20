@@ -10,6 +10,7 @@ import { useToast } from '@/composables/useToast'
 import { useValidationHistoryStore } from '@/stores/validationHistory'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseTable from '@/components/atoms/BaseTable.vue'
 
 const chainStore = useChainStore()
 const nodesStore = useNodesStore()
@@ -18,6 +19,8 @@ const historyStore = useValidationHistoryStore()
 
 const loadingChainValidation = ref(false)
 const chainValidation = ref<{ valid: boolean; message: string } | null>(null)
+const page = ref(1)
+const pageSize = ref(10)
 
 const blockForm = reactive({ index: null as number | null })
 const nodeForm = reactive({ url: '' })
@@ -121,6 +124,34 @@ function downloadHistory() {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+function downloadCsv() {
+  const rows = [...historyStore.events].reverse()
+  if (rows.length === 0) return
+  const headers = ['id', 'type', 'status', 'target', 'message', 'timestamp']
+  const csv = [headers.join(',')]
+    .concat(
+      rows.map((r: any) =>
+        [r.id, r.type, r.status, r.target, `"${String(r.message).replace(/"/g, '""')}"`, r.timestamp].join(',')
+      )
+    )
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `validation-history-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const totalPages = computed(() => Math.max(1, Math.ceil(historyStore.total / pageSize.value)))
+const pagedEvents = computed(() => {
+  const all = [...historyStore.events].reverse()
+  const start = (page.value - 1) * pageSize.value
+  return all.slice(start, start + pageSize.value)
+})
 
 onMounted(async () => {
   await Promise.all([chainStore.fetchChain(), nodesStore.fetchNodes()])
@@ -338,30 +369,41 @@ onMounted(async () => {
         <span class="count-badge sm">{{ historyStore.total }}</span>
       </template>
       <div class="section-body history-list-shell">
-        <div class="history-list">
-          <div
-            v-for="ev in [...historyStore.events].reverse()"
-            :key="ev.id"
-            class="history-item"
-            :class="ev.status"
-          >
-            <span
-              class="pi history-icon"
-              :class="{
-                'pi-check-circle': ev.status === 'valid',
-                'pi-times-circle': ev.status === 'invalid',
-                'pi-exclamation-triangle': ev.status === 'error',
-              }"
-              aria-hidden="true"
-            />
-            <div class="history-body">
-              <span class="ev-type">{{ ev.type }}</span>
-              <span class="ev-target">{{ ev.target }}</span>
-              <span class="ev-message">{{ ev.message }}</span>
-            </div>
-            <span class="ev-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+        <div class="history-controls" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label class="hint">Page size</label>
+            <select v-model="pageSize" @change="page = 1">
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" class="btn" :disabled="page <= 1" @click="page = page - 1">Prev</button>
+            <span class="hint">Page {{ page }} / {{ totalPages }}</span>
+            <button type="button" class="btn" :disabled="page >= totalPages" @click="page = page + 1">Next</button>
           </div>
         </div>
+
+        <BaseTable
+          :columns="[
+            { key: 'type', label: 'Type' },
+            { key: 'target', label: 'Target' },
+            { key: 'message', label: 'Message' },
+            { key: 'status', label: 'Status', width: 120, align: 'center' },
+            { key: 'timestamp', label: 'Time', width: 140 }
+          ]"
+          :rows="pagedEvents"
+          row-key="id"
+        >
+          <template #cell-status="{ row }">
+            <span :class="['pi', row.status === 'valid' ? 'pi-check-circle' : row.status === 'invalid' ? 'pi-times-circle' : 'pi-exclamation-triangle']" aria-hidden="true"></span>
+            <span style="margin-left:6px">{{ row.status }}</span>
+          </template>
+          <template #cell-timestamp="{ value }">
+            {{ new Date(value).toLocaleString() }}
+          </template>
+        </BaseTable>
       </div>
     </BaseCard>
   </div>
