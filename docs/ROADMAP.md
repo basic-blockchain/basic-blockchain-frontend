@@ -321,18 +321,18 @@ ISO timestamp on soft-delete.
 **Goal**: visual + UX refresh against the same backend / framework
 stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
 
-| Sub-phase | Step                                                                                                                                                                                                        | Status    | PR    |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ----- |
-| 7.0       | DESIGN-v2.md contract + token deltas added to `src/assets/design-system.css`. | done | — |
-| 7.1       | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`). | done | — |
-| 7.2       | Login / Register migration. | done | #319, #318 |
-| 7.3       | AdminView dashboard refresh. | done | #321, #320 |
-| 7.4       | AdminUsersView (row-actions, bulk-action footer). | done | #323, #322 |
-| 7.5       | AdminWalletsView (USD/native toggle, row-actions). | done | #325, #324 |
-| 7.6       | UserDrawer + WalletDrawer unification into one detail-panel pattern. | done | #327, #326 |
-| 7.7       | ChainView / MempoolView / NodesView refresh. | done | #329, #328 |
-| 7.8       | Treasury distribution + dual-sign mint flows (with backend Phase 7.8). | done | #331, #330 |
-| 7.9       | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView. | done | #332+ |
+| Sub-phase | Step                                                                                                                                 | Status | PR         |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------ | ---------- |
+| 7.0       | DESIGN-v2.md contract + token deltas added to `src/assets/design-system.css`.                                                        | done   | —          |
+| 7.1       | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`).             | done   | —          |
+| 7.2       | Login / Register migration.                                                                                                          | done   | #319, #318 |
+| 7.3       | AdminView dashboard refresh.                                                                                                         | done   | #321, #320 |
+| 7.4       | AdminUsersView (row-actions, bulk-action footer).                                                                                    | done   | #323, #322 |
+| 7.5       | AdminWalletsView (USD/native toggle, row-actions).                                                                                   | done   | #325, #324 |
+| 7.6       | UserDrawer + WalletDrawer unification into one detail-panel pattern.                                                                 | done   | #327, #326 |
+| 7.7       | ChainView / MempoolView / NodesView refresh.                                                                                         | done   | #329, #328 |
+| 7.8       | Treasury distribution + dual-sign mint flows (with backend Phase 7.8).                                                               | done   | #331, #330 |
+| 7.9       | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView. | done   | #332+      |
 
 **Iteration rules** (captured in DESIGN-v2 §6):
 
@@ -346,7 +346,7 @@ stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
 
 ## 4. Next (committed scope)
 
-*(Phase 7 closed; next scope TBD. See §5 Backlog for candidate work.)*
+_(Phase 7 closed; next scope TBD. See §5 Backlog for candidate work.)_
 
 ---
 
@@ -446,20 +446,21 @@ review") and rules BR-KY-09..16 in business-rules.md.
 **Goal**: visual + UX refresh against the same backend / framework
 stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
 
-| Sub-phase | Step | Status | PR |
-| --- | --- | --- | --- |
-| 7.0 | DESIGN-v2.md contract + token deltas (`--surface-3`, `--radius-pill`, `--space-*`, `--duration-*`, `--ease-*`) added to `src/assets/design-system.css`. | done | — |
-| 7.1 | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`, consolidated `AddrChip`/`AssetPill`). | done | — |
-| 7.2 | Login / Register migration. | done | #319, #318 |
-| 7.3 | AdminView dashboard refresh. | done | #321, #320 |
-| 7.4 | AdminUsersView (row-actions, bulk-action footer). | done | #323, #322 |
-| 7.5 | AdminWalletsView (USD/native toggle, row-actions). | done | #325, #324 |
-| 7.6 | UserDrawer + WalletDrawer unification into one detail-panel pattern with breadcrumb-style entity nav. | done | #327, #326 |
-| 7.7 | ChainView / MempoolView / NodesView refresh. | done | #329, #328 |
-| 7.8 | Treasury distribution + dual-sign mint flows (consumer of `Stepper`). | done | #331, #330 |
-| 7.9 | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView. | done | #332 + #334 + #336 + #346 + others |
+| Sub-phase | Step                                                                                                                                                          | Status | PR                                 |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------- |
+| 7.0       | DESIGN-v2.md contract + token deltas (`--surface-3`, `--radius-pill`, `--space-*`, `--duration-*`, `--ease-*`) added to `src/assets/design-system.css`.       | done   | —                                  |
+| 7.1       | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`, consolidated `AddrChip`/`AssetPill`). | done   | —                                  |
+| 7.2       | Login / Register migration.                                                                                                                                   | done   | #319, #318                         |
+| 7.3       | AdminView dashboard refresh.                                                                                                                                  | done   | #321, #320                         |
+| 7.4       | AdminUsersView (row-actions, bulk-action footer).                                                                                                             | done   | #323, #322                         |
+| 7.5       | AdminWalletsView (USD/native toggle, row-actions).                                                                                                            | done   | #325, #324                         |
+| 7.6       | UserDrawer + WalletDrawer unification into one detail-panel pattern with breadcrumb-style entity nav.                                                         | done   | #327, #326                         |
+| 7.7       | ChainView / MempoolView / NodesView refresh.                                                                                                                  | done   | #329, #328                         |
+| 7.8       | Treasury distribution + dual-sign mint flows (consumer of `Stepper`).                                                                                         | done   | #331, #330                         |
+| 7.9       | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView.                          | done   | #332 + #334 + #336 + #346 + others |
 
 **Notes**:
+
 - Phase 7.0 opened 2026-05-17 with the DESIGN-v2 contract.
 - Phase 7.1 shipped components one PR per component (BaseButton, BaseBadge, BaseCard, BaseTable, BaseModal, BaseDrawer, Stepper, etc.).
 - Phases 7.2–7.9 shipped screen-by-screen migrations on develop, with promotion to main completed 2026-05-20.
