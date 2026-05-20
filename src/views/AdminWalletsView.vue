@@ -1,20 +1,25 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import {
-  listAllWallets, listAuditLog, freezeWallet, unfreezeWallet,
+  listAllWallets,
+  listAuditLog,
+  freezeWallet,
+  unfreezeWallet,
   type WalletAdminRecord,
 } from '@/api/admin'
 import { getConfirmed, getPending } from '@/api/mempool'
 import HashChip from '@/components/atoms/HashChip.vue'
 import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
 import WalletDrawer, {
-  type DrawerWallet, type DrawerWalletMovement, type DrawerWalletAuditEvent,
+  type DrawerWallet,
+  type DrawerWalletMovement,
+  type DrawerWalletAuditEvent,
   type WalletDrawerAction,
 } from '@/components/drawers/WalletDrawer.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const wallets = ref<WalletAdminRecord[]>([])
 const totalBalanceUsd = ref('0')
@@ -75,8 +80,10 @@ onMounted(load)
 const filtered = computed(() => {
   return wallets.value.filter((w) => {
     const q = filterUser.value.toLowerCase()
-    const matchUser = !q || w.username.toLowerCase().includes(q) || w.display_name.toLowerCase().includes(q)
-    const matchFrozen = filterFrozen.value === 'all' || (filterFrozen.value === 'frozen' ? w.frozen : !w.frozen)
+    const matchUser =
+      !q || w.username.toLowerCase().includes(q) || w.display_name.toLowerCase().includes(q)
+    const matchFrozen =
+      filterFrozen.value === 'all' || (filterFrozen.value === 'frozen' ? w.frozen : !w.frozen)
     return matchUser && matchFrozen
   })
 })
@@ -213,26 +220,11 @@ function onRowClick(payload: { row: WalletAdminRecord }) {
         <p>Gestión y congelamiento de wallets de la plataforma</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           Actualizar
         </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-        >
-          Exportar
-        </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-        >
-          Congelar selección
-        </BaseButton>
+        <BaseButton variant="ghost" size="sm"> Exportar </BaseButton>
+        <BaseButton variant="ghost" size="sm"> Congelar selección </BaseButton>
       </div>
     </div>
 
@@ -242,110 +234,69 @@ function onRowClick(payload: { row: WalletAdminRecord }) {
           <span>Total</span>
         </template>
         {{ wallets.length }}
-        <template #footer>
-          {{ wallets.length }} registradas
-        </template>
+        <template #footer> {{ wallets.length }} registradas </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
         <template #header>
           <span>Activas</span>
         </template>
-        {{ wallets.filter(w => !w.frozen).length }}
-        <template #footer>
-          en operación
-        </template>
+        {{ wallets.filter((w) => !w.frozen).length }}
+        <template #footer> en operación </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
         <template #header>
           <span>Congeladas</span>
         </template>
-        {{ wallets.filter(w => w.frozen).length }}
-        <template #footer>
-          bloqueadas
-        </template>
+        {{ wallets.filter((w) => w.frozen).length }}
+        <template #footer> bloqueadas </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
         <template #header>
           <span>Saldo bajo gestión</span>
         </template>
-        <template v-if="hasPricedBalance">
-          ${{ formatUsd(totalBalanceUsd) }}
-        </template>
+        <template v-if="hasPricedBalance"> ${{ formatUsd(totalBalanceUsd) }} </template>
         <template v-else-if="nativeAggregate">
-          <span
-            class="vl-native"
-            :title="nativeAggregate"
-          >{{ nativeAggregate }}</span>
+          <span class="vl-native" :title="nativeAggregate">{{ nativeAggregate }}</span>
         </template>
-        <template v-else>
-          $0
-        </template>
+        <template v-else> $0 </template>
         <template #footer>
           <template v-if="hasPricedBalance && unpricedCurrencies.length">
             <span class="unpriced">{{ unpricedCurrencies.length }} sin tasa FX</span>
             ({{ unpricedCurrencies.join(', ') }})
           </template>
-          <template v-else-if="hasPricedBalance">
-            USD agregado
-          </template>
+          <template v-else-if="hasPricedBalance"> USD agregado </template>
           <template v-else-if="nativeAggregate">
             <span class="unpriced">sin tasa FX para mostrar USD</span>
           </template>
-          <template v-else>
-            sin balances
-          </template>
+          <template v-else> sin balances </template>
         </template>
       </BaseCard>
     </div>
 
     <div class="filters-bar">
-      <input
-        v-model="filterUser"
-        class="filter-input"
-        placeholder="Buscar por usuario…"
-      >
-      <select
-        v-model="filterFrozen"
-        class="filter-select"
-      >
-        <option value="all">
-          Todos los estados
-        </option>
-        <option value="active">
-          Activa
-        </option>
-        <option value="frozen">
-          Congelada
-        </option>
+      <input v-model="filterUser" class="filter-input" placeholder="Buscar por usuario…" />
+      <select v-model="filterFrozen" class="filter-select">
+        <option value="all">Todos los estados</option>
+        <option value="active">Activa</option>
+        <option value="frozen">Congelada</option>
       </select>
-      <span class="count-badge">{{ filtered.length }} wallet{{ filtered.length !== 1 ? 's' : '' }}</span>
+      <span class="count-badge"
+        >{{ filtered.length }} wallet{{ filtered.length !== 1 ? 's' : '' }}</span
+      >
     </div>
 
-    <div
-      v-if="error"
-      class="inline-alert danger"
-    >
+    <div v-if="error" class="inline-alert danger">
       {{ error }}
     </div>
-    <div
-      v-if="loading"
-      class="loading-row"
-    >
-      <span
-        class="pi pi-spin pi-spinner"
-        aria-hidden="true"
-      /> Cargando…
+    <div v-if="loading" class="loading-row">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
 
-    <BaseCard
-      v-else
-      variant="default"
-      padding="none"
-    >
-      <BaseTable
+    <BaseCard v-else variant="default" padding="none">
+      <PaginatedTable
         :columns="walletColumns"
         :rows="filtered"
         :row-key="(w: WalletAdminRecord) => w.wallet_id"
@@ -357,15 +308,8 @@ function onRowClick(payload: { row: WalletAdminRecord }) {
         </template>
 
         <template #cell-wallet_id="{ row }">
-          <div
-            class="mono"
-            @click.stop
-          >
-            <HashChip
-              :hash="row.wallet_id"
-              :length="16"
-              label="wallet id"
-            />
+          <div class="mono" @click.stop>
+            <HashChip :hash="row.wallet_id" :length="16" label="wallet id" />
           </div>
         </template>
 
@@ -387,33 +331,19 @@ function onRowClick(payload: { row: WalletAdminRecord }) {
         <template #cell-usd="{ row }">
           <span class="mono usd-cell">
             <template v-if="row.balance_usd !== null">${{ formatUsd(row.balance_usd) }}</template>
-            <span
-              v-else
-              class="usd-missing"
-              title="Sin tasa FX para esta moneda"
-            >—</span>
+            <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
           </span>
         </template>
 
         <template #cell-type="{ row }">
-          <BaseBadge
-            :tone="typeTone(row.wallet_type)"
-            :dot="false"
-          >
+          <BaseBadge :tone="typeTone(row.wallet_type)" :dot="false">
             {{ row.wallet_type }}
           </BaseBadge>
         </template>
 
         <template #cell-pub_key="{ row }">
-          <div
-            class="mono text-dim"
-            @click.stop
-          >
-            <HashChip
-              :hash="row.public_key"
-              :length="14"
-              label="public key"
-            />
+          <div class="mono text-dim" @click.stop>
+            <HashChip :hash="row.public_key" :length="14" label="public key" />
           </div>
         </template>
 
@@ -424,19 +354,13 @@ function onRowClick(payload: { row: WalletAdminRecord }) {
         </template>
 
         <template #row-actions="{ row }">
-          <BaseButton
-            variant="secondary"
-            size="sm"
-            @click="toggleFreeze(row)"
-          >
+          <BaseButton variant="secondary" size="sm" @click="toggleFreeze(row)">
             {{ row.frozen ? 'Descongelar' : 'Congelar' }}
           </BaseButton>
         </template>
 
-        <template #empty>
-          No se encontraron wallets.
-        </template>
-      </BaseTable>
+        <template #empty> No se encontraron wallets. </template>
+      </PaginatedTable>
     </BaseCard>
 
     <WalletDrawer

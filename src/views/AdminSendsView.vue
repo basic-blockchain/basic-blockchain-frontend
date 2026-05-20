@@ -4,9 +4,9 @@ import { getConfirmed, getPending } from '@/api/mempool'
 import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
 import { useToast } from 'primevue/usetoast'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
 const confirmed = ref<ConfirmedTransaction[]>([])
@@ -126,18 +126,9 @@ onMounted(load)
         <h1>Envíos</h1>
         <p>Transferencias entre wallets · internas y on-chain.</p>
       </div>
-      <BaseButton
-        variant="ghost"
-        size="sm"
-        :loading="loading"
-        @click="load"
-      >
+      <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
         <template #leading>
-          <span
-            class="pi pi-refresh"
-            :class="{ 'pi-spin': loading }"
-            aria-hidden="true"
-          />
+          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
         </template>
         Actualizar
       </BaseButton>
@@ -150,44 +141,33 @@ onMounted(load)
           <span>Envíos totales</span>
         </template>
         {{ stats.total.toLocaleString('es-AR') }}
-        <template #footer>
-          Confirmados + pendientes
-        </template>
+        <template #footer> Confirmados + pendientes </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Volumen total</span>
         </template>
         {{ stats.volume.toLocaleString('es-AR', { maximumFractionDigits: 2 }) }}
-        <template #footer>
-          Suma de montos
-        </template>
+        <template #footer> Suma de montos </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Pendientes on-chain</span>
         </template>
         <span :class="{ 'kpi-warning': stats.pending > 0 }">{{ stats.pending }}</span>
-        <template #footer>
-          Confirmaciones &lt; 3
-        </template>
+        <template #footer> Confirmaciones &lt; 3 </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Confirmados</span>
         </template>
         <span class="kpi-success">{{ stats.confirmed.toLocaleString('es-AR') }}</span>
-        <template #footer>
-          En blockchain
-        </template>
+        <template #footer> En blockchain </template>
       </BaseCard>
     </div>
 
     <!-- Tab strip -->
-    <div
-      class="tabstrip"
-      role="tablist"
-    >
+    <div class="tabstrip" role="tablist">
       <button
         v-for="t in [
           { key: 'all', label: 'Todos' },
@@ -210,37 +190,18 @@ onMounted(load)
     <!-- Search bar -->
     <div class="toolbar-search-bar">
       <div class="toolbar-search">
-        <span
-          class="pi pi-search"
-          aria-hidden="true"
-        />
-        <input
-          v-model="searchQuery"
-          placeholder="Buscar por wallet, referencia…"
-        >
+        <span class="pi pi-search" aria-hidden="true" />
+        <input v-model="searchQuery" placeholder="Buscar por wallet, referencia…" />
       </div>
       <span class="count-badge">{{ filteredRows.length }}</span>
     </div>
 
     <!-- Table -->
-    <div
-      v-if="loading"
-      class="loading-row"
-    >
-      <span
-        class="pi pi-spin pi-spinner"
-        aria-hidden="true"
-      /> Cargando…
+    <div v-if="loading" class="loading-row">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
-    <BaseCard
-      v-else
-      variant="default"
-      padding="none"
-    >
-      <BaseTable
-        :columns="sendColumns"
-        :rows="filteredRows"
-      >
+    <BaseCard v-else variant="default" padding="none">
+      <PaginatedTable :columns="sendColumns" :rows="filteredRows">
         <template #cell-type="{ row }">
           <BaseBadge :tone="typeTone(row.type)">
             {{ row.type }}
@@ -274,10 +235,8 @@ onMounted(load)
         <template #cell-when="{ row }">
           <span class="text-dim ts-cell">{{ row.when }}</span>
         </template>
-        <template #empty>
-          Sin envíos en esta categoría.
-        </template>
-      </BaseTable>
+        <template #empty> Sin envíos en esta categoría. </template>
+      </PaginatedTable>
     </BaseCard>
   </div>
 </template>

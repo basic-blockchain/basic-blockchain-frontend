@@ -3,9 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { listAuditLog, type AuditEntry } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
 const entries = ref<AuditEntry[]>([])
@@ -100,18 +100,9 @@ onMounted(load)
         <p>Trazabilidad inmutable de toda acción administrativa, de seguridad y de tesorería.</p>
       </div>
       <div class="page-h-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           <template #leading>
-            <span
-              class="pi pi-refresh"
-              :class="{ 'pi-spin': loading }"
-              aria-hidden="true"
-            />
+            <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
           </template>
           Actualizar
         </BaseButton>
@@ -125,9 +116,7 @@ onMounted(load)
           <span>Total eventos</span>
         </template>
         {{ entries.length }}
-        <template #footer>
-          últimas 100 entradas
-        </template>
+        <template #footer> últimas 100 entradas </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -135,9 +124,7 @@ onMounted(load)
           <span>Seguridad</span>
         </template>
         <span :class="{ 'kpi-danger': securityCount > 0 }">{{ securityCount }}</span>
-        <template #footer>
-          eventos críticos
-        </template>
+        <template #footer> eventos críticos </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -145,9 +132,7 @@ onMounted(load)
           <span>Usuarios</span>
         </template>
         {{ userCount }}
-        <template #footer>
-          acciones de usuario
-        </template>
+        <template #footer> acciones de usuario </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -155,36 +140,19 @@ onMounted(load)
           <span>Wallets</span>
         </template>
         {{ walletCount }}
-        <template #footer>
-          wallet y tesorería
-        </template>
+        <template #footer> wallet y tesorería </template>
       </BaseCard>
     </div>
 
     <!-- Toolbar -->
     <BaseCard class="toolbar">
       <div class="toolbar-search">
-        <span
-          class="pi pi-search"
-          aria-hidden="true"
-        />
-        <input
-          v-model="searchQuery"
-          placeholder="Buscar por actor, acción o detalle…"
-        >
+        <span class="pi pi-search" aria-hidden="true" />
+        <input v-model="searchQuery" placeholder="Buscar por actor, acción o detalle…" />
       </div>
-      <select
-        v-model="filterAction"
-        class="toolbar-chip-select"
-      >
-        <option value="">
-          Categoría · Todas
-        </option>
-        <option
-          v-for="cat in uniqueCategories"
-          :key="cat"
-          :value="cat"
-        >
+      <select v-model="filterAction" class="toolbar-chip-select">
+        <option value="">Categoría · Todas</option>
+        <option v-for="cat in uniqueCategories" :key="cat" :value="cat">
           {{ cat }}
         </option>
       </select>
@@ -192,21 +160,11 @@ onMounted(load)
     </BaseCard>
 
     <!-- Table -->
-    <BaseCard
-      class="audit-table"
-      variant="default"
-      padding="none"
-    >
-      <div
-        v-if="loading"
-        class="loading-row"
-      >
-        <span
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        /> Cargando…
+    <BaseCard class="audit-table" variant="default" padding="none">
+      <div v-if="loading" class="loading-row">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <BaseTable
+      <PaginatedTable
         v-else
         :columns="auditColumns"
         :rows="filtered"
@@ -219,10 +177,7 @@ onMounted(load)
           <div class="mono actor-id">
             {{ row.actor_id }}
           </div>
-          <BaseBadge
-            class="cat-badge"
-            :tone="getCat(row.action).tone"
-          >
+          <BaseBadge class="cat-badge" :tone="getCat(row.action).tone">
             {{ getCat(row.action).label }}
           </BaseBadge>
         </template>
@@ -237,10 +192,8 @@ onMounted(load)
         <template #cell-origin>
           <span class="mono text-dim">—</span>
         </template>
-        <template #empty>
-          Sin entradas de auditoría.
-        </template>
-      </BaseTable>
+        <template #empty> Sin entradas de auditoría. </template>
+      </PaginatedTable>
     </BaseCard>
   </div>
 </template>

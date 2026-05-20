@@ -10,7 +10,7 @@ import { useToast } from 'primevue/usetoast'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
 const rates = ref<ExchangeRateRecord[]>([])
@@ -150,12 +150,7 @@ onMounted(load)
         <p>Gestión manual y sincronización automática de tasas</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           Refrescar
         </BaseButton>
       </div>
@@ -163,145 +158,75 @@ onMounted(load)
 
     <div class="bigstat-row">
       <BaseCard variant="bigstat">
-        <template #header>
-          Pares activos
-        </template>
+        <template #header> Pares activos </template>
         {{ rates.length }}
-        <template #footer>
-          tasas vigentes
-        </template>
+        <template #footer> tasas vigentes </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          Fuente BINANCE
-        </template>
+        <template #header> Fuente BINANCE </template>
         {{ rates.filter((r) => r.source === 'BINANCE').length }}
-        <template #footer>
-          automáticas
-        </template>
+        <template #footer> automáticas </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          Fuente MANUAL
-        </template>
+        <template #header> Fuente MANUAL </template>
         {{ rates.filter((r) => r.source === 'MANUAL').length }}
-        <template #footer>
-          configuradas
-        </template>
+        <template #footer> configuradas </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          Última actualización
-        </template>
+        <template #header> Última actualización </template>
         {{ rates[0]?.updated_at?.slice(0, 16) ?? '—' }}
-        <template #footer>
-          más reciente
-        </template>
+        <template #footer> más reciente </template>
       </BaseCard>
     </div>
 
     <div class="forms-grid">
-      <BaseCard
-        variant="default"
-        padding="none"
-        class="form-card"
-      >
-        <div class="panel-h">
-          Sincronizar desde proveedor
-        </div>
-        <form
-          class="panel-form"
-          @submit.prevent="runSync"
-        >
+      <BaseCard variant="default" padding="none" class="form-card">
+        <div class="panel-h">Sincronizar desde proveedor</div>
+        <form class="panel-form" @submit.prevent="runSync">
           <div class="field">
-            <label
-              class="field-label"
-              for="provider"
-            >Proveedor</label>
-            <select
-              id="provider"
-              v-model="syncForm.provider"
-              class="field-select"
-            >
-              <option value="BINANCE">
-                Binance
-              </option>
-              <option value="CRYPTO_COM">
-                Crypto.com
-              </option>
+            <label class="field-label" for="provider">Proveedor</label>
+            <select id="provider" v-model="syncForm.provider" class="field-select">
+              <option value="BINANCE">Binance</option>
+              <option value="CRYPTO_COM">Crypto.com</option>
             </select>
           </div>
           <div class="field">
-            <label
-              class="field-label"
-              for="pairs"
-            >Pares</label>
+            <label class="field-label" for="pairs">Pares</label>
             <input
               id="pairs"
               v-model="syncForm.pairs"
               class="field-input"
               placeholder="BTC/USDT,ETH/USDT"
-            >
+            />
           </div>
           <div class="form-footer">
-            <BaseButton
-              variant="primary"
-              size="sm"
-              type="submit"
-              :loading="syncing"
-            >
+            <BaseButton variant="primary" size="sm" type="submit" :loading="syncing">
               <i class="pi pi-sync" />
               <span>Sincronizar ahora</span>
             </BaseButton>
-            <span class="hint">Los pares deben coincidir con las monedas activas del catálogo.</span>
+            <span class="hint"
+              >Los pares deben coincidir con las monedas activas del catálogo.</span
+            >
           </div>
         </form>
       </BaseCard>
 
-      <BaseCard
-        variant="default"
-        padding="none"
-        class="form-card"
-      >
-        <div class="panel-h">
-          Tasa manual
-        </div>
-        <form
-          class="panel-form"
-          @submit.prevent="submit"
-        >
+      <BaseCard variant="default" padding="none" class="form-card">
+        <div class="panel-h">Tasa manual</div>
+        <form class="panel-form" @submit.prevent="submit">
           <div class="form-row">
             <div class="field">
-              <label
-                class="field-label"
-                for="from"
-              >Desde</label>
-              <input
-                id="from"
-                v-model="form.fromCurrency"
-                class="field-input"
-                placeholder="USD"
-              >
+              <label class="field-label" for="from">Desde</label>
+              <input id="from" v-model="form.fromCurrency" class="field-input" placeholder="USD" />
             </div>
             <div class="field">
-              <label
-                class="field-label"
-                for="to"
-              >Hacia</label>
-              <input
-                id="to"
-                v-model="form.toCurrency"
-                class="field-input"
-                placeholder="EUR"
-              >
+              <label class="field-label" for="to">Hacia</label>
+              <input id="to" v-model="form.toCurrency" class="field-input" placeholder="EUR" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label
-                class="field-label"
-                for="rate"
-              >Tasa</label>
+              <label class="field-label" for="rate">Tasa</label>
               <input
                 id="rate"
                 v-model="form.rate"
@@ -310,13 +235,10 @@ onMounted(load)
                 min="0"
                 step="any"
                 placeholder="1.05"
-              >
+              />
             </div>
             <div class="field">
-              <label
-                class="field-label"
-                for="fee"
-              >Comisión</label>
+              <label class="field-label" for="fee">Comisión</label>
               <input
                 id="fee"
                 v-model="form.feeRate"
@@ -326,15 +248,11 @@ onMounted(load)
                 max="1"
                 step="0.000001"
                 placeholder="0.01"
-              >
+              />
             </div>
           </div>
           <div class="form-footer">
-            <BaseButton
-              variant="primary"
-              size="sm"
-              type="submit"
-            >
+            <BaseButton variant="primary" size="sm" type="submit">
               <i class="pi pi-save" />
               <span>Guardar tasa</span>
             </BaseButton>
@@ -344,38 +262,25 @@ onMounted(load)
       </BaseCard>
     </div>
 
-    <div
-      v-if="error"
-      class="inline-alert danger"
-    >
+    <div v-if="error" class="inline-alert danger">
       {{ error }}
     </div>
 
-    <div class="section-h">
-      Tasas vigentes
-    </div>
-    <BaseCard
-      variant="default"
-      padding="none"
-      class="table-card"
-    >
-      <div
-        v-if="loading"
-        class="loading-row"
-      >
-        <span
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        /> Cargando…
+    <div class="section-h">Tasas vigentes</div>
+    <BaseCard variant="default" padding="none" class="table-card">
+      <div v-if="loading" class="loading-row">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <BaseTable
+      <PaginatedTable
         v-else
         :columns="rateColumns"
         :rows="rates"
         :row-key="(r: ExchangeRateRecord) => r.rate_id"
       >
         <template #cell-pair="{ row }">
-          <span class="mono pair-cell">{{ row.from_currency }}<span class="arrow"> → </span>{{ row.to_currency }}</span>
+          <span class="mono pair-cell"
+            >{{ row.from_currency }}<span class="arrow"> → </span>{{ row.to_currency }}</span
+          >
         </template>
         <template #cell-rate="{ row }">
           <span class="mono">{{ row.rate }}</span>
@@ -391,10 +296,8 @@ onMounted(load)
         <template #cell-updated="{ row }">
           <span class="mono text-dim">{{ row.updated_at }}</span>
         </template>
-        <template #empty>
-          Sin tasas de cambio todavía.
-        </template>
-      </BaseTable>
+        <template #empty> Sin tasas de cambio todavía. </template>
+      </PaginatedTable>
     </BaseCard>
   </div>
 </template>
