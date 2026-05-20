@@ -4,9 +4,9 @@ import { useChainStore } from '@/stores/chain'
 import { formatHash, type Block } from '@/domain/block'
 import MineBlockFlow, { type MineBlockData } from '@/components/flows/MineBlockFlow.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const chainStore = useChainStore()
 const showMineFlow = ref(false)
@@ -21,14 +21,12 @@ watch(
       selectedIndex.value = blocks[blocks.length - 1].index
     }
   },
-  { immediate: true },
+  { immediate: true }
 )
 
 const selectedBlock = computed<Block | null>(() => {
   return (
-    chainStore.blocks.find((b) => b.index === selectedIndex.value) ??
-    chainStore.latestBlock ??
-    null
+    chainStore.blocks.find((b) => b.index === selectedIndex.value) ?? chainStore.latestBlock ?? null
   )
 })
 
@@ -101,18 +99,10 @@ function txRowKey(t: BlockTxRow): string {
         </p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="chainStore.fetchChain()"
-        >
+        <BaseButton variant="ghost" size="sm" @click="chainStore.fetchChain()">
           Sincronizar
         </BaseButton>
-        <BaseButton
-          variant="primary"
-          size="sm"
-          @click="showMineFlow = true"
-        >
+        <BaseButton variant="primary" size="sm" @click="showMineFlow = true">
           Minar bloque
         </BaseButton>
       </div>
@@ -124,54 +114,37 @@ function txRowKey(t: BlockTxRow): string {
           <span>Altura</span>
         </template>
         {{ heightLabel }}
-        <template #footer>
-          {{ chainStore.length }} bloques
-        </template>
+        <template #footer> {{ chainStore.length }} bloques </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Tiempo medio</span>
         </template>
         5m 42s
-        <template #footer>
-          objetivo: 6m
-        </template>
+        <template #footer> objetivo: 6m </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Dificultad</span>
         </template>
         {{ chainStore.latestBlock?.proof ?? '—' }}
-        <template #footer>
-          nonce · PoW
-        </template>
+        <template #footer> nonce · PoW </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Último bloque</span>
         </template>
         {{ latestTime }}
-        <template #footer>
-          timestamp on-chain
-        </template>
+        <template #footer> timestamp on-chain </template>
       </BaseCard>
     </div>
 
-    <div
-      v-if="chainStore.loading"
-      class="loading-wrap"
-    >
+    <div v-if="chainStore.loading" class="loading-wrap">
       <div class="spinner" />
     </div>
 
-    <div
-      v-else
-      class="explorer"
-    >
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+    <div v-else class="explorer">
+      <BaseCard variant="default" padding="none">
         <template #header>
           <div class="list-h">
             <span>Bloques recientes</span>
@@ -193,12 +166,8 @@ function txRowKey(t: BlockTxRow): string {
               #{{ b.index }}
             </div>
             <div class="bi">
-              <div class="mono small">
-                PREV {{ formatHash(b.previousHash, 8) }}
-              </div>
-              <div class="mono small">
-                MERKLE {{ formatHash(b.merkleRoot, 8) }}
-              </div>
+              <div class="mono small">PREV {{ formatHash(b.previousHash, 8) }}</div>
+              <div class="mono small">MERKLE {{ formatHash(b.merkleRoot, 8) }}</div>
             </div>
             <div class="bs">
               <div>{{ b.transactions.length }} tx · proof {{ b.proof }}</div>
@@ -210,26 +179,17 @@ function txRowKey(t: BlockTxRow): string {
         </div>
       </BaseCard>
 
-      <BaseCard
-        variant="default"
-        padding="default"
-      >
+      <BaseCard variant="default" padding="default">
         <template v-if="selectedBlock">
           <div class="detail-h">
-            <div class="hash-box mono">
-              #{{ selectedBlock.index }}
-            </div>
+            <div class="hash-box mono">#{{ selectedBlock.index }}</div>
             <div class="grow">
-              <div class="title">
-                Bloque #{{ selectedBlock.index }}
-              </div>
+              <div class="title">Bloque #{{ selectedBlock.index }}</div>
               <div class="muted small">
                 {{ selectedBlock.timestamp }} · minado proof {{ selectedBlock.proof }}
               </div>
             </div>
-            <BaseBadge tone="success">
-              Confirmado
-            </BaseBadge>
+            <BaseBadge tone="success"> Confirmado </BaseBadge>
           </div>
 
           <div class="kvs">
@@ -244,14 +204,9 @@ function txRowKey(t: BlockTxRow): string {
             </div>
           </div>
 
-          <div
-            v-if="selectedBlock.transactions.length"
-            class="txs"
-          >
-            <div class="section-h">
-              Transacciones
-            </div>
-            <BaseTable
+          <div v-if="selectedBlock.transactions.length" class="txs">
+            <div class="section-h">Transacciones</div>
+            <PaginatedTable
               :columns="txColumns"
               :rows="selectedBlock.transactions"
               :row-key="txRowKey"
@@ -265,15 +220,10 @@ function txRowKey(t: BlockTxRow): string {
               <template #cell-amount="{ row }">
                 <span class="mono">{{ row.amount }}</span>
               </template>
-            </BaseTable>
+            </PaginatedTable>
           </div>
         </template>
-        <div
-          v-else
-          class="empty muted"
-        >
-          Selecciona un bloque para ver el detalle.
-        </div>
+        <div v-else class="empty muted">Selecciona un bloque para ver el detalle.</div>
       </BaseCard>
     </div>
 
