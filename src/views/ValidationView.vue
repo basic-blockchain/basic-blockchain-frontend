@@ -146,6 +146,10 @@ function downloadCsv() {
   URL.revokeObjectURL(url)
 }
 
+function formatTime(value: unknown) {
+  return new Date(String(value)).toLocaleString()
+}
+
 const totalPages = computed(() => Math.max(1, Math.ceil(historyStore.total / pageSize.value)))
 const pagedEvents = computed(() => {
   const all = [...historyStore.events].reverse()
@@ -187,6 +191,15 @@ onMounted(async () => {
         >
           <span class="pi pi-download" aria-hidden="true" />
           Exportar historial
+        </BaseButton>
+        <BaseButton
+          v-if="historyStore.total > 0"
+          variant="ghost"
+          size="sm"
+          @click="downloadCsv"
+        >
+          <span class="pi pi-file-o" aria-hidden="true" />
+          Export CSV
         </BaseButton>
       </div>
     </div>
