@@ -7,9 +7,9 @@ import type { KYCData } from '@/components/flows/KYCReviewFlow.vue'
 import DisputeResolutionFlow from '@/components/flows/DisputeResolutionFlow.vue'
 import type { DisputeData } from '@/components/flows/DisputeResolutionFlow.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
-import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
 const users = ref<UserAdminRecord[]>([])
@@ -221,27 +221,15 @@ const queueColumns: QueueColumn[] = [
         <p>KYC, AML, sanciones y disputas P2P pendientes de revisión.</p>
       </div>
       <div class="page-h-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-        >
+        <BaseButton variant="ghost" size="sm">
           <template #leading>
-            <span
-              class="pi pi-download"
-              aria-hidden="true"
-            />
+            <span class="pi pi-download" aria-hidden="true" />
           </template>
           Reporte regulatorio
         </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-        >
+        <BaseButton variant="ghost" size="sm">
           <template #leading>
-            <span
-              class="pi pi-cog"
-              aria-hidden="true"
-            />
+            <span class="pi pi-cog" aria-hidden="true" />
           </template>
           Reglas AML
         </BaseButton>
@@ -250,11 +238,7 @@ const queueColumns: QueueColumn[] = [
 
     <!-- Big stats -->
     <div class="bigstat-row">
-      <BaseCard
-        v-for="s in stats"
-        :key="s.label"
-        variant="bigstat"
-      >
+      <BaseCard v-for="s in stats" :key="s.label" variant="bigstat">
         <template #header>
           <span>{{ s.label }}</span>
         </template>
@@ -266,10 +250,7 @@ const queueColumns: QueueColumn[] = [
     </div>
 
     <!-- Tab strip -->
-    <div
-      class="tabstrip"
-      role="tablist"
-    >
+    <div class="tabstrip" role="tablist">
       <button
         v-for="t in tabDefs"
         :key="t.key"
@@ -286,43 +267,23 @@ const queueColumns: QueueColumn[] = [
             'tab-count-danger': 'danger' in t && t.danger,
             'tab-count-success': t.key === 'resolved',
           }"
-        >{{ tabCounts[t.key] ?? 0 }}</span>
+          >{{ tabCounts[t.key] ?? 0 }}</span
+        >
       </button>
     </div>
 
     <!-- Queue -->
-    <BaseCard
-      class="queue-panel"
-      variant="default"
-      padding="none"
-    >
-      <div
-        v-if="loading"
-        class="loading-row"
-      >
-        <span
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        /> Cargando…
+    <BaseCard class="queue-panel" variant="default" padding="none">
+      <div v-if="loading" class="loading-row">
+        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
       </div>
-      <BaseTable
-        v-else
-        :columns="queueColumns"
-        :rows="filteredQueue"
-      >
+      <PaginatedTable v-else :columns="queueColumns" :rows="filteredQueue">
         <template #cell-priority="{ row }">
-          <span
-            class="queue-priority"
-            :class="`qp-${row.priority}`"
-            aria-hidden="true"
-          />
+          <span class="queue-priority" :class="`qp-${row.priority}`" aria-hidden="true" />
         </template>
         <template #cell-user="{ row }">
           <div class="queue-user">
-            <div
-              class="queue-avatar"
-              aria-hidden="true"
-            >
+            <div class="queue-avatar" aria-hidden="true">
               {{ row.user.charAt(0) }}
             </div>
             <div class="queue-info">
@@ -349,18 +310,10 @@ const queueColumns: QueueColumn[] = [
           <span class="meta-age">hace {{ row.age }}</span>
         </template>
         <template #row-actions="{ row }">
-          <BaseButton
-            size="sm"
-            variant="secondary"
-            @click="openReview(row)"
-          >
-            Revisar
-          </BaseButton>
+          <BaseButton size="sm" variant="secondary" @click="openReview(row)"> Revisar </BaseButton>
         </template>
-        <template #empty>
-          Sin elementos en esta categoría.
-        </template>
-      </BaseTable>
+        <template #empty> Sin elementos en esta categoría. </template>
+      </PaginatedTable>
     </BaseCard>
   </div>
 
