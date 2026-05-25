@@ -1,0 +1,487 @@
+{
+  "info": {
+    "name": "Basic Blockchain — Frontend API surface",
+    "description": "Every endpoint consumed by basic-blockchain-frontend (v0.9.0 / Phase 7 closed). Mirrors docs/api-reference.md. Pair with the `local` or `staging` environment. After running `Auth > Login`, the `access_token` is captured into the `jwt` env var via a test script and re-used by every authenticated request through `{{authHeader}}`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "bb-frontend-2026-05-25"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{jwt}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "user_id", "value": "" },
+    { "key": "wallet_id", "value": "" },
+    { "key": "op_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"alice\",\n  \"display_name\": \"Alice\",\n  \"country\": \"AR\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "POST /auth/activate",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"alice\",\n  \"activation_code\": \"REPLACE\",\n  \"password\": \"S3cret!pass\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/activate", "host": ["{{baseUrl}}"], "path": ["auth", "activate"] }
+          }
+        },
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) {",
+                  "    pm.environment.set('jwt', json.access_token);",
+                  "    console.log('JWT captured into env.jwt');",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "KYC (self)",
+      "item": [
+        {
+          "name": "GET /me/kyc/status",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/me/kyc/status", "host": ["{{baseUrl}}"], "path": ["me", "kyc", "status"] } }
+        },
+        {
+          "name": "POST /me/kyc/documents",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"key\": \"dni\",\n  \"filename\": \"dni-front.png\",\n  \"content_type\": \"image/png\",\n  \"data\": \"BASE64_PAYLOAD\"\n}" },
+            "url": { "raw": "{{baseUrl}}/me/kyc/documents", "host": ["{{baseUrl}}"], "path": ["me", "kyc", "documents"] }
+          }
+        },
+        {
+          "name": "POST /me/kyc/review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"target\": \"L1\"\n}" },
+            "url": { "raw": "{{baseUrl}}/me/kyc/review", "host": ["{{baseUrl}}"], "path": ["me", "kyc", "review"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallets (self)",
+      "item": [
+        {
+          "name": "POST /wallets",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"currency\": \"BTC\"\n}" },
+            "url": { "raw": "{{baseUrl}}/wallets", "host": ["{{baseUrl}}"], "path": ["wallets"] }
+          }
+        },
+        {
+          "name": "POST /wallets/preview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"currency\": \"BTC\"\n}" },
+            "url": { "raw": "{{baseUrl}}/wallets/preview", "host": ["{{baseUrl}}"], "path": ["wallets", "preview"] }
+          }
+        },
+        {
+          "name": "POST /wallets/confirm",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"draft_id\": \"REPLACE\"\n}" },
+            "url": { "raw": "{{baseUrl}}/wallets/confirm", "host": ["{{baseUrl}}"], "path": ["wallets", "confirm"] }
+          }
+        },
+        {
+          "name": "GET /wallets/me",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/wallets/me", "host": ["{{baseUrl}}"], "path": ["wallets", "me"] } }
+        },
+        {
+          "name": "POST /transactions/signed",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"sender_wallet_id\": \"REPLACE\",\n  \"receiver_wallet_id\": \"REPLACE\",\n  \"amount\": 1.0,\n  \"nonce\": 0,\n  \"signature\": \"HEX_ED25519\"\n}" },
+            "url": { "raw": "{{baseUrl}}/transactions/signed", "host": ["{{baseUrl}}"], "path": ["transactions", "signed"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mempool & chain",
+      "item": [
+        {
+          "name": "GET /transactions/pending",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/transactions/pending", "host": ["{{baseUrl}}"], "path": ["transactions", "pending"] } }
+        },
+        {
+          "name": "POST /transactions",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"sender\": \"REPLACE_PUBKEY\",\n  \"receiver\": \"REPLACE_PUBKEY\",\n  \"amount\": 1.0\n}" },
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] }
+          }
+        },
+        {
+          "name": "GET /transactions",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] } }
+        },
+        {
+          "name": "GET /chain",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/chain", "host": ["{{baseUrl}}"], "path": ["chain"] } }
+        },
+        {
+          "name": "GET /valid",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/valid", "host": ["{{baseUrl}}"], "path": ["valid"] } }
+        },
+        {
+          "name": "POST /mine_block",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/mine_block", "host": ["{{baseUrl}}"], "path": ["mine_block"] }
+          },
+          "description": "Mining can take up to 120s. Set Postman request timeout accordingly."
+        }
+      ]
+    },
+    {
+      "name": "Nodes",
+      "item": [
+        {
+          "name": "GET /nodes",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/nodes", "host": ["{{baseUrl}}"], "path": ["nodes"] } }
+        },
+        {
+          "name": "POST /nodes/register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nodes\": [\"http://peer-1:5000\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/nodes/register", "host": ["{{baseUrl}}"], "path": ["nodes", "register"] }
+          }
+        },
+        {
+          "name": "GET /nodes/resolve",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/nodes/resolve", "host": ["{{baseUrl}}"], "path": ["nodes", "resolve"] } },
+          "description": "Longest-chain consensus. Up to 60s."
+        }
+      ]
+    },
+    {
+      "name": "Public catalog",
+      "item": [
+        {
+          "name": "GET /currencies",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/currencies?active=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies"],
+              "query": [{ "key": "active", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "GET /health",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] } }
+        },
+        {
+          "name": "GET /metrics",
+          "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] } }
+        }
+      ]
+    },
+    {
+      "name": "Admin — users",
+      "item": [
+        { "name": "GET /admin/users", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] } } },
+        {
+          "name": "POST /admin/users/:userId/roles (grant)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"action\": \"grant\",\n  \"role\": \"OPERATOR\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}/roles", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}", "roles"] }
+          }
+        },
+        {
+          "name": "POST /admin/users/:userId/ban",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}/ban", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}", "ban"] } }
+        },
+        {
+          "name": "POST /admin/users/:userId/unban",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}/unban", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}", "unban"] } }
+        },
+        {
+          "name": "POST /admin/users/:userId/permissions (grant)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"action\": \"grant\",\n  \"permission\": \"REVIEW_KYC\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}/permissions", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}", "permissions"] }
+          }
+        },
+        {
+          "name": "PATCH /admin/users/:userId",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"display_name\": \"Alice Updated\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "DELETE /admin/users/:userId",
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}"] } }
+        },
+        {
+          "name": "POST /admin/users/:userId/restore",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"unfreeze_wallets\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{user_id}}/restore", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{user_id}}", "restore"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — wallets & mint",
+      "item": [
+        { "name": "GET /admin/wallets", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/admin/wallets", "host": ["{{baseUrl}}"], "path": ["admin", "wallets"] } } },
+        { "name": "POST /admin/wallets/:walletId/freeze", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/wallets/{{wallet_id}}/freeze", "host": ["{{baseUrl}}"], "path": ["admin", "wallets", "{{wallet_id}}", "freeze"] } } },
+        { "name": "POST /admin/wallets/:walletId/unfreeze", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/wallets/{{wallet_id}}/unfreeze", "host": ["{{baseUrl}}"], "path": ["admin", "wallets", "{{wallet_id}}", "unfreeze"] } } },
+        {
+          "name": "POST /admin/mint",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"amount\": 100\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/mint", "host": ["{{baseUrl}}"], "path": ["admin", "mint"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — currencies & treasury",
+      "item": [
+        {
+          "name": "GET /admin/currencies",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/currencies?active=true", "host": ["{{baseUrl}}"], "path": ["admin", "currencies"], "query": [{ "key": "active", "value": "true" }] }
+          }
+        },
+        {
+          "name": "POST /admin/currencies",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"USDT\",\n  \"name\": \"Tether USD\",\n  \"decimals\": 6,\n  \"active\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/currencies", "host": ["{{baseUrl}}"], "path": ["admin", "currencies"] }
+          }
+        },
+        {
+          "name": "POST /admin/treasury (create wallet)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"currency\": \"USDT\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/treasury", "host": ["{{baseUrl}}"], "path": ["admin", "treasury"] }
+          }
+        },
+        {
+          "name": "POST /admin/treasury/distribute (initiate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.op_id) pm.environment.set('op_id', j.op_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"source_wallet_id\": \"REPLACE\",\n  \"currency\": \"USDT\",\n  \"amount_per_wallet\": \"10\",\n  \"recipient_user_ids\": [\"USR-XXXX\"],\n  \"memo\": \"Phase 7.8 test\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/treasury/distribute", "host": ["{{baseUrl}}"], "path": ["admin", "treasury", "distribute"] }
+          }
+        },
+        {
+          "name": "POST /admin/treasury/distribute/:opId/approve",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/treasury/distribute/{{op_id}}/approve", "host": ["{{baseUrl}}"], "path": ["admin", "treasury", "distribute", "{{op_id}}", "approve"] } }
+        },
+        {
+          "name": "POST /admin/treasury/distribute/:opId/cancel",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/treasury/distribute/{{op_id}}/cancel", "host": ["{{baseUrl}}"], "path": ["admin", "treasury", "distribute", "{{op_id}}", "cancel"] } }
+        }
+      ]
+    },
+    {
+      "name": "Admin — exchange rates",
+      "item": [
+        { "name": "GET /admin/exchange-rates", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/admin/exchange-rates", "host": ["{{baseUrl}}"], "path": ["admin", "exchange-rates"] } } },
+        {
+          "name": "PUT /admin/exchange-rates/:from/:to",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rate\": 65000,\n  \"fee_rate\": 0.001\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/exchange-rates/BTC/USDT", "host": ["{{baseUrl}}"], "path": ["admin", "exchange-rates", "BTC", "USDT"] }
+          }
+        },
+        {
+          "name": "POST /admin/exchange-rates/sync",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"provider\": \"binance\",\n  \"pairs\": [\"BTC/USDT\", \"ETH/USDT\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/exchange-rates/sync", "host": ["{{baseUrl}}"], "path": ["admin", "exchange-rates", "sync"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — audit",
+      "item": [
+        {
+          "name": "GET /admin/audit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit?severity=critical&since=24h&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit"],
+              "query": [
+                { "key": "severity", "value": "critical" },
+                { "key": "since", "value": "24h" },
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — dashboard (Phase 6e)",
+      "item": [
+        {
+          "name": "GET /admin/stats (?compare=7d)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats?compare=7d",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stats"],
+              "query": [{ "key": "compare", "value": "7d" }]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/volume",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/volume?range=30d&bucket=day",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "volume"],
+              "query": [
+                { "key": "range", "value": "30d" },
+                { "key": "bucket", "value": "day" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/movements/top",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/movements/top?range=24h&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "movements", "top"],
+              "query": [
+                { "key": "range", "value": "24h" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — KYC review (Phase 6g-admin)",
+      "item": [
+        { "name": "GET /admin/kyc/pending", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/admin/kyc/pending", "host": ["{{baseUrl}}"], "path": ["admin", "kyc", "pending"] } } },
+        {
+          "name": "POST /admin/kyc/users/:userId/documents/:docKey/approve",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/kyc/users/{{user_id}}/documents/dni/approve", "host": ["{{baseUrl}}"], "path": ["admin", "kyc", "users", "{{user_id}}", "documents", "dni", "approve"] } }
+        },
+        {
+          "name": "POST /admin/kyc/users/:userId/documents/:docKey/reject",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"document_blurred\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/kyc/users/{{user_id}}/documents/dni/reject", "host": ["{{baseUrl}}"], "path": ["admin", "kyc", "users", "{{user_id}}", "documents", "dni", "reject"] }
+          }
+        },
+        {
+          "name": "POST /admin/kyc/users/:userId/promote",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/admin/kyc/users/{{user_id}}/promote", "host": ["{{baseUrl}}"], "path": ["admin", "kyc", "users", "{{user_id}}", "promote"] } }
+        }
+      ]
+    }
+  ]
+}

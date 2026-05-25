@@ -1,7 +1,7 @@
 # Frontend Architecture — Basic Blockchain Simulator Dashboard
 
 Status: Accepted
-Last updated: 2026-05-08
+Last updated: 2026-05-25 (Phase 7 closed — Design v2 + Atomic migration shipped in v0.9.0)
 Audience: Frontend engineers, tech leads, SRE, DevSecOps
 
 ---
@@ -21,7 +21,12 @@ It provides:
 - Health, metrics and latency telemetry.
 - JWT authentication and session-aware routing.
 - Wallet management with BIP-39 mnemonic flow and signed transfers.
-- Admin workflows (users, wallets, minting).
+- Admin workflows (users, wallets, minting, currencies, exchange rates,
+  audit log, KYC review, dashboard analytics).
+- Treasury distribution with dual-sign approval (Phase 7.8).
+- Multi-currency support with FX-as-of-timestamp aggregation (Phase 6e/6i).
+- Design System v2 (Phase 7) — unified Base\* atom layer driving every
+  view, drawer and flow. See [`DESIGN-v2.md`](./DESIGN-v2.md).
 
 The frontend is a **single-page application (SPA)** that communicates with the
 backend through:
@@ -40,6 +45,7 @@ backend through:
 | Utilities  | VueUse          | 11.x    | Composable primitives (useWebSocket, usePolling, ...)  |
 | UI kit     | PrimeVue        | 4.x     | Accessible components (DataTable, Toast, Dialog, ...)  |
 | Charts     | Chart.js        | 4.x     | Mining throughput, latency, mempool depth              |
+| Charts (v2)| ECharts (vue-echarts) | 5.x | Volume / dashboard charts (lazy-loaded, modular)     |
 | Routing    | Vue Router      | 4.x     | Client-side routing                                    |
 | HTTP       | Axios           | 1.x     | REST client with interceptors                          |
 | Tests      | Vitest + Vue TL | 2.x     | Unit and component tests (>= 80% coverage)             |
@@ -60,6 +66,40 @@ This symmetry makes it trivial for a backend engineer to find the frontend
 counterpart of any module and vice versa. Domain invariants (e.g. BR-TX-\*) are
 enforced both client-side (fast UX feedback) and server-side (authoritative).
 
+### 1.4 Component layer (post-Phase 7)
+
+The UI layer follows **Atomic Design** ([ADR-003](decisions/ADR-003-atomic-design.md))
+on top of the **Design v2** contract ([DESIGN-v2.md](DESIGN-v2.md)):
+
+```
+atoms       — Base{Button,Badge,Card,Table,Modal,Drawer}, Stepper,
+              HashChip, AmountDisplay
+molecules   — AuthLayout, BlockCard, TransactionRow, MetricTile, …
+organisms   — ChainList, MempoolTable, MetricsBar, PaginatedTable, …
+flows       — TreasuryApprovalFlow (dual-sign), KYCReviewFlow,
+              SendConfirmFlow, ExchangeOrderFlow, …
+drawers     — UserDrawer, WalletDrawer, ProfileDrawer (all built on
+              BaseDrawer)
+views       — every screen migrated to the Base\* atoms in Phase 7.2–7.9
+```
+
+A snapshot matrix per Base\* atom guards visual regressions
+(`tests/components/__snapshots__/`).
+
+### 1.5 API surface
+
+The full HTTP / WS catalog the SPA consumes is documented in
+[`api-reference.md`](./api-reference.md) and mirrored in
+[`postman/basic-blockchain.postman_collection.json`](./postman/basic-blockchain.postman_collection.json).
+Major additions since Phase 5:
+
+- **Auth + KYC**: `/auth/*`, `/me/kyc/*`, admin `/admin/kyc/*`.
+- **Dashboard analytics**: `/admin/stats?compare=`, `/admin/volume`,
+  `/admin/movements/top`, `/admin/audit?severity=&since=`.
+- **Treasury**: `/admin/treasury`, `/admin/treasury/distribute[/:opId/{approve,cancel}]`.
+- **Exchange rates**: `/admin/exchange-rates[/:from/:to|/sync]`.
+- **Currencies**: public `/currencies` + admin `/admin/currencies`.
+
 ---
 
 ## 2. Layered Architecture
@@ -69,8 +109,8 @@ flowchart TB
     subgraph Browser["Browser (SPA)"]
         V["Views<br/>(DashboardView, ChainView, ...)"]
         C["Composables<br/>(useBlockchainWs, usePolling, useToast)"]
-        S["Stores (Pinia)<br/>(useAuthStore, useChainStore, useMempoolStore, useConfirmedTransactionsStore, useNodesStore, useMetricsStore, useWalletStore, useValidationHistoryStore)"]
-        A["API Clients<br/>(src/api/client.ts, websocket.ts)"]
+        S["Stores (Pinia)<br/>(useAuthStore, useChainStore, useMempoolStore, useConfirmedTransactionsStore, useNodesStore, useMetricsStore, useWalletStore, useValidationHistoryStore, useMiningStore, useDashboardStore)"]
+        A["API Clients<br/>(src/api/{client,websocket,auth,kyc,admin,dashboard,wallets,chain,mempool,nodes,health,stats,mining}.ts)"]
         D["Domain<br/>(src/domain/block.ts, transaction.ts, validation)"]
     end
 
