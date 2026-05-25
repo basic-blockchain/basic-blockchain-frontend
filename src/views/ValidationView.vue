@@ -131,7 +131,7 @@ function downloadCsv() {
   const headers = ['id', 'type', 'status', 'target', 'message', 'timestamp']
   const csv = [headers.join(',')]
     .concat(
-      rows.map((r: any) =>
+      rows.map((r) =>
         [r.id, r.type, r.status, r.target, `"${String(r.message).replace(/"/g, '""')}"`, r.timestamp].join(',')
       )
     )

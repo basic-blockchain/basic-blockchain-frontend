@@ -47,7 +47,7 @@ const slots = useSlots()
 const currentPage = ref(1)
 const pageSize = ref(props.defaultPageSize)
 const baseTableProps = computed(() => ({
-  rowKey: props.rowKey as any,
+  rowKey: props.rowKey as unknown as Props['rowKey'],
   rowClass: props.rowClass,
   sortKey: props.sortKey,
   sortDirection: props.sortDirection,
