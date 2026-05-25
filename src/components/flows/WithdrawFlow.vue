@@ -332,10 +332,7 @@ const remainingBalance = computed(() => {
           <BaseButton
             variant="primary"
             :disabled="!otpFilled"
-            @click="
-              step = 3
-              startBroadcast()
-            "
+            @click="step = 3; startBroadcast()"
             >Firmar y transmitir</BaseButton
           >
         </template>
@@ -346,10 +343,7 @@ const remainingBalance = computed(() => {
           <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
           <BaseButton
             variant="primary"
-            @click="
-              emit('complete')
-              emit('close')
-            "
+            @click="emit('complete'); emit('close')"
           >
             <span class="pi pi-external-link" style="font-size: 12px" />
             Ver en explorador

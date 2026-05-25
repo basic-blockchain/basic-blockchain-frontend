@@ -75,10 +75,7 @@ const autoChecks = [
         <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
         <BaseButton
           variant="primary"
-          @click="
-            emit('complete')
-            emit('close')
-          "
+          @click="emit('complete'); emit('close')"
           >Siguiente disputa</BaseButton
         >
       </div>
