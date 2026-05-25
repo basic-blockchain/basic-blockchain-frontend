@@ -15,6 +15,8 @@ Stack: Vue 3 + Vite 6 + TypeScript 5 + Pinia + VueUse + PrimeVue 4 + Chart.js.
 | Document                                                        | Description                                                                                               |
 | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | [Architecture](architecture.md)                                 | Layered design, component tree, data flows, Pinia stores, WebSocket lifecycle, CI/CD, environment config. |
+| [API Reference](api-reference.md)                               | Every HTTP / WebSocket endpoint the SPA consumes, mapped to its `src/api/*.ts` module.                    |
+| [Postman collection + envs](postman/README.md)                  | Importable collection with `local` / `staging` / `production` environments.                                |
 | [Component Catalog](components.md)                              | Every atom, molecule, organism and view — props, emits, usage examples.                                   |
 | [User Guide](user-guide.md)                                     | End-to-end navigation guide for auth, wallet, admin, and monitoring flows.                                |
 | [UX and Validation Requirements](ux-validation-requirements.md) | Visual improvement backlog, color strategy, accessibility and new validation capabilities roadmap.        |
