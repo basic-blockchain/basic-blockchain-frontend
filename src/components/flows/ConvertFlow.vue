@@ -82,10 +82,7 @@ function swap() {
         <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
         <BaseButton
           variant="primary"
-          @click="
-            emit('complete')
-            emit('close')
-          "
+          @click="emit('complete'); emit('close')"
           >Ir a {{ to }}</BaseButton
         >
       </div>

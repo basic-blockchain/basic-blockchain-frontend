@@ -87,10 +87,7 @@ const firstName = props.data.user.split(' ')[0]?.toUpperCase() ?? ''
         <BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton>
         <BaseButton
           variant="primary"
-          @click="
-            emit('complete')
-            emit('close')
-          "
+          @click="emit('complete'); emit('close')"
           >Siguiente caso</BaseButton
         >
       </div>
