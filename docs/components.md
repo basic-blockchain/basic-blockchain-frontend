@@ -1,7 +1,7 @@
 # Component Catalog
 
 Status: Accepted
-Last updated: 2026-05-14
+Last updated: 2026-05-25 (Phase 7 closed — Design v2 atoms catalogued)
 Scope: All reusable UI components under `src/components/` and `src/views/`.
 
 Components are organised under the **Atomic Design** methodology:
@@ -11,15 +11,30 @@ Dependency direction is **strictly bottom-up**: an atom never imports a
 molecule, a molecule never imports an organism, and **only organisms and views
 may call `useXxxStore()`**.
 
+> **Phase 7 (Design v2)** introduced a unified base-atom layer
+> (`BaseButton`, `BaseBadge`, `BaseTable`, `BaseModal`, `BaseDrawer`,
+> `BaseCard`, `Stepper`) and migrated every view and flow onto it. Pre-v2
+> atoms that survived (`HashChip`, `AmountDisplay`) coexist; `StatusBadge`
+> was consolidated into `BaseBadge` in 7.7 and **removed**. The contract is
+> documented in [`DESIGN-v2.md`](./DESIGN-v2.md).
+
 ---
 
 ## Table of Contents
 
-- Atoms
-  - StatusBadge
+- Atoms (Phase 7 / Design v2)
+  - BaseButton
+  - BaseBadge
+  - BaseCard
+  - BaseTable
+  - BaseModal
+  - BaseDrawer
+  - Stepper
+- Atoms (legacy / pre-v2 survivors)
   - HashChip
   - AmountDisplay
 - Molecules
+  - AuthLayout
   - BlockCard
   - TransactionRow
   - NodeBadge
@@ -33,25 +48,33 @@ may call `useXxxStore()`**.
   - MetricsBar
   - MineButton
   - MiningChart
+  - MiningNotification
+  - PaginatedTable
 - Flows
   - MineBlockFlow
   - TransactionDetailFlow
+  - SendConfirmFlow
+  - ReceiveFlow
+  - ConvertFlow
+  - WithdrawFlow
+  - ExchangeOrderFlow
+  - P2PBuyFlow
+  - TreasuryApprovalFlow (Phase 7.8 — dual-sign, wired to backend)
+  - DisputeResolutionFlow
+  - KYCReviewFlow
 - Drawers
   - UserDrawer
+  - WalletDrawer
+  - ProfileDrawer
 - Views
-  - LoginView
-  - RegisterView
-  - ActivateView
-  - WalletView
-  - AdminView
-  - AdminUsersView
-  - AdminWalletsView
-  - DashboardView
-  - ChainView
-  - MempoolView
-  - NodesView
-  - ValidationView
-  - HealthView
+  - LoginView, RegisterView, ActivateView
+  - DashboardView, WalletView
+  - ChainView, MempoolView, NodesView, HealthView, ValidationView
+  - ExchangeView, P2PView
+  - AdminView, AdminUsersView, AdminWalletsView, AdminCurrenciesView,
+    AdminExchangeRatesView, AdminTreasuryView, AdminMovementsView,
+    AdminSendsView, AdminAuditView, AdminComplianceView, AdminKycView,
+    AdminSettingsView
 
 ---
 
@@ -60,27 +83,152 @@ may call `useXxxStore()`**.
 Atoms are **pure presentational** components. They have no access to stores,
 no side effects, and rely only on props and emits.
 
-### StatusBadge
+> The Base\* family below was introduced in **Phase 7** as the foundation of
+> Design v2. The full visual + API contract is documented in
+> [`DESIGN-v2.md`](./DESIGN-v2.md); the entries here are the catalog
+> summary. Each atom ships with a unit-test suite and a snapshot matrix
+> under `tests/components/`.
 
-**Purpose:** displays a coloured pill indicating the health or state of an entity
-(block, node, transaction, connection).
+### BaseButton (7.1.a)
+
+**Purpose:** unified button element; replaces every legacy `.btn` across the
+app (flows, drawers, views).
 
 **Props:**
 
 ```ts
-interface StatusBadgeProps {
-  status: 'ok' | 'degraded' | 'error' | 'n/a'
+interface BaseButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  size?: 'sm' | 'md' | 'lg'
+  loading?: boolean
+  disabled?: boolean
+  type?: 'button' | 'submit' | 'reset'
+  iconLeft?: string
+  iconRight?: string
 }
 ```
 
-**Emits:** none.
+**Emits:** `click`.
 
-**Usage:**
+**Slots:** default (label).
 
-```vue
-<StatusBadge status="ok" />
-<StatusBadge status="degraded" />
+Spec: [`specs/7.1.a-base-button.md`](specs/7.1.a-base-button.md).
+
+---
+
+### BaseBadge (7.1.b)
+
+**Purpose:** pill / tag element with a `tone × variant` contract. Consolidates
+the former `StatusBadge` (Phase 7.7) — every status / chip / tag use case
+on the dashboard now flows through this atom.
+
+**Props:**
+
+```ts
+interface BaseBadgeProps {
+  tone?: 'neutral' | 'info' | 'success' | 'warning' | 'danger'
+  variant?: 'soft' | 'solid' | 'outline'
+  size?: 'sm' | 'md'
+}
 ```
+
+**Slots:** default (label).
+
+Spec: [`specs/7.1.b-base-badge.md`](specs/7.1.b-base-badge.md).
+
+---
+
+### BaseCard (7.1.f)
+
+**Purpose:** chrome wrapper with header / body / footer slots; the default
+shell for every panel and section after Phase 7.
+
+**Props:**
+
+```ts
+interface BaseCardProps {
+  padded?: boolean
+  bordered?: boolean
+  tone?: 'default' | 'muted'
+}
+```
+
+**Slots:** `header`, default (body), `footer`.
+
+Spec: [`specs/7.1.f-base-card.md`](specs/7.1.f-base-card.md).
+
+---
+
+### BaseTable (7.1.c)
+
+**Purpose:** greenfield table atom with explicit `rowKey` / `rowClass`
+contract and named slots per column. Every admin / chain / mempool list now
+renders through it (via `PaginatedTable` for paginated chrome).
+
+**Props (sketch):**
+
+```ts
+interface BaseTableProps<T> {
+  rows: readonly T[]
+  rowKey: (row: T) => string
+  rowClass?: (row: T) => string | string[] | undefined
+  columns: ReadonlyArray<{ key: string; label: string; width?: string }>
+  empty?: string
+}
+```
+
+**Slots:** one per column key (`#cell-<key>`), plus `#empty`.
+
+Spec: [`specs/7.1.c-base-table.md`](specs/7.1.c-base-table.md).
+
+---
+
+### BaseModal & BaseDrawer (7.1.e)
+
+**Purpose:** `BaseModal` is a centred dialog primitive (Teleport + focus
+trap + `Esc` close). `BaseDrawer` wraps `BaseModal` with a side variant
+(`left | right`). All confirm / detail surfaces (ProfileDrawer, UserDrawer,
+WalletDrawer, ConfirmUserModal) sit on top of these.
+
+**Props (shared):**
+
+```ts
+interface BaseModalProps {
+  open: boolean
+  size?: 'sm' | 'md' | 'lg'
+  dismissible?: boolean
+}
+interface BaseDrawerProps extends BaseModalProps {
+  side?: 'left' | 'right'
+}
+```
+
+**Emits:** `update:open`, `close`.
+
+Spec: [`specs/7.1.e-base-modal-drawer.md`](specs/7.1.e-base-modal-drawer.md).
+
+---
+
+### Stepper (7.1.d)
+
+**Purpose:** linear progress indicator used by multi-step flows
+(`TreasuryApprovalFlow`, `KYCReviewFlow`, AdminView dashboard fetch
+indicator). Supports error / done / current states.
+
+**Props:**
+
+```ts
+interface StepperProps {
+  steps: ReadonlyArray<{
+    key: string
+    label: string
+    state: 'pending' | 'current' | 'done' | 'error'
+    note?: string
+  }>
+}
+```
+
+Spec: [`specs/7.1.d-stepper.md`](specs/7.1.d-stepper.md).
 
 ---
 
@@ -135,6 +283,29 @@ interface AmountDisplayProps {
 ## Molecules
 
 Molecules compose atoms and simple PrimeVue primitives. Still no store access.
+
+### AuthLayout (Phase 7.2)
+
+**Purpose:** shared chrome for `LoginView`, `RegisterView` and `ActivateView`
+— renders the brand panel + a slotted form column, plus an optional inline
+`Stepper` for multi-step flows (registration → activation). Replaces the
+ad-hoc layouts each auth view used pre-Phase 7.
+
+**Props:**
+
+```ts
+interface AuthLayoutProps {
+  title: string
+  subtitle?: string
+  steps?: StepperProps['steps']
+}
+```
+
+**Slots:** default (form body), `footer`.
+
+Spec: [`specs/7.2-login-migration.md`](specs/7.2-login-migration.md).
+
+---
 
 ### BlockCard
 
@@ -466,6 +637,24 @@ interface TxDetailData {
 Drawers are slide-in panels anchored to the right edge of the viewport.
 They overlay content with a semi-transparent scrim and are dismissed via
 an Escape key listener, scrim click, or an explicit close button.
+
+> **Phase 7.6** rebased every drawer onto `BaseDrawer` (a `BaseModal` with
+> `side='right'`). The per-drawer logic below survived the migration; only
+> the chrome changed.
+
+### WalletDrawer
+
+**File:** `src/components/drawers/WalletDrawer.vue`
+**Purpose:** wallet-level detail (Resumen / Movimientos / Auditoría) opened
+from `AdminWalletsView` rows or, since Phase 6d.4, from a wallet row inside
+`UserDrawer` (cross-navigation). Surfaces freeze / unfreeze in the header.
+
+### ProfileDrawer
+
+**File:** `src/components/drawers/ProfileDrawer.vue`
+**Purpose:** end-user profile (Identidad + KYC tabs) opened from the sidebar
+avatar. The KYC tab consumes `src/api/kyc.ts` (`/me/kyc/*`) for upload and
+review-submission flows (Phase 6g).
 
 ### UserDrawer
 
