@@ -29,6 +29,9 @@ Stack: Vue 3 + Vite 6 + TypeScript 5 + Pinia + VueUse + PrimeVue 4 + Chart.js.
 
 | Version | Notes                                                                                                                                                                       |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.9.0  | [docs/releases/v0.9.0.md](releases/v0.9.0.md) — Phase 7 Design System v2 & full Atomic migration (paired with simulator v0.15.0)                                            |
+| v0.8.2  | [docs/releases/v0.8.2.md](releases/v0.8.2.md) — Phase I.5 maintenance + GitFlow integration (paired with simulator v0.14.2)                                                 |
+| v0.8.1  | [docs/releases/v0.8.1.md](releases/v0.8.1.md) — Auth token persistence hotfix (paired with simulator v0.14.1)                                                               |
 | v0.8.0  | [docs/releases/v0.8.0.md](releases/v0.8.0.md) — Phase I.5 admin enrichment + auth fix (paired with simulator v0.14.0)                                                       |
 | v0.7.0  | [docs/releases/v0.7.0.md](releases/v0.7.0.md) — Phase I.4 auth + wallet UI (paired with simulator v0.13.0)                                                                  |
 | v0.6.0  | [docs/releases/v0.6.0.md](releases/v0.6.0.md) — Phase H+ merkle-rooted blocks + confirmed history UI                                                                        |
