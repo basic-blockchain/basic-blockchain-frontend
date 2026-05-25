@@ -1,7 +1,7 @@
 # Roadmap
 
 Status: Living document
-Last updated: 2026-05-17 (Phase 7.0 design-v2 contract opens)
+Last updated: 2026-05-25 (Phase 7 closed, v0.9.0 shipped to main)
 Scope: combined plan for `basic-blockchain-frontend` and
 `basic-blockchain-simulator` — phases of the visual + functional
 build-out around the redesign proposal.
@@ -316,31 +316,7 @@ ISO timestamp on soft-delete.
 
 ## 3. In flight
 
-### Phase 7 — Cadena v2
-
-**Goal**: visual + UX refresh against the same backend / framework
-stack, screen by screen. Contract: [`docs/DESIGN-v2.md`](./DESIGN-v2.md).
-
-| Sub-phase | Step                                                                                                                                 | Status | PR         |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------ | ---------- |
-| 7.0       | DESIGN-v2.md contract + token deltas added to `src/assets/design-system.css`.                                                        | done   | —          |
-| 7.1       | Base components (`BaseButton`, `BaseBadge`, `BaseAvatar`, `BaseCard`, `BaseTable`, `BaseModal`/`BaseDrawer`, `Stepper`).             | done   | —          |
-| 7.2       | Login / Register migration.                                                                                                          | done   | #319, #318 |
-| 7.3       | AdminView dashboard refresh.                                                                                                         | done   | #321, #320 |
-| 7.4       | AdminUsersView (row-actions, bulk-action footer).                                                                                    | done   | #323, #322 |
-| 7.5       | AdminWalletsView (USD/native toggle, row-actions).                                                                                   | done   | #325, #324 |
-| 7.6       | UserDrawer + WalletDrawer unification into one detail-panel pattern.                                                                 | done   | #327, #326 |
-| 7.7       | ChainView / MempoolView / NodesView refresh.                                                                                         | done   | #329, #328 |
-| 7.8       | Treasury distribution + dual-sign mint flows (with backend Phase 7.8).                                                               | done   | #331, #330 |
-| 7.9       | Long tail: AdminAuditView, AdminComplianceView, AdminMovementsView, AdminKycView, AdminSendsView, AdminSettingsView, ValidationView. | done   | #332+      |
-
-**Iteration rules** (captured in DESIGN-v2 §6):
-
-- One screen or one base component per PR.
-- Route filenames stay; the file is rewritten in place.
-- Tokens before components; components before screens.
-- No dead code at merge — v1 file deleted in the same commit as v2 lands.
-- Promotion chain runs at milestone boundaries (every 2–3 migrations), not after every PR.
+_(No phase currently in flight — Phase 7 closed on 2026-05-20 and released as v0.9.0; the full sub-phase table is kept under §5 "Phase 7 — Cadena v2 (CLOSED)" for reference. See §5 Backlog for candidate next scope.)_
 
 ---
 

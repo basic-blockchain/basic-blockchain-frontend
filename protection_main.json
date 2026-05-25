@@ -3,11 +3,18 @@
   "required_status_checks": {
     "url": "https://api.github.com/repos/basic-blockchain/basic-blockchain-frontend/branches/main/protection/required_status_checks",
     "strict": true,
-    "contexts": ["ci / ci", "enforce-merge-policy"],
+    "contexts": [
+      "Lint · Typecheck · Test · Build",
+      "Dependency Audit",
+      "Semgrep SAST",
+      "CodeQL"
+    ],
     "contexts_url": "https://api.github.com/repos/basic-blockchain/basic-blockchain-frontend/branches/main/protection/required_status_checks/contexts",
     "checks": [
-      { "context": "ci / ci", "app_id": null },
-      { "context": "enforce-merge-policy", "app_id": null }
+      { "context": "Lint · Typecheck · Test · Build", "app_id": null },
+      { "context": "Dependency Audit", "app_id": null },
+      { "context": "Semgrep SAST", "app_id": null },
+      { "context": "CodeQL", "app_id": null }
     ]
   },
   "required_pull_request_reviews": {
