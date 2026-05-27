@@ -2,6 +2,14 @@ export interface Transaction {
   sender: string
   receiver: string
   amount: number
+  /** Wallet IDs are the only identifiers that reliably resolve back to
+   * `/admin/wallets`. The pubkey fields are kept for display only. */
+  senderWalletId?: string
+  receiverWalletId?: string
+  /** Amount credited to the receiver — differs from `amount` when the
+   * transfer crosses currencies (the receiving wallet is in a different
+   * asset). `null` when the simulator has no separate receiver amount. */
+  receiverAmount?: number | null
 }
 
 export interface ConfirmedTransaction extends Transaction {

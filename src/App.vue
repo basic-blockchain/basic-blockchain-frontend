@@ -41,6 +41,7 @@ interface NavItem {
   icon: string
   requireAuth?: true
   requireRole?: string
+  disabled?: true
 }
 
 interface NavGroup {
@@ -49,7 +50,50 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const allGroups: NavGroup[] = [
+const adminGroups: NavGroup[] = [
+  {
+    label: 'Operaciones',
+    items: [
+      { to: '/admin', label: 'Resumen', icon: 'pi pi-chart-bar' },
+      { to: '/admin/users', label: 'Usuarios', icon: 'pi pi-users' },
+      { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet' },
+      { to: '/admin/treasury', label: 'Tesorería', icon: 'pi pi-building' },
+      { to: '/admin/movements', label: 'Movimientos', icon: 'pi pi-arrows-h' },
+      { to: '/admin/sends', label: 'Envíos', icon: 'pi pi-send' },
+    ],
+  },
+  {
+    label: 'Blockchain',
+    items: [
+      { to: '/chain', label: 'Cadena', icon: 'pi pi-link' },
+      { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
+      { to: '/nodes', label: 'Nodos', icon: 'pi pi-sitemap' },
+      { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
+      { to: '/health', label: 'Health', icon: 'pi pi-heart' },
+    ],
+  },
+  {
+    label: 'Mercado',
+    items: [
+      { to: '/p2p', label: 'Mercado P2P', icon: 'pi pi-arrow-right-arrow-left' },
+      { to: '/exchange', label: 'Exchange', icon: 'pi pi-chart-line' },
+      { to: '/admin/currencies', label: 'Monedas', icon: 'pi pi-globe' },
+      { to: '/admin/exchange-rates', label: 'Tasas de cambio', icon: 'pi pi-sort-alt' },
+    ],
+  },
+  {
+    label: 'Plataforma',
+    items: [
+      { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield' },
+      { to: '/admin/kyc', label: 'KYC', icon: 'pi pi-id-card' },
+      { to: '', label: 'Permisos', icon: 'pi pi-key', disabled: true },
+      { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list' },
+      { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog' },
+    ],
+  },
+]
+
+const userGroups: NavGroup[] = [
   {
     label: 'Operaciones',
     items: [
@@ -62,41 +106,18 @@ const allGroups: NavGroup[] = [
   {
     label: 'Blockchain',
     items: [
-      { to: '/chain', label: 'Chain', icon: 'pi pi-link' },
+      { to: '/chain', label: 'Cadena', icon: 'pi pi-link' },
       { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
       { to: '/nodes', label: 'Nodos', icon: 'pi pi-sitemap' },
       { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
       { to: '/health', label: 'Health', icon: 'pi pi-heart' },
     ],
   },
-  {
-    label: 'Plataforma',
-    requireRole: 'ADMIN',
-    items: [
-      { to: '/admin', label: 'Resumen', icon: 'pi pi-chart-bar', requireRole: 'ADMIN' },
-      { to: '/admin/users', label: 'Usuarios', icon: 'pi pi-users', requireRole: 'ADMIN' },
-      { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet', requireRole: 'ADMIN' },
-      { to: '/admin/currencies', label: 'Monedas', icon: 'pi pi-globe', requireRole: 'ADMIN' },
-      { to: '/admin/treasury', label: 'Tesorería', icon: 'pi pi-building', requireRole: 'ADMIN' },
-      { to: '/admin/exchange-rates', label: 'Tasas', icon: 'pi pi-sort-alt', requireRole: 'ADMIN' },
-      { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list', requireRole: 'ADMIN' },
-      { to: '/admin/kyc', label: 'KYC', icon: 'pi pi-id-card', requireRole: 'ADMIN' },
-      { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield', requireRole: 'ADMIN' },
-      {
-        to: '/admin/movements',
-        label: 'Movimientos',
-        icon: 'pi pi-arrows-h',
-        requireRole: 'ADMIN',
-      },
-      { to: '/admin/sends', label: 'Envíos', icon: 'pi pi-send', requireRole: 'ADMIN' },
-      { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog', requireRole: 'ADMIN' },
-    ],
-  },
 ]
 
-const navGroups = computed(() =>
-  allGroups
-    .filter((g) => !g.requireRole || auth.hasRole(g.requireRole))
+const navGroups = computed(() => {
+  const source = auth.hasRole('ADMIN') ? adminGroups : userGroups
+  return source
     .map((g) => ({
       ...g,
       items: g.items.filter((item) => {
@@ -106,7 +127,7 @@ const navGroups = computed(() =>
       }),
     }))
     .filter((g) => g.items.length > 0)
-)
+})
 
 function isActive(to: string): boolean {
   if (to === '/admin') return route.path === '/admin'
@@ -115,7 +136,7 @@ function isActive(to: string): boolean {
 
 const routeLabels: Record<string, string> = {
   dashboard: 'Dashboard',
-  chain: 'Chain',
+  chain: 'Cadena',
   mempool: 'Mempool',
   nodes: 'Nodos',
   validation: 'Validación',
@@ -162,12 +183,21 @@ function avatarInitial(name: string): string {
     <Toast position="bottom-right" />
   </div>
 
-  <div v-else class="app">
-    <a href="#main-content" class="skip-link">Saltar al contenido</a>
+  <div
+    v-else
+    class="app"
+  >
+    <a
+      href="#main-content"
+      class="skip-link"
+    >Saltar al contenido</a>
 
     <!-- Mobile top bar -->
     <header class="mobile-bar">
-      <span class="sb-brand-mark" aria-hidden="true">C</span>
+      <span
+        class="sb-brand-mark"
+        aria-hidden="true"
+      >C</span>
       <span class="mobile-title">Cadena</span>
       <button
         class="hamburger"
@@ -176,11 +206,20 @@ function avatarInitial(name: string): string {
         aria-label="Abrir navegación"
         @click="navOpen = !navOpen"
       >
-        <span class="pi" :class="navOpen ? 'pi-times' : 'pi-bars'" aria-hidden="true" />
+        <span
+          class="pi"
+          :class="navOpen ? 'pi-times' : 'pi-bars'"
+          aria-hidden="true"
+        />
       </button>
     </header>
 
-    <div v-if="navOpen" class="nav-overlay" aria-hidden="true" @click="navOpen = false" />
+    <div
+      v-if="navOpen"
+      class="nav-overlay"
+      aria-hidden="true"
+      @click="navOpen = false"
+    />
 
     <!-- Sidebar -->
     <aside
@@ -190,30 +229,65 @@ function avatarInitial(name: string): string {
       aria-label="Navegación principal"
     >
       <div class="sb-brand">
-        <span class="sb-brand-mark" aria-hidden="true">C</span>
+        <span
+          class="sb-brand-mark"
+          aria-hidden="true"
+        >C</span>
         <span>Cadena</span>
       </div>
 
       <nav aria-label="Secciones">
-        <template v-for="group in navGroups" :key="group.label">
+        <template
+          v-for="group in navGroups"
+          :key="group.label"
+        >
           <span class="sb-section">{{ group.label }}</span>
-          <RouterLink
+          <template
             v-for="item in group.items"
-            :key="item.to"
-            :to="item.to"
-            class="sb-link"
-            :class="{ active: isActive(item.to) }"
-            :aria-current="isActive(item.to) ? 'page' : undefined"
+            :key="item.label + item.to"
           >
-            <span :class="item.icon" aria-hidden="true" />
-            <span>{{ item.label }}</span>
-          </RouterLink>
+            <span
+              v-if="item.disabled"
+              class="sb-link sb-link-disabled"
+              aria-disabled="true"
+            >
+              <span
+                :class="item.icon"
+                aria-hidden="true"
+              />
+              <span class="sb-link-label">{{ item.label }}</span>
+              <span class="sb-link-soon">Pronto</span>
+            </span>
+            <RouterLink
+              v-else
+              :to="item.to"
+              class="sb-link"
+              :class="{ active: isActive(item.to) }"
+              :aria-current="isActive(item.to) ? 'page' : undefined"
+            >
+              <span
+                :class="item.icon"
+                aria-hidden="true"
+              />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </template>
         </template>
       </nav>
 
-      <div v-if="auth.isAuthenticated && auth.user" class="sb-foot">
-        <button class="sb-profile-btn" aria-label="Abrir perfil" @click="showProfile = true">
-          <span class="sb-avatar" aria-hidden="true">{{
+      <div
+        v-if="auth.isAuthenticated && auth.user"
+        class="sb-foot"
+      >
+        <button
+          class="sb-profile-btn"
+          aria-label="Abrir perfil"
+          @click="showProfile = true"
+        >
+          <span
+            class="sb-avatar"
+            aria-hidden="true"
+          >{{
             avatarInitial(auth.user.display_name)
           }}</span>
           <div class="sb-foot-text">
@@ -221,8 +295,16 @@ function avatarInitial(name: string): string {
             <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
           </div>
         </button>
-        <button class="sb-logout" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
-          <span class="pi pi-sign-out" aria-hidden="true" />
+        <button
+          class="sb-logout"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          @click="logout"
+        >
+          <span
+            class="pi pi-sign-out"
+            aria-hidden="true"
+          />
         </button>
       </div>
 
@@ -233,7 +315,10 @@ function avatarInitial(name: string): string {
         aria-live="polite"
         :aria-label="`WebSocket: ${wsStatus === 'OPEN' ? 'conectado' : 'conectando'}`"
       >
-        <span class="ws-dot" aria-hidden="true" />
+        <span
+          class="ws-dot"
+          aria-hidden="true"
+        />
         <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Conectando…' }}</span>
       </div>
     </aside>
@@ -242,9 +327,19 @@ function avatarInitial(name: string): string {
     <div class="main">
       <!-- Topbar with breadcrumbs -->
       <header class="topbar">
-        <nav class="crumbs" aria-label="Breadcrumb">
-          <template v-for="(crumb, i) in breadcrumbs" :key="crumb.label">
-            <span v-if="i > 0" class="crumb-sep" aria-hidden="true">·</span>
+        <nav
+          class="crumbs"
+          aria-label="Breadcrumb"
+        >
+          <template
+            v-for="(crumb, i) in breadcrumbs"
+            :key="crumb.label"
+          >
+            <span
+              v-if="i > 0"
+              class="crumb-sep"
+              aria-hidden="true"
+            >·</span>
             <strong v-if="i === breadcrumbs.length - 1">{{ crumb.label }}</strong>
             <span v-else>{{ crumb.label }}</span>
           </template>
@@ -255,7 +350,11 @@ function avatarInitial(name: string): string {
           :title="theme === 'dark' ? 'Modo claro' : 'Modo oscuro'"
           @click="toggleTheme"
         >
-          <span class="pi" :class="theme === 'dark' ? 'pi-sun' : 'pi-moon'" aria-hidden="true" />
+          <span
+            class="pi"
+            :class="theme === 'dark' ? 'pi-sun' : 'pi-moon'"
+            aria-hidden="true"
+          />
         </button>
         <button
           class="topbar-search"
@@ -263,14 +362,21 @@ function avatarInitial(name: string): string {
           aria-label="Abrir búsqueda global"
           @click="showPalette = true"
         >
-          <span class="pi pi-search" aria-hidden="true" />
+          <span
+            class="pi pi-search"
+            aria-hidden="true"
+          />
           <span class="topbar-search-placeholder">Buscar…</span>
           <kbd class="topbar-kbd">⌘K</kbd>
         </button>
         <NotificationCenter />
       </header>
 
-      <main id="main-content" class="page-content" tabindex="-1">
+      <main
+        id="main-content"
+        class="page-content"
+        tabindex="-1"
+      >
         <RouterView />
       </main>
     </div>
@@ -278,8 +384,15 @@ function avatarInitial(name: string): string {
     <Toast position="bottom-right" />
     <MiningNotification />
 
-    <ProfileDrawer :user="auth.user" :open="showProfile" @close="showProfile = false" />
-    <CommandPalette :open="showPalette" @close="showPalette = false" />
+    <ProfileDrawer
+      :user="auth.user"
+      :open="showProfile"
+      @close="showProfile = false"
+    />
+    <CommandPalette
+      :open="showPalette"
+      @close="showPalette = false"
+    />
   </div>
 </template>
 
@@ -372,6 +485,29 @@ function avatarInitial(name: string): string {
 .sb-link.active .pi {
   opacity: 1;
   color: var(--accent);
+}
+.sb-link-disabled {
+  color: var(--text-3);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.sb-link-disabled:hover {
+  background: transparent;
+  color: var(--text-3);
+}
+.sb-link-label {
+  flex: 1;
+}
+.sb-link-soon {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 6px;
 }
 
 /* User chip at sidebar bottom */
