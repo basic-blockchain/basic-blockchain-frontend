@@ -3,9 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import '@/lib/echarts'
-import { mint as mintApi } from '@/api/wallets'
 import { useStatsStore } from '@/stores/stats'
-import { useMetricsStore } from '@/stores/metrics'
 import { useToast } from 'primevue/usetoast'
 import {
   getVolume,
@@ -26,10 +24,6 @@ import Stepper from '@/components/atoms/Stepper.vue'
 const router = useRouter()
 const toast = useToast()
 const statsStore = useStatsStore()
-const metricsStore = useMetricsStore()
-
-const mintForm = ref({ walletId: '', amount: '' })
-const minting = ref(false)
 
 // ── Phase 6e widgets state ───────────────────────────────────────────
 const volumeRange = ref<VolumeRange>('30d')
@@ -42,7 +36,6 @@ const volumeOptions = useVolumeChartOptions(volume)
 // ── Dashboard refresh tracking ───────────────────────────────────────
 const fetch = useDashboardFetchSteps([
   { key: 'stats', label: 'Stats' },
-  { key: 'metrics', label: 'Metrics' },
   { key: 'volume', label: 'Volumen' },
   { key: 'top-movements', label: 'Top mov' },
   { key: 'critical-events', label: 'Eventos' },
@@ -102,15 +95,10 @@ async function loadStats() {
   await fetch.run('stats', () => statsStore.fetchStats({ compare: '7d' }))
 }
 
-async function loadMetrics() {
-  await fetch.run('metrics', () => metricsStore.fetchAll())
-}
-
 async function refreshAll() {
   fetch.reset()
   await Promise.allSettled([
     loadStats(),
-    loadMetrics(),
     loadVolume(),
     loadTopMovements(),
     loadCriticalEvents(),
@@ -160,31 +148,41 @@ const movementColumns: MovementColumn[] = [
   { key: 'confirmed_at', label: 'Cuando' },
 ]
 
-// ── Mint (unchanged behavior) ────────────────────────────────────────
-async function submitMint() {
-  const amount = Number(mintForm.value.amount)
-  if (!mintForm.value.walletId || !amount || amount <= 0) return
-  minting.value = true
-  try {
-    await mintApi({ wallet_id: mintForm.value.walletId, amount })
-    toast.add({
-      severity: 'success',
-      summary: 'Mint enviado',
-      detail: 'Transacción en mempool — mina un bloque para confirmar',
-      life: 5000,
-    })
-    mintForm.value = { walletId: '', amount: '' }
-  } catch (e) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error al mintear',
-      detail: e instanceof Error ? e.message : 'Error',
-      life: 4000,
-    })
-  } finally {
-    minting.value = false
-  }
+// ── Composición del saldo ────────────────────────────────────────────
+type CompositionTone = 'green' | 'orange' | 'blue' | 'teal' | 'gray'
+
+interface CompositionItem {
+  currency: string
+  amount: number
+  pct: number
+  tone: CompositionTone
 }
+
+const COMPOSITION_TONES: Record<string, CompositionTone> = {
+  USDT: 'green',
+  BTC: 'orange',
+  ETH: 'blue',
+  USDC: 'teal',
+}
+
+const composition = computed<CompositionItem[]>(() => {
+  const balances = statsStore.stats?.balances
+  if (!balances) return []
+  const entries = Object.entries(balances).map(([currency, raw]) => ({
+    currency,
+    amount: Number(raw),
+  }))
+  const total = entries.reduce((acc, e) => acc + (Number.isFinite(e.amount) ? e.amount : 0), 0)
+  if (total <= 0) return []
+  return entries
+    .map((e) => ({
+      currency: e.currency,
+      amount: e.amount,
+      pct: Math.round((e.amount / total) * 1000) / 10,
+      tone: COMPOSITION_TONES[e.currency] ?? 'gray',
+    }))
+    .sort((a, b) => b.pct - a.pct)
+})
 
 function relativeTime(iso: string): string {
   const ts = new Date(iso).getTime()
@@ -294,42 +292,76 @@ onMounted(() => {
       </BaseCard>
     </div>
 
-    <!-- Volume chart -->
-    <BaseCard variant="default" padding="none">
-      <template #header>
-        <div class="panel-h chart-h">
-          <span>Volumen confirmado · USD</span>
-          <div class="range-tabs">
-            <button
-              v-for="r in ['30d', '90d', '1y'] as VolumeRange[]"
-              :key="r"
-              type="button"
-              class="range-tab"
-              :class="{ active: volumeRange === r }"
-              @click="changeRange(r)"
-            >
-              {{ r === '1y' ? '1A' : r.toUpperCase() }}
-            </button>
+    <!-- Volume chart + Composición del saldo -->
+    <div class="volume-grid">
+      <BaseCard variant="default" padding="none">
+        <template #header>
+          <div class="panel-h chart-h">
+            <div class="panel-title">
+              <span>Volumen últimos 30 días</span>
+              <span class="panel-sub">Operaciones P2P + Exchange + on-chain</span>
+            </div>
+            <div class="range-tabs">
+              <button
+                v-for="r in ['30d', '90d', '1y'] as VolumeRange[]"
+                :key="r"
+                type="button"
+                class="range-tab"
+                :class="{ active: volumeRange === r }"
+                @click="changeRange(r)"
+              >
+                {{ r === '1y' ? '1A' : r.toUpperCase() }}
+              </button>
+            </div>
           </div>
+        </template>
+        <div class="chart-body">
+          <div v-if="fetch.status.volume === 'current'" class="chart-loading">
+            <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+          </div>
+          <VChart v-else-if="volume" class="chart" :option="volumeOptions" autoresize />
+          <div v-else class="chart-empty">Sin datos en el rango.</div>
         </div>
-      </template>
-      <div class="chart-body">
-        <div v-if="fetch.status.volume === 'current'" class="chart-loading">
-          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+        <div v-if="volume" class="chart-totals">
+          <span>
+            Total <strong>${{ formatUsd(volume.totals.volume_usd) }}</strong>
+          </span>
+          <span>· {{ volume.totals.tx_count }} tx</span>
+          <span v-if="volume.totals.unpriced_count > 0" class="unpriced-note">
+            · {{ volume.totals.unpriced_count }} sin tasa FX
+          </span>
         </div>
-        <VChart v-else-if="volume" class="chart" :option="volumeOptions" autoresize />
-        <div v-else class="chart-empty">Sin datos en el rango.</div>
-      </div>
-      <div v-if="volume" class="chart-totals">
-        <span>
-          Total <strong>${{ formatUsd(volume.totals.volume_usd) }}</strong>
-        </span>
-        <span>· {{ volume.totals.tx_count }} tx</span>
-        <span v-if="volume.totals.unpriced_count > 0" class="unpriced-note">
-          · {{ volume.totals.unpriced_count }} sin tasa FX
-        </span>
-      </div>
-    </BaseCard>
+      </BaseCard>
+
+      <BaseCard variant="default" padding="none">
+        <template #header>
+          <div class="panel-h">
+            <div class="panel-title">
+              <span>Composición del saldo</span>
+              <span class="panel-sub">Por activo en wallets de usuarios</span>
+            </div>
+          </div>
+        </template>
+        <div v-if="composition.length === 0" class="panel-empty">
+          Sin balances en circulación todavía.
+        </div>
+        <ul v-else class="composition-list">
+          <li v-for="item in composition" :key="item.currency" class="composition-row">
+            <div class="comp-meta">
+              <span class="comp-currency">{{ item.currency }}</span>
+              <span class="comp-pct">{{ item.pct }}%</span>
+            </div>
+            <div class="comp-bar">
+              <div
+                class="comp-bar-fill"
+                :class="`tone-${item.tone}`"
+                :style="{ width: item.pct + '%' }"
+              />
+            </div>
+          </li>
+        </ul>
+      </BaseCard>
+    </div>
 
     <!-- Critical events + Top movements -->
     <div class="content-grid">
@@ -400,88 +432,6 @@ onMounted(() => {
       </BaseCard>
     </div>
 
-    <!-- Blockchain KPIs + Mint -->
-    <div class="content-grid">
-      <BaseCard variant="default" padding="none">
-        <template #header>
-          <div class="panel-h">Blockchain</div>
-        </template>
-        <div class="chain-kpis">
-          <div class="chain-kpi">
-            <div class="ck-val">
-              {{ metricsStore.metrics?.chainHeight ?? '—' }}
-            </div>
-            <div class="ck-lbl">Altura de cadena</div>
-            <div class="ck-sub">bloques confirmados</div>
-          </div>
-          <div class="chain-kpi">
-            <div class="ck-val">
-              {{ metricsStore.metrics?.pendingTransactions ?? '—' }}
-            </div>
-            <div class="ck-lbl">Txs pendientes</div>
-            <div class="ck-sub">en mempool</div>
-          </div>
-        </div>
-      </BaseCard>
-
-      <BaseCard variant="default" padding="none">
-        <template #header>
-          <div class="panel-h">Mintear tokens</div>
-        </template>
-        <form class="mint-form" @submit.prevent="submitMint">
-          <div class="field">
-            <label class="field-label" for="wallet-id">Wallet ID</label>
-            <input
-              id="wallet-id"
-              v-model="mintForm.walletId"
-              class="field-input"
-              type="text"
-              placeholder="ID de la wallet destinataria"
-              required
-            />
-          </div>
-          <div class="field">
-            <label class="field-label" for="mint-amount">Cantidad</label>
-            <input
-              id="mint-amount"
-              v-model="mintForm.amount"
-              class="field-input"
-              type="number"
-              min="0.00000001"
-              step="any"
-              placeholder="100"
-              required
-            />
-          </div>
-          <BaseButton variant="primary" type="submit" :loading="minting"> Mintear </BaseButton>
-        </form>
-      </BaseCard>
-    </div>
-
-    <!-- Balances by currency -->
-    <BaseCard
-      v-if="statsStore.stats?.balances && Object.keys(statsStore.stats.balances).length"
-      variant="default"
-      padding="none"
-    >
-      <template #header>
-        <div class="panel-h">Balances en circulación</div>
-      </template>
-      <div class="balances-grid">
-        <div
-          v-for="(amount, currency) in statsStore.stats.balances"
-          :key="currency"
-          class="balance-card"
-        >
-          <div class="bc-currency">
-            {{ currency }}
-          </div>
-          <div class="bc-amount">
-            {{ amount }}
-          </div>
-        </div>
-      </div>
-    </BaseCard>
   </div>
 </template>
 
@@ -621,6 +571,73 @@ onMounted(() => {
   gap: 12px;
 }
 
+/* Volume + composition layout */
+.volume-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.panel-sub {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+/* Composición del saldo */
+.composition-list {
+  list-style: none;
+  margin: 0;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.composition-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.comp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.comp-currency {
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.comp-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+.comp-bar {
+  position: relative;
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.comp-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  transition: width var(--duration-base) var(--ease-out);
+}
+.comp-bar-fill.tone-green { background: var(--success, #2f9e44); }
+.comp-bar-fill.tone-orange { background: var(--warning, #e8590c); }
+.comp-bar-fill.tone-blue { background: var(--accent, #4263eb); }
+.comp-bar-fill.tone-teal { background: var(--info, #1098ad); }
+.comp-bar-fill.tone-gray { background: var(--border-strong, #adb5bd); }
+
 .panel-loading,
 .panel-empty {
   padding: 24px;
@@ -712,99 +729,10 @@ onMounted(() => {
   font-size: 11px;
 }
 
-/* Chain KPIs */
-.chain-kpis {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--border);
-}
-.chain-kpi {
-  background: var(--surface);
-  padding: 16px;
-}
-.ck-val {
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-.ck-lbl {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-2);
-  margin-top: 4px;
-}
-.ck-sub {
-  font-size: 11.5px;
-  color: var(--text-3);
-  margin-top: 2px;
-}
-
-/* Mint form */
-.mint-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-2);
-}
-.field-input {
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  transition: border-color var(--duration-fast) var(--ease-out);
-  width: 100%;
-  box-sizing: border-box;
-  font-family: var(--font-sans);
-}
-.field-input:focus {
-  border-color: var(--accent);
-}
-
-/* Balances */
-.balances-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1px;
-  background: var(--border);
-}
-.balance-card {
-  background: var(--surface);
-  padding: 14px 20px;
-  min-width: 140px;
-}
-.bc-currency {
-  font-size: 11.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-2);
-}
-.bc-amount {
-  font-size: 20px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.015em;
-  color: var(--text);
-  margin-top: 2px;
-}
-
 @media (max-width: 900px) {
+  .volume-grid {
+    grid-template-columns: 1fr;
+  }
   .bigstat-row {
     grid-template-columns: 1fr 1fr;
   }
