@@ -186,8 +186,19 @@ function rowKey(w: WalletAdminRecord): string {
         <p>Wallets de reserva de la plataforma por moneda</p>
       </div>
       <div class="page-actions">
-        <BaseButton variant="ghost" size="sm" @click="openDistribution"> Distribuir </BaseButton>
-        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          @click="openDistribution"
+        >
+          Distribuir
+        </BaseButton>
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          :loading="loading"
+          @click="load"
+        >
           Actualizar
         </BaseButton>
       </div>
@@ -200,64 +211,99 @@ function rowKey(w: WalletAdminRecord): string {
           <span>Wallets tesorería</span>
         </template>
         {{ totalTreasury }}
-        <template #footer> wallets activas </template>
+        <template #footer>
+          wallets activas
+        </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Monedas</span>
         </template>
         {{ currencies_count }}
-        <template #footer> tipos distintos </template>
+        <template #footer>
+          tipos distintos
+        </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Balance NATIVE</span>
         </template>
         {{ totalNative }}
-        <template #footer> NATIVE en reserva </template>
+        <template #footer>
+          NATIVE en reserva
+        </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Estado</span>
         </template>
         {{ loading ? 'Cargando' : 'OK' }}
-        <template #footer> sincronizado </template>
+        <template #footer>
+          sincronizado
+        </template>
       </BaseCard>
     </div>
 
     <!-- Create treasury + Mint side-by-side -->
     <div class="content-grid">
-      <BaseCard variant="default" padding="default">
+      <BaseCard
+        variant="default"
+        padding="default"
+      >
         <template #header>
-          <div class="section-h">Crear wallet de tesorería</div>
+          <div class="section-h">
+            Crear wallet de tesorería
+          </div>
         </template>
         <div class="inline-form">
           <div class="field">
-            <label class="field-label" for="currency">Moneda</label>
+            <label
+              class="field-label"
+              for="currency"
+            >Moneda</label>
             <select
               id="currency"
               v-model="selectedCurrency"
               class="field-select"
               :disabled="creating"
             >
-              <option v-for="c in currencies" :key="c.code" :value="c.code">
+              <option
+                v-for="c in currencies"
+                :key="c.code"
+                :value="c.code"
+              >
                 {{ c.code }} · {{ c.name }}
               </option>
             </select>
           </div>
-          <BaseButton variant="primary" :loading="creating" @click="createTreasury">
+          <BaseButton
+            variant="primary"
+            :loading="creating"
+            @click="createTreasury"
+          >
             Crear
           </BaseButton>
         </div>
       </BaseCard>
 
-      <BaseCard variant="default" padding="default">
+      <BaseCard
+        variant="default"
+        padding="default"
+      >
         <template #header>
-          <div class="section-h">Mintear tokens</div>
+          <div class="section-h">
+            Mintear tokens
+          </div>
         </template>
-        <form class="mint-form" @submit.prevent="submitMint">
+        <form
+          class="mint-form"
+          @submit.prevent="submitMint"
+        >
           <div class="field">
-            <label class="field-label" for="mint-wallet-id">Wallet ID</label>
+            <label
+              class="field-label"
+              for="mint-wallet-id"
+            >Wallet ID</label>
             <input
               id="mint-wallet-id"
               v-model="mintForm.walletId"
@@ -265,10 +311,13 @@ function rowKey(w: WalletAdminRecord): string {
               type="text"
               placeholder="ID de la wallet destinataria"
               required
-            />
+            >
           </div>
           <div class="field">
-            <label class="field-label" for="mint-amount">Cantidad</label>
+            <label
+              class="field-label"
+              for="mint-amount"
+            >Cantidad</label>
             <input
               id="mint-amount"
               v-model="mintForm.amount"
@@ -278,46 +327,83 @@ function rowKey(w: WalletAdminRecord): string {
               step="any"
               placeholder="100"
               required
-            />
+            >
           </div>
-          <BaseButton variant="primary" type="submit" :loading="minting"> Mintear </BaseButton>
+          <BaseButton
+            variant="primary"
+            type="submit"
+            :loading="minting"
+          >
+            Mintear
+          </BaseButton>
         </form>
       </BaseCard>
     </div>
 
     <!-- Treasury wallets table -->
-    <BaseCard variant="default" padding="none">
+    <BaseCard
+      variant="default"
+      padding="none"
+    >
       <template #header>
         <div class="panel-h">
           <span>Wallets de tesorería</span>
           <span class="count-badge sm">{{ treasuryWallets.length }}</span>
         </div>
       </template>
-      <div v-if="loading" class="loading-row">
-        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+      <div
+        v-if="loading"
+        class="loading-row"
+      >
+        <span
+          class="pi pi-spin pi-spinner"
+          aria-hidden="true"
+        /> Cargando…
       </div>
-      <PaginatedTable v-else :columns="treasuryColumns" :rows="treasuryWallets" :row-key="rowKey">
+      <PaginatedTable
+        v-else
+        :columns="treasuryColumns"
+        :rows="treasuryWallets"
+        :row-key="rowKey"
+      >
         <template #cell-wallet_id="{ row }">
           <span class="mono">
-            <HashChip :hash="row.wallet_id" :length="16" label="wallet id" />
+            <HashChip
+              :hash="row.wallet_id"
+              :length="16"
+              label="wallet id"
+            />
           </span>
         </template>
         <template #cell-currency="{ row }">
-          <BaseBadge variant="outline" tone="warning">
+          <BaseBadge
+            variant="outline"
+            tone="warning"
+          >
             {{ row.currency }}
           </BaseBadge>
         </template>
         <template #cell-balance="{ row }">
           <span class="mono">
-            <AmountDisplay :amount="Number(row.balance)" :precision="8" :unit="row.currency" />
+            <AmountDisplay
+              :amount="Number(row.balance)"
+              :precision="8"
+              :unit="row.currency"
+            />
           </span>
         </template>
         <template #cell-pub_key="{ row }">
           <span class="mono text-dim">
-            <HashChip :hash="row.public_key" :length="14" label="public key" />
+            <HashChip
+              :hash="row.public_key"
+              :length="14"
+              label="public key"
+            />
           </span>
         </template>
-        <template #empty> Sin wallets de tesorería todavía. </template>
+        <template #empty>
+          Sin wallets de tesorería todavía.
+        </template>
       </PaginatedTable>
     </BaseCard>
   </div>
