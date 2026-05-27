@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import HashChip from '@/components/atoms/HashChip.vue'
 
+vi.mock('primevue/usetoast', () => ({
+  useToast: () => ({ add: vi.fn() }),
+}))
+
 describe('HashChip', () => {
   it('truncates long hashes', () => {
     const wrapper = mount(HashChip, { props: { hash: '00000abcdefghij1234567890' } })
