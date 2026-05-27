@@ -49,7 +49,49 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const allGroups: NavGroup[] = [
+const adminGroups: NavGroup[] = [
+  {
+    label: 'Operaciones',
+    items: [
+      { to: '/admin', label: 'Resumen', icon: 'pi pi-chart-bar' },
+      { to: '/admin/users', label: 'Usuarios', icon: 'pi pi-users' },
+      { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet' },
+      { to: '/admin/treasury', label: 'Tesorería', icon: 'pi pi-building' },
+      { to: '/admin/movements', label: 'Movimientos', icon: 'pi pi-arrows-h' },
+      { to: '/admin/sends', label: 'Envíos', icon: 'pi pi-send' },
+    ],
+  },
+  {
+    label: 'Blockchain',
+    items: [
+      { to: '/chain', label: 'Cadena', icon: 'pi pi-link' },
+      { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
+      { to: '/nodes', label: 'Nodos', icon: 'pi pi-sitemap' },
+      { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
+      { to: '/health', label: 'Health', icon: 'pi pi-heart' },
+    ],
+  },
+  {
+    label: 'Mercado',
+    items: [
+      { to: '/p2p', label: 'Mercado P2P', icon: 'pi pi-arrow-right-arrow-left' },
+      { to: '/exchange', label: 'Exchange', icon: 'pi pi-chart-line' },
+      { to: '/admin/currencies', label: 'Monedas', icon: 'pi pi-globe' },
+      { to: '/admin/exchange-rates', label: 'Tasas de cambio', icon: 'pi pi-sort-alt' },
+    ],
+  },
+  {
+    label: 'Plataforma',
+    items: [
+      { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield' },
+      { to: '/admin/kyc', label: 'Permisos', icon: 'pi pi-id-card' },
+      { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list' },
+      { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog' },
+    ],
+  },
+]
+
+const userGroups: NavGroup[] = [
   {
     label: 'Operaciones',
     items: [
@@ -62,41 +104,18 @@ const allGroups: NavGroup[] = [
   {
     label: 'Blockchain',
     items: [
-      { to: '/chain', label: 'Chain', icon: 'pi pi-link' },
+      { to: '/chain', label: 'Cadena', icon: 'pi pi-link' },
       { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
       { to: '/nodes', label: 'Nodos', icon: 'pi pi-sitemap' },
       { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
       { to: '/health', label: 'Health', icon: 'pi pi-heart' },
     ],
   },
-  {
-    label: 'Plataforma',
-    requireRole: 'ADMIN',
-    items: [
-      { to: '/admin', label: 'Resumen', icon: 'pi pi-chart-bar', requireRole: 'ADMIN' },
-      { to: '/admin/users', label: 'Usuarios', icon: 'pi pi-users', requireRole: 'ADMIN' },
-      { to: '/admin/wallets', label: 'Wallets', icon: 'pi pi-wallet', requireRole: 'ADMIN' },
-      { to: '/admin/currencies', label: 'Monedas', icon: 'pi pi-globe', requireRole: 'ADMIN' },
-      { to: '/admin/treasury', label: 'Tesorería', icon: 'pi pi-building', requireRole: 'ADMIN' },
-      { to: '/admin/exchange-rates', label: 'Tasas', icon: 'pi pi-sort-alt', requireRole: 'ADMIN' },
-      { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list', requireRole: 'ADMIN' },
-      { to: '/admin/kyc', label: 'KYC', icon: 'pi pi-id-card', requireRole: 'ADMIN' },
-      { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield', requireRole: 'ADMIN' },
-      {
-        to: '/admin/movements',
-        label: 'Movimientos',
-        icon: 'pi pi-arrows-h',
-        requireRole: 'ADMIN',
-      },
-      { to: '/admin/sends', label: 'Envíos', icon: 'pi pi-send', requireRole: 'ADMIN' },
-      { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog', requireRole: 'ADMIN' },
-    ],
-  },
 ]
 
-const navGroups = computed(() =>
-  allGroups
-    .filter((g) => !g.requireRole || auth.hasRole(g.requireRole))
+const navGroups = computed(() => {
+  const source = auth.hasRole('ADMIN') ? adminGroups : userGroups
+  return source
     .map((g) => ({
       ...g,
       items: g.items.filter((item) => {
@@ -106,7 +125,7 @@ const navGroups = computed(() =>
       }),
     }))
     .filter((g) => g.items.length > 0)
-)
+})
 
 function isActive(to: string): boolean {
   if (to === '/admin') return route.path === '/admin'
@@ -115,7 +134,7 @@ function isActive(to: string): boolean {
 
 const routeLabels: Record<string, string> = {
   dashboard: 'Dashboard',
-  chain: 'Chain',
+  chain: 'Cadena',
   mempool: 'Mempool',
   nodes: 'Nodos',
   validation: 'Validación',
