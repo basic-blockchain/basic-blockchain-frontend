@@ -1,18 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import '@/lib/echarts'
 import { useStatsStore } from '@/stores/stats'
 import { useToast } from 'primevue/usetoast'
-import {
-  getVolume,
-  getTopMovements,
-  type VolumeRange,
-  type VolumeResponse,
-  type TopMovement,
-} from '@/api/dashboard'
-import { listAuditLog, type AuditEntry } from '@/api/admin'
+import { getVolume, type VolumeRange, type VolumeResponse } from '@/api/dashboard'
+import { listAuditLog, listAllWallets, type AuditEntry } from '@/api/admin'
+import { getConfirmed } from '@/api/mempool'
 import { useVolumeChartOptions } from '@/composables/useVolumeChartOptions'
 import { useDashboardFetchSteps } from '@/composables/useDashboardFetchSteps'
 import BaseCard from '@/components/atoms/BaseCard.vue'
@@ -28,8 +23,18 @@ const statsStore = useStatsStore()
 // ── Phase 6e widgets state ───────────────────────────────────────────
 const volumeRange = ref<VolumeRange>('30d')
 const volume = ref<VolumeResponse | null>(null)
-const topMovements = ref<TopMovement[]>([])
+const recentMovements = ref<RecentMovement[]>([])
 const criticalEvents = ref<AuditEntry[]>([])
+
+interface RecentMovement {
+  txKey: string
+  fromLabel: string
+  toLabel: string
+  amount: number
+  currency: string | null
+  confirmedAt: string
+  blockIndex: number | null
+}
 
 const volumeOptions = useVolumeChartOptions(volume)
 
@@ -37,7 +42,7 @@ const volumeOptions = useVolumeChartOptions(volume)
 const fetch = useDashboardFetchSteps([
   { key: 'stats', label: 'Stats' },
   { key: 'volume', label: 'Volumen' },
-  { key: 'top-movements', label: 'Top mov' },
+  { key: 'recent-movements', label: 'Movimientos' },
   { key: 'critical-events', label: 'Eventos' },
 ] as const)
 
@@ -57,11 +62,37 @@ async function loadVolume() {
   })
 }
 
-async function loadTopMovements() {
-  await fetch.run('top-movements', async () => {
+const RECENT_MOVEMENTS_LIMIT = 5
+const RECENT_MOVEMENTS_WINDOW_MS = 24 * 60 * 60 * 1000
+
+async function loadRecentMovements() {
+  await fetch.run('recent-movements', async () => {
     try {
-      const res = await getTopMovements({ range: '24h', limit: 5 })
-      topMovements.value = res.movements
+      const [conf, walletsRes] = await Promise.all([getConfirmed(), listAllWallets()])
+      const pkToUsername: Record<string, string> = {}
+      const pkToCurrency: Record<string, string> = {}
+      for (const w of walletsRes.wallets) {
+        pkToUsername[w.public_key] = w.username
+        pkToCurrency[w.public_key] = w.currency
+      }
+      const since = Date.now() - RECENT_MOVEMENTS_WINDOW_MS
+      recentMovements.value = conf.transactions
+        .map((t) => {
+          const ts = new Date(t.blockTimestamp).getTime()
+          return { tx: t, ts }
+        })
+        .filter(({ ts }) => Number.isFinite(ts) && ts >= since)
+        .sort((a, b) => b.ts - a.ts)
+        .slice(0, RECENT_MOVEMENTS_LIMIT)
+        .map<RecentMovement>(({ tx }) => ({
+          txKey: `${tx.blockIndex}:${tx.sender}:${tx.receiver}:${tx.amount}`,
+          fromLabel: pkToUsername[tx.sender] ?? shortenId(tx.sender),
+          toLabel: pkToUsername[tx.receiver] ?? shortenId(tx.receiver),
+          amount: tx.amount,
+          currency: pkToCurrency[tx.sender] ?? pkToCurrency[tx.receiver] ?? null,
+          confirmedAt: tx.blockTimestamp,
+          blockIndex: tx.blockIndex ?? null,
+        }))
     } catch (e) {
       toast.add({
         severity: 'error',
@@ -100,7 +131,7 @@ async function refreshAll() {
   await Promise.allSettled([
     loadStats(),
     loadVolume(),
-    loadTopMovements(),
+    loadRecentMovements(),
     loadCriticalEvents(),
   ])
 }
@@ -144,7 +175,6 @@ interface MovementColumn {
 const movementColumns: MovementColumn[] = [
   { key: 'from-to', label: 'De → Para' },
   { key: 'amount', label: 'Monto', num: true },
-  { key: 'amount_usd', label: 'USD', num: true },
   { key: 'confirmed_at', label: 'Cuando' },
 ]
 
@@ -492,11 +522,20 @@ onMounted(() => {
       >
         <template #header>
           <div class="panel-h">
-            Top movimientos · 24h
+            <div class="panel-title">
+              <span>Movimientos recientes · 24h</span>
+              <span class="panel-sub">Últimas transacciones confirmadas en la plataforma</span>
+            </div>
+            <RouterLink
+              to="/admin/movements"
+              class="panel-link"
+            >
+              Ver todos →
+            </RouterLink>
           </div>
         </template>
         <div
-          v-if="fetch.status['top-movements'] === 'current'"
+          v-if="fetch.status['recent-movements'] === 'current'"
           class="panel-loading"
         >
           <span
@@ -505,7 +544,7 @@ onMounted(() => {
           /> Cargando…
         </div>
         <div
-          v-else-if="topMovements.length === 0"
+          v-else-if="recentMovements.length === 0"
           class="panel-empty"
         >
           Sin movimientos en las últimas 24h.
@@ -513,24 +552,21 @@ onMounted(() => {
         <PaginatedTable
           v-else
           :columns="movementColumns"
-          :rows="topMovements"
-          :row-key="(m: TopMovement) => m.tx_id"
+          :rows="recentMovements"
+          :row-key="(m: RecentMovement) => m.txKey"
         >
           <template #cell-from-to="{ row }">
             <div class="movement-pair">
-              <span class="mono">{{ row.from_username ?? shortenId(row.from_user_id) }}</span>
+              <span class="mono">{{ row.fromLabel }}</span>
               <span class="arrow">→</span>
-              <span class="mono">{{ row.to_username ?? shortenId(row.to_user_id) }}</span>
+              <span class="mono">{{ row.toLabel }}</span>
             </div>
           </template>
           <template #cell-amount="{ row }">
-            <span class="mono">{{ row.amount }} {{ row.currency }}</span>
-          </template>
-          <template #cell-amount_usd="{ row }">
-            <span class="mono usd">${{ formatUsd(row.amount_usd) }}</span>
+            <span class="mono">{{ row.amount }} {{ row.currency ?? '' }}</span>
           </template>
           <template #cell-confirmed_at="{ row }">
-            <span class="ts mono">{{ relativeTime(row.confirmed_at) }}</span>
+            <span class="ts mono">{{ relativeTime(row.confirmedAt) }}</span>
           </template>
         </PaginatedTable>
       </BaseCard>
@@ -690,6 +726,16 @@ onMounted(() => {
   font-size: 11.5px;
   font-weight: 400;
   color: var(--text-3);
+}
+.panel-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.panel-link:hover {
+  text-decoration: underline;
 }
 
 /* Composición del saldo */
