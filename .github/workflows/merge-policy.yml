@@ -21,9 +21,15 @@ jobs:
           head="$HEAD_REF"
           echo "Base: $base | Head: $head"
 
+          # CLAUDE.md chain: develop → qa → staging → production → main.
+          # `staging` is therefore a first-class head for base=production
+          # alongside the existing release/* and hotfix/* exception paths
+          # — without it the documented promotion script collides with the
+          # guard and every staging→production PR has to be forced through
+          # with --admin.
           if [[ "$base" == "production" ]]; then
-            if [[ ! "$head" =~ ^release/ ]] && [[ ! "$head" =~ ^hotfix/ ]]; then
-              echo "PR to production must come from release/* or hotfix/* branches." >&2
+            if [[ ! "$head" =~ ^release/ ]] && [[ ! "$head" =~ ^hotfix/ ]] && [[ "$head" != "staging" ]]; then
+              echo "PR to production must come from staging, release/* or hotfix/* branches." >&2
               exit 1
             fi
           fi
