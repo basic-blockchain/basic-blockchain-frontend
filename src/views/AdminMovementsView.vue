@@ -4,10 +4,14 @@ import { getConfirmed, getPending } from '@/api/mempool'
 import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
 import { listAllWallets, listExchangeRates } from '@/api/admin'
 import { useToast } from 'primevue/usetoast'
+import { useRouter } from 'vue-router'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
+import TransactionDetailFlow, {
+  type TxDetailData,
+} from '@/components/flows/TransactionDetailFlow.vue'
 
 const QUOTE = 'USDT'
 
@@ -45,8 +49,13 @@ async function load() {
     pending.value = pend.transactions
 
     const pkMap: Record<string, string> = {}
-    for (const w of walletsRes.wallets) pkMap[w.public_key] = w.currency
+    const userMap: Record<string, string> = {}
+    for (const w of walletsRes.wallets) {
+      pkMap[w.public_key] = w.currency
+      userMap[w.public_key] = w.username
+    }
     pubkeyToCurrency.value = pkMap
+    pubkeyToUsername.value = userMap
 
     // Keep only the freshest row per from_currency (the rates endpoint
     // returns history). Latest-wins so an operator's manual override
@@ -71,12 +80,78 @@ async function load() {
 interface Row {
   sender: string
   receiver: string
+  senderLabel: string
+  receiverLabel: string
   amount: number
   currency: string | null
   amountUsd: number | null
   status: 'completed' | 'pending'
   blockIndex?: number
   timestamp?: string
+}
+
+type CurrencyTone = 'green' | 'orange' | 'blue' | 'teal' | 'gray'
+
+const CURRENCY_TONES: Record<string, CurrencyTone> = {
+  USDT: 'green',
+  USDC: 'teal',
+  BTC: 'orange',
+  ETH: 'blue',
+}
+
+function currencyTone(code: string | null): CurrencyTone {
+  if (!code) return 'gray'
+  return CURRENCY_TONES[code] ?? 'gray'
+}
+
+const pubkeyToUsername = ref<Record<string, string>>({})
+
+function labelFor(pubkey: string): string {
+  return pubkeyToUsername.value[pubkey] ?? truncate(pubkey)
+}
+
+const router = useRouter()
+
+const chainHeight = computed(() => {
+  let max = -1
+  for (const tx of confirmed.value) {
+    if (tx.blockIndex != null && tx.blockIndex > max) max = tx.blockIndex
+  }
+  return max >= 0 ? max : null
+})
+
+function confirmationsFor(row: Row): number | null {
+  if (row.status !== 'completed' || row.blockIndex == null || chainHeight.value === null) {
+    return null
+  }
+  return Math.max(0, chainHeight.value - row.blockIndex + 1)
+}
+
+const selectedTx = ref<TxDetailData | null>(null)
+
+function openDetail(row: Row) {
+  const rate = row.currency ? rateByCurrency.value[row.currency] : undefined
+  selectedTx.value = {
+    tx: {
+      sender: row.sender,
+      receiver: row.receiver,
+      senderLabel: row.senderLabel,
+      receiverLabel: row.receiverLabel,
+      amount: row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }),
+      currency: row.currency ?? undefined,
+    },
+    status: row.status,
+    block: row.blockIndex,
+    confirmedAt: row.timestamp,
+    confirmations: confirmationsFor(row),
+    amountUsd: row.amountUsd,
+    fxRate: rate !== undefined && Number.isFinite(rate) ? rate : null,
+  }
+}
+
+function viewInChain() {
+  router.push('/chain')
+  selectedTx.value = null
 }
 
 interface MovementColumn {
@@ -91,6 +166,7 @@ const movementColumns: MovementColumn[] = [
   { key: 'receiver', label: 'Para' },
   { key: 'amount', label: 'Monto', num: true },
   { key: 'usd', label: 'USD', num: true },
+  { key: 'asset', label: 'Activo' },
   { key: 'status', label: 'Estado' },
   { key: 'when', label: 'Bloque / Cuando' },
 ]
@@ -110,6 +186,8 @@ function rowFromTx(
   return {
     sender: t.sender,
     receiver: t.receiver,
+    senderLabel: labelFor(t.sender),
+    receiverLabel: labelFor(t.receiver),
     amount: t.amount,
     currency,
     amountUsd,
@@ -156,9 +234,18 @@ onMounted(load)
         <p>Historial consolidado · transacciones confirmadas y pendientes en la plataforma.</p>
       </div>
       <div class="page-h-actions">
-        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
+        <BaseButton
+          variant="ghost"
+          size="sm"
+          :loading="loading"
+          @click="load"
+        >
           <template #leading>
-            <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+            <span
+              class="pi pi-refresh"
+              :class="{ 'pi-spin': loading }"
+              aria-hidden="true"
+            />
           </template>
           Actualizar
         </BaseButton>
@@ -172,28 +259,36 @@ onMounted(load)
           <span>Operaciones totales</span>
         </template>
         {{ stats.total.toLocaleString('es-AR') }}
-        <template #footer> Confirmadas + pendientes </template>
+        <template #footer>
+          Confirmadas + pendientes
+        </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Confirmadas</span>
         </template>
         <span class="kpi-success">{{ stats.confirmed.toLocaleString('es-AR') }}</span>
-        <template #footer> En bloques minados </template>
+        <template #footer>
+          En bloques minados
+        </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Pendientes</span>
         </template>
         <span :class="{ 'kpi-warning': stats.pending > 0 }">{{ stats.pending }}</span>
-        <template #footer> En mempool </template>
+        <template #footer>
+          En mempool
+        </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Mostrando</span>
         </template>
         {{ rows.length }}
-        <template #footer> Con filtros actuales </template>
+        <template #footer>
+          Con filtros actuales
+        </template>
       </BaseCard>
     </div>
 
@@ -215,17 +310,39 @@ onMounted(load)
         </button>
       </div>
       <div class="toolbar-search">
-        <span class="pi pi-search" aria-hidden="true" />
-        <input v-model="searchQuery" placeholder="Buscar por sender, receiver o hash…" />
+        <span
+          class="pi pi-search"
+          aria-hidden="true"
+        />
+        <input
+          v-model="searchQuery"
+          placeholder="Buscar por sender, receiver o hash…"
+        >
       </div>
     </div>
 
     <!-- Table -->
-    <div v-if="loading" class="loading-row">
-      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+    <div
+      v-if="loading"
+      class="loading-row"
+    >
+      <span
+        class="pi pi-spin pi-spinner"
+        aria-hidden="true"
+      /> Cargando…
     </div>
-    <BaseCard v-else class="table-panel" variant="default" padding="none">
-      <PaginatedTable :columns="movementColumns" :rows="rows">
+    <BaseCard
+      v-else
+      class="table-panel"
+      variant="default"
+      padding="none"
+    >
+      <PaginatedTable
+        :columns="movementColumns"
+        :rows="rows"
+        :row-class="() => 'mv-row-clickable'"
+        @row-click="openDetail($event.row)"
+      >
         <template #cell-type="{ row }">
           <div class="mv-type">
             <span
@@ -242,22 +359,48 @@ onMounted(load)
           </div>
         </template>
         <template #cell-sender="{ row }">
-          <span class="mono cell-addr">{{ truncate(row.sender) }}</span>
+          <span class="cell-user">{{ row.senderLabel }}</span>
         </template>
         <template #cell-receiver="{ row }">
-          <span class="mono cell-addr">{{ truncate(row.receiver) }}</span>
+          <span class="cell-user">{{ row.receiverLabel }}</span>
         </template>
         <template #cell-amount="{ row }">
           <span class="mono">
             {{ row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}
-            <span v-if="row.currency" class="cell-currency">{{ row.currency }}</span>
           </span>
         </template>
         <template #cell-usd="{ row }">
           <span class="mono usd-cell">
             <template v-if="row.amountUsd !== null">{{ fmtUsd(row.amountUsd) }}</template>
-            <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
+            <span
+              v-else
+              class="usd-missing"
+              title="Sin tasa FX para esta moneda"
+            >—</span>
           </span>
+        </template>
+        <template #cell-asset="{ row }">
+          <BaseBadge
+            v-if="row.currency"
+            variant="outline"
+            :tone="
+              currencyTone(row.currency) === 'green'
+                ? 'success'
+                : currencyTone(row.currency) === 'orange'
+                  ? 'warning'
+                  : 'neutral'
+            "
+          >
+            <span
+              class="asset-dot"
+              :class="`asset-tone-${currencyTone(row.currency)}`"
+            />
+            {{ row.currency }}
+          </BaseBadge>
+          <span
+            v-else
+            class="usd-missing"
+          >—</span>
         </template>
         <template #cell-status="{ row }">
           <BaseBadge :tone="statusTone(row.status)">
@@ -271,9 +414,18 @@ onMounted(load)
             <template v-else>—</template>
           </span>
         </template>
-        <template #empty> Sin movimientos. </template>
+        <template #empty>
+          Sin movimientos.
+        </template>
       </PaginatedTable>
     </BaseCard>
+
+    <TransactionDetailFlow
+      v-if="selectedTx"
+      :data="selectedTx"
+      @close="selectedTx = null"
+      @view-in-chain="viewInChain"
+    />
   </div>
 </template>
 
@@ -423,6 +575,36 @@ onMounted(load)
 }
 .usd-missing {
   color: var(--text-3);
+}
+
+.cell-user {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* Asset badge */
+.asset-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.asset-tone-green { background: var(--success, #2f9e44); }
+.asset-tone-orange { background: var(--warning, #e8590c); }
+.asset-tone-blue { background: var(--accent, #4263eb); }
+.asset-tone-teal { background: var(--info, #1098ad); }
+.asset-tone-gray { background: var(--border-strong, #adb5bd); }
+
+/* Clickable rows */
+:deep(.base-tbl__body tr.mv-row-clickable) {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+:deep(.base-tbl__body tr.mv-row-clickable:hover) {
+  background: var(--hover);
 }
 
 /* Movement type */
