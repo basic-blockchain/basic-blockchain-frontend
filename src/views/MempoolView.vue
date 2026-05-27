@@ -24,7 +24,8 @@ const confirmedStore = useConfirmedTransactionsStore()
 const router = useRouter()
 
 function viewInChain() {
-  router.push('/chain')
+  const block = selectedTx.value?.block
+  router.push(block != null ? { path: '/chain', query: { block: String(block) } } : '/chain')
   selectedTx.value = null
 }
 
