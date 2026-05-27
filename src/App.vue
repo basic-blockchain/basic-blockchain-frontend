@@ -41,6 +41,7 @@ interface NavItem {
   icon: string
   requireAuth?: true
   requireRole?: string
+  disabled?: true
 }
 
 interface NavGroup {
@@ -84,7 +85,8 @@ const adminGroups: NavGroup[] = [
     label: 'Plataforma',
     items: [
       { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield' },
-      { to: '/admin/kyc', label: 'Permisos', icon: 'pi pi-id-card' },
+      { to: '/admin/kyc', label: 'KYC', icon: 'pi pi-id-card' },
+      { to: '', label: 'Permisos', icon: 'pi pi-key', disabled: true },
       { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list' },
       { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog' },
     ],
@@ -216,17 +218,23 @@ function avatarInitial(name: string): string {
       <nav aria-label="Secciones">
         <template v-for="group in navGroups" :key="group.label">
           <span class="sb-section">{{ group.label }}</span>
-          <RouterLink
-            v-for="item in group.items"
-            :key="item.to"
-            :to="item.to"
-            class="sb-link"
-            :class="{ active: isActive(item.to) }"
-            :aria-current="isActive(item.to) ? 'page' : undefined"
-          >
-            <span :class="item.icon" aria-hidden="true" />
-            <span>{{ item.label }}</span>
-          </RouterLink>
+          <template v-for="item in group.items" :key="item.label + item.to">
+            <span v-if="item.disabled" class="sb-link sb-link-disabled" aria-disabled="true">
+              <span :class="item.icon" aria-hidden="true" />
+              <span class="sb-link-label">{{ item.label }}</span>
+              <span class="sb-link-soon">Pronto</span>
+            </span>
+            <RouterLink
+              v-else
+              :to="item.to"
+              class="sb-link"
+              :class="{ active: isActive(item.to) }"
+              :aria-current="isActive(item.to) ? 'page' : undefined"
+            >
+              <span :class="item.icon" aria-hidden="true" />
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </template>
         </template>
       </nav>
 
@@ -391,6 +399,29 @@ function avatarInitial(name: string): string {
 .sb-link.active .pi {
   opacity: 1;
   color: var(--accent);
+}
+.sb-link-disabled {
+  color: var(--text-3);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.sb-link-disabled:hover {
+  background: transparent;
+  color: var(--text-3);
+}
+.sb-link-label {
+  flex: 1;
+}
+.sb-link-soon {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 6px;
 }
 
 /* User chip at sidebar bottom */
