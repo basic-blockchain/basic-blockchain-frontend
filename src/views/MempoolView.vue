@@ -16,6 +16,10 @@ import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 interface PendingTx extends Transaction {
   id?: string | number
   currency?: string
+  // The Transaction model already exposes `fee` (post BR-TX-10); this
+  // alias allows callers that still pass `PendingTx`-shaped objects
+  // (older fixtures, stores not yet typed to the new model) to keep
+  // working without losing the real value.
   fee?: number
 }
 
@@ -53,28 +57,61 @@ function shortAddr(addr: string, n = 6): string {
   return addr.length > n * 2 ? `${addr.slice(0, n)}…${addr.slice(-n)}` : addr
 }
 
-const totalFees = computed(() => {
-  let sum = 0
+/** Count of pending transactions that carry a non-zero fee. Replaces
+ * the previous "fees acumulados" KPI that summed raw fee amounts —
+ * a misleading aggregate when transactions span multiple currencies
+ * (BR-TX-10: fees are always denominated in the sender's currency).
+ * The honest answer for a multi-currency mempool is a count, not a
+ * cross-currency sum; per-currency breakdowns can ship as a follow-up. */
+const txsWithFee = computed(() => {
+  let n = 0
   for (const tx of mempoolStore.transactions as PendingTx[]) {
     const f = Number(tx.fee ?? 0)
-    if (!Number.isNaN(f)) sum += f
+    if (!Number.isNaN(f) && f > 0) n += 1
   }
-  return sum > 0 ? sum.toFixed(4) : '$3.21'
+  return n
 })
 
-const totalSize = computed(() => `${mempoolStore.count * 280} B`)
+/** Approximate mempool byte size from the JSON-serialised transactions
+ * themselves. The simulator does not yet persist a real size column on
+ * `Transaction`, so this is the best deterministic approximation we
+ * can give the operator until that backend field exists. */
+const totalSize = computed(() => {
+  let bytes = 0
+  for (const tx of mempoolStore.transactions) {
+    bytes += JSON.stringify(tx).length
+  }
+  return `${bytes} B`
+})
+
+function feeText(tx: PendingTx): string {
+  const f = Number(tx.fee ?? 0)
+  return Number.isFinite(f) && f > 0 ? String(f) : '—'
+}
+
+function txSize(tx: Transaction): number {
+  return JSON.stringify(tx).length
+}
 
 function openTx(tx: Transaction, i: number, status: 'pending' | 'completed') {
   const ptx = tx as PendingTx
+  const fee = Number(ptx.fee ?? 0)
   selectedTx.value = {
     tx: {
       id: shortId(ptx, i),
       sender: tx.sender,
       receiver: tx.receiver,
       amount: String(tx.amount),
-      currency: ptx.currency ?? 'BTC',
-      fee: String(ptx.fee ?? '0.0001'),
-      size: 240,
+      // `currency` is intentionally unset — the Transaction model
+      // does not carry a currency field; the wallet does. Non-admin
+      // contexts cannot resolve the counterpart wallet, so the modal
+      // renders "unidad desconocida" rather than lie with a default.
+      currency: ptx.currency,
+      // Real platform fee (BR-TX-11). `undefined` when the row lacks
+      // one (e.g. legacy / coinbase) — `TransactionDetailFlow` hides
+      // the Fee row when undefined.
+      fee: fee > 0 ? String(fee) : undefined,
+      size: txSize(tx),
     },
     status,
   }
@@ -168,16 +205,16 @@ function confirmedRowKey(r: ConfirmedRow): string {
         </template>
         {{ mempoolStore.count }}
         <template #footer>
-          la más antigua hace 8 min
+          en cola para el próximo bloque
         </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
-          <span>Fees acumulados</span>
+          <span>Operaciones con fee</span>
         </template>
-        {{ totalFees }}
+        {{ txsWithFee }}
         <template #footer>
-          a recompensar al minero
+          aportan al recolector de fees
         </template>
       </BaseCard>
       <BaseCard variant="bigstat">
@@ -186,16 +223,16 @@ function confirmedRowKey(r: ConfirmedRow): string {
         </template>
         {{ totalSize }}
         <template #footer>
-          de 1 MB por bloque
+          aproximado por JSON serializado
         </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Tiempo medio espera</span>
         </template>
-        4m 22s
+        —
         <template #footer>
-          hasta confirmación
+          sin telemetría aún
         </template>
       </BaseCard>
     </div>
@@ -231,10 +268,10 @@ function confirmedRowKey(r: ConfirmedRow): string {
             <span class="mono">{{ row.tx.amount }}</span>
           </template>
           <template #cell-fee="{ row }">
-            <span class="mono xs muted">{{ (row.tx as PendingTx).fee ?? '0.0001' }}</span>
+            <span class="mono xs muted">{{ feeText(row.tx as PendingTx) }}</span>
           </template>
-          <template #cell-size>
-            <span class="muted">240 B</span>
+          <template #cell-size="{ row }">
+            <span class="muted">{{ txSize(row.tx) }} B</span>
           </template>
           <template #cell-status>
             <BaseBadge tone="warning">
