@@ -23,12 +23,17 @@ const loading = ref(false)
 const searchQuery = ref('')
 const activeTab = ref<'all' | 'pending' | 'confirmed'>('all')
 
-// Phase 6j — currency / rate lookups so the table can show USD per
-// row. Transactions ship only sender/receiver public keys + native
-// amount; we resolve currency via the wallet store and apply the
-// current X/<QUOTE> rate (rate-as-of-now, because pending mempool
-// rows have no confirmed_at to anchor against).
+// Resolution maps. The transaction model exposes both the public-key
+// fields (`sender`/`receiver`) and the wallet IDs (`senderWalletId`/
+// `receiverWalletId`). Wallet IDs are the authoritative key — pubkeys
+// may belong to wallets that aren't part of `/admin/wallets` (e.g.
+// COINBASE issuance), but `wallet_id` is consistent across endpoints.
+const walletIdToCurrency = ref<Record<string, string>>({})
+const walletIdToUsername = ref<Record<string, string>>({})
+const walletIdToType = ref<Record<string, string>>({})
 const pubkeyToCurrency = ref<Record<string, string>>({})
+const pubkeyToUsername = ref<Record<string, string>>({})
+const pubkeyToWalletType = ref<Record<string, string>>({})
 const rateByCurrency = ref<Record<string, number>>({})
 
 const stats = computed(() => ({
@@ -52,14 +57,23 @@ async function load() {
     const pkMap: Record<string, string> = {}
     const userMap: Record<string, string> = {}
     const typeMap: Record<string, string> = {}
+    const widCurrency: Record<string, string> = {}
+    const widUser: Record<string, string> = {}
+    const widType: Record<string, string> = {}
     for (const w of walletsRes.wallets) {
       pkMap[w.public_key] = w.currency
       userMap[w.public_key] = w.username
       typeMap[w.public_key] = w.wallet_type
+      widCurrency[w.wallet_id] = w.currency
+      widUser[w.wallet_id] = w.username
+      widType[w.wallet_id] = w.wallet_type
     }
     pubkeyToCurrency.value = pkMap
     pubkeyToUsername.value = userMap
     pubkeyToWalletType.value = typeMap
+    walletIdToCurrency.value = widCurrency
+    walletIdToUsername.value = widUser
+    walletIdToType.value = widType
 
     // Keep only the freshest row per from_currency (the rates endpoint
     // returns history). Latest-wins so an operator's manual override
@@ -89,7 +103,13 @@ interface Row {
   senderRole: string | null
   receiverRole: string | null
   amount: number
+  /** Currency of the sender side of the transfer. `null` when neither
+   * the sender nor receiver wallet is part of `/admin/wallets`. */
   currency: string | null
+  /** When sender and receiver use different currencies, the asset the
+   * receiver actually credits. `null` for single-currency transfers. */
+  receiverCurrency: string | null
+  receiverAmount: number | null
   amountUsd: number | null
   status: 'completed' | 'pending'
   blockIndex?: number
@@ -110,20 +130,32 @@ function currencyTone(code: string | null): CurrencyTone {
   return CURRENCY_TONES[code] ?? 'gray'
 }
 
-const pubkeyToUsername = ref<Record<string, string>>({})
-const pubkeyToWalletType = ref<Record<string, string>>({})
-
-function roleFor(pubkey: string): string | null {
-  const t = pubkeyToWalletType.value[pubkey]
-  if (!t) return null
-  // Friendly labels for the user chip role tag.
-  if (t === 'TREASURY') return 'Tesorería'
-  if (t === 'USER') return 'Usuario'
-  return t
+function roleFromType(walletType: string | undefined): string | null {
+  if (!walletType) return null
+  if (walletType === 'TREASURY') return 'Tesorería'
+  if (walletType === 'USER') return 'Usuario'
+  return walletType
 }
 
-function labelFor(pubkey: string): string {
-  return pubkeyToUsername.value[pubkey] ?? truncate(pubkey)
+function resolveRole(walletId: string | undefined, pubkey: string): string | null {
+  const t = (walletId && walletIdToType.value[walletId]) || pubkeyToWalletType.value[pubkey]
+  return roleFromType(t)
+}
+
+function resolveLabel(walletId: string | undefined, pubkey: string): string {
+  return (
+    (walletId && walletIdToUsername.value[walletId]) ||
+    pubkeyToUsername.value[pubkey] ||
+    truncate(pubkey)
+  )
+}
+
+function resolveCurrency(walletId: string | undefined, pubkey: string): string | null {
+  return (
+    (walletId && walletIdToCurrency.value[walletId]) ||
+    pubkeyToCurrency.value[pubkey] ||
+    null
+  )
 }
 
 const router = useRouter()
@@ -157,6 +189,11 @@ function openDetail(row: Row) {
       receiverRole: row.receiverRole ?? undefined,
       amount: row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }),
       currency: row.currency ?? undefined,
+      receiverAmount:
+        row.receiverAmount !== null
+          ? row.receiverAmount.toLocaleString('es-AR', { maximumFractionDigits: 8 })
+          : undefined,
+      receiverCurrency: row.receiverCurrency ?? undefined,
     },
     status: row.status,
     block: row.blockIndex,
@@ -194,23 +231,32 @@ function rowFromTx(
   t: Transaction & { blockIndex?: number; blockTimestamp?: string },
   status: 'completed' | 'pending'
 ): Row {
-  // Sender first — owner side carries the source currency; receiver
-  // is the fallback (mint/coinbase rows have an empty sender wallet).
-  const currency = pubkeyToCurrency.value[t.sender] ?? pubkeyToCurrency.value[t.receiver] ?? null
+  // Resolve via wallet_id first (authoritative across endpoints); fall
+  // back to the pubkey index for legacy rows that have no wallet_id.
+  const senderCurrency = resolveCurrency(t.senderWalletId, t.sender)
+  const receiverCurrency = resolveCurrency(t.receiverWalletId, t.receiver)
+  // Sender side carries the source asset for display in the table.
+  const currency = senderCurrency ?? receiverCurrency
   let amountUsd: number | null = null
   if (currency && rateByCurrency.value[currency] !== undefined) {
     const rate = rateByCurrency.value[currency]
     if (Number.isFinite(rate)) amountUsd = t.amount * rate
   }
+  const crossCurrency =
+    senderCurrency !== null &&
+    receiverCurrency !== null &&
+    senderCurrency !== receiverCurrency
   return {
     sender: t.sender,
     receiver: t.receiver,
-    senderLabel: labelFor(t.sender),
-    receiverLabel: labelFor(t.receiver),
-    senderRole: roleFor(t.sender),
-    receiverRole: roleFor(t.receiver),
+    senderLabel: resolveLabel(t.senderWalletId, t.sender),
+    receiverLabel: resolveLabel(t.receiverWalletId, t.receiver),
+    senderRole: resolveRole(t.senderWalletId, t.sender),
+    receiverRole: resolveRole(t.receiverWalletId, t.receiver),
     amount: t.amount,
     currency,
+    receiverCurrency: crossCurrency ? receiverCurrency : null,
+    receiverAmount: t.receiverAmount ?? null,
     amountUsd,
     status,
     blockIndex: t.blockIndex,

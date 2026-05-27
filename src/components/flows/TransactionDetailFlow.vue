@@ -17,6 +17,11 @@ export interface TxDetailData {
     receiverRole?: string
     amount: string
     currency?: string
+    /** Amount the receiver actually credits — only set when the
+     * transfer crosses currencies (e.g. ETH→BTC). */
+    receiverAmount?: string
+    /** Receiver-side currency for cross-currency transfers. */
+    receiverCurrency?: string
     fee?: string
     size?: number
   }
@@ -173,6 +178,20 @@ const receiverDisplay = computed(() => props.data.tx.receiverLabel ?? props.data
             v-if="data.tx.currency"
             class="tx-amount-unit"
           >{{ data.tx.currency }}</span>
+          <span
+            v-else
+            class="tx-amount-unit dim"
+          >unidad desconocida</span>
+        </div>
+        <div
+          v-if="data.tx.receiverAmount && data.tx.receiverCurrency"
+          class="tx-amount-cross mono"
+        >
+          <span
+            class="pi pi-arrow-down"
+            aria-hidden="true"
+          />
+          {{ data.tx.receiverAmount }} {{ data.tx.receiverCurrency }}
         </div>
         <div
           v-if="data.amountUsd != null"
@@ -458,6 +477,22 @@ const receiverDisplay = computed(() => props.data.tx.receiverLabel ?? props.data
 }
 .tx-amount-usd.dim {
   color: var(--text-3);
+}
+.tx-amount-cross {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tx-amount-cross .pi {
+  font-size: 10px;
+  color: var(--text-3);
+}
+.tx-amount-unit.dim {
+  font-style: italic;
+  font-weight: 400;
 }
 
 /* Parties */
