@@ -9,6 +9,7 @@ import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
+import UserChip from '@/components/atoms/UserChip.vue'
 import TransactionDetailFlow, {
   type TxDetailData,
 } from '@/components/flows/TransactionDetailFlow.vue'
@@ -50,12 +51,15 @@ async function load() {
 
     const pkMap: Record<string, string> = {}
     const userMap: Record<string, string> = {}
+    const typeMap: Record<string, string> = {}
     for (const w of walletsRes.wallets) {
       pkMap[w.public_key] = w.currency
       userMap[w.public_key] = w.username
+      typeMap[w.public_key] = w.wallet_type
     }
     pubkeyToCurrency.value = pkMap
     pubkeyToUsername.value = userMap
+    pubkeyToWalletType.value = typeMap
 
     // Keep only the freshest row per from_currency (the rates endpoint
     // returns history). Latest-wins so an operator's manual override
@@ -82,6 +86,8 @@ interface Row {
   receiver: string
   senderLabel: string
   receiverLabel: string
+  senderRole: string | null
+  receiverRole: string | null
   amount: number
   currency: string | null
   amountUsd: number | null
@@ -105,6 +111,16 @@ function currencyTone(code: string | null): CurrencyTone {
 }
 
 const pubkeyToUsername = ref<Record<string, string>>({})
+const pubkeyToWalletType = ref<Record<string, string>>({})
+
+function roleFor(pubkey: string): string | null {
+  const t = pubkeyToWalletType.value[pubkey]
+  if (!t) return null
+  // Friendly labels for the user chip role tag.
+  if (t === 'TREASURY') return 'Tesorería'
+  if (t === 'USER') return 'Usuario'
+  return t
+}
 
 function labelFor(pubkey: string): string {
   return pubkeyToUsername.value[pubkey] ?? truncate(pubkey)
@@ -137,6 +153,8 @@ function openDetail(row: Row) {
       receiver: row.receiver,
       senderLabel: row.senderLabel,
       receiverLabel: row.receiverLabel,
+      senderRole: row.senderRole ?? undefined,
+      receiverRole: row.receiverRole ?? undefined,
       amount: row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }),
       currency: row.currency ?? undefined,
     },
@@ -150,7 +168,8 @@ function openDetail(row: Row) {
 }
 
 function viewInChain() {
-  router.push('/chain')
+  const block = selectedTx.value?.block
+  router.push(block != null ? { path: '/chain', query: { block: String(block) } } : '/chain')
   selectedTx.value = null
 }
 
@@ -188,6 +207,8 @@ function rowFromTx(
     receiver: t.receiver,
     senderLabel: labelFor(t.sender),
     receiverLabel: labelFor(t.receiver),
+    senderRole: roleFor(t.sender),
+    receiverRole: roleFor(t.receiver),
     amount: t.amount,
     currency,
     amountUsd,
@@ -359,10 +380,16 @@ onMounted(load)
           </div>
         </template>
         <template #cell-sender="{ row }">
-          <span class="cell-user">{{ row.senderLabel }}</span>
+          <UserChip
+            :name="row.senderLabel"
+            :role="row.senderRole ?? undefined"
+          />
         </template>
         <template #cell-receiver="{ row }">
-          <span class="cell-user">{{ row.receiverLabel }}</span>
+          <UserChip
+            :name="row.receiverLabel"
+            :role="row.receiverRole ?? undefined"
+          />
         </template>
         <template #cell-amount="{ row }">
           <span class="mono">

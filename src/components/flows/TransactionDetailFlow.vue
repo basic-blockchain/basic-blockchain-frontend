@@ -4,6 +4,7 @@ import BaseModal from '@/components/atoms/BaseModal.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import HashChip from '@/components/atoms/HashChip.vue'
+import UserChip from '@/components/atoms/UserChip.vue'
 
 export interface TxDetailData {
   tx: {
@@ -12,6 +13,8 @@ export interface TxDetailData {
     receiver: string
     senderLabel?: string
     receiverLabel?: string
+    senderRole?: string
+    receiverRole?: string
     amount: string
     currency?: string
     fee?: string
@@ -189,7 +192,11 @@ const receiverDisplay = computed(() => props.data.tx.receiverLabel ?? props.data
       <div class="tx-parties">
         <div class="tx-party">
           <span class="tx-party-label">De</span>
-          <span class="tx-party-name">{{ senderDisplay }}</span>
+          <UserChip
+            :name="senderDisplay"
+            :role="data.tx.senderRole"
+            size="md"
+          />
           <HashChip
             :hash="data.tx.sender"
             :length="14"
@@ -202,7 +209,11 @@ const receiverDisplay = computed(() => props.data.tx.receiverLabel ?? props.data
         />
         <div class="tx-party">
           <span class="tx-party-label">Para</span>
-          <span class="tx-party-name">{{ receiverDisplay }}</span>
+          <UserChip
+            :name="receiverDisplay"
+            :role="data.tx.receiverRole"
+            size="md"
+          />
           <HashChip
             :hash="data.tx.receiver"
             :length="14"
@@ -279,7 +290,15 @@ const receiverDisplay = computed(() => props.data.tx.receiverLabel ?? props.data
           <div class="tx-row">
             <dt>Monto</dt>
             <dd class="mono">
-              {{ data.tx.amount }} {{ data.tx.currency ?? '' }}
+              {{ data.tx.amount }}
+              <span
+                v-if="data.tx.currency"
+                class="tx-row-unit"
+              >{{ data.tx.currency }}</span>
+              <span
+                v-else
+                class="dim"
+              >· unidad desconocida</span>
             </dd>
           </div>
           <div
@@ -528,6 +547,12 @@ const receiverDisplay = computed(() => props.data.tx.receiverLabel ?? props.data
 }
 .dim {
   color: var(--text-3);
+}
+.tx-row-unit {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
 }
 
 .asset-dot {
