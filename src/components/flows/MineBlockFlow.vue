@@ -8,6 +8,9 @@ export interface MineBlockData {
   nextHeight: number
   pendingCount: number
   prevHash: string
+  feeTotal?: number
+  baseReward?: number
+  rewardCurrency?: string
 }
 
 const props = defineProps<{ data: MineBlockData }>()
@@ -19,6 +22,34 @@ const hash = ref('')
 const iter = ref(0)
 
 const miningStore = useMiningStore()
+
+function hasFeeData(): boolean {
+  return props.data.feeTotal !== undefined && props.data.feeTotal !== null
+}
+
+function formatAmount(value: number): string {
+  return value.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })
+}
+
+function feeText(): string {
+  if (!hasFeeData()) return '—'
+  const total = Number(props.data.feeTotal ?? 0)
+  if (!Number.isFinite(total) || total <= 0) return '0,00'
+  return formatAmount(total)
+}
+
+function rewardText(): string {
+  const base = Number(props.data.baseReward)
+  const currency = props.data.rewardCurrency ?? 'BTC'
+  const feeSuffix = hasFeeData() ? `${feeText()} fees` : 'fees pendientes'
+  if (!Number.isFinite(base) || base <= 0) {
+    return `Recompensa base (coinbase) + ${feeSuffix}`
+  }
+  return `${formatAmount(base)} ${currency} + ${feeSuffix}`
+}
 
 let rafId = 0
 let counter = 0
@@ -101,7 +132,9 @@ onUnmounted(() => {
       <div class="mine-flow__header">
         <div>
           <h2 class="mine-flow__title">Minar nuevo bloque</h2>
-          <p class="mine-flow__sub">Proof of Work · altura #{{ data.nextHeight }}</p>
+          <p class="mine-flow__sub">
+            Se incluirá la transacción coinbase + todas las pendientes del mempool.
+          </p>
         </div>
         <button class="mine-flow__close" type="button" aria-label="Cerrar" @click="closeFlow">
           <span class="pi pi-times" aria-hidden="true" />
@@ -128,11 +161,14 @@ onUnmounted(() => {
           </div>
           <div class="mine-flow__row">
             <span class="muted">Recompensa de bloque</span>
-            <span>50 BTC → admin_platform</span>
+            <span class="mono">{{ rewardText() }}</span>
           </div>
           <div class="mine-flow__row">
             <span class="muted">Fees acumulados</span>
-            <span>$3.21</span>
+            <span class="mono">{{ feeText() }}</span>
+          </div>
+          <div v-if="!hasFeeData()" class="mine-flow__row-hint">
+            Fees aun no disponibles en esta version.
           </div>
           <div class="mine-flow__row">
             <span class="muted">Dificultad</span>
@@ -190,7 +226,7 @@ onUnmounted(() => {
 <style scoped>
 .mine-flow__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
@@ -236,7 +272,6 @@ onUnmounted(() => {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .mine-flow__row {
@@ -245,11 +280,24 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 12px;
   font-size: 12.5px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mine-flow__row:last-child {
+  border-bottom: 0;
+}
+
+.mine-flow__row-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: -2px;
+  padding-bottom: 6px;
 }
 
 .mine-flow__hint {
   margin-top: 12px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   background: var(--surface-2);
@@ -258,6 +306,8 @@ onUnmounted(() => {
   padding: 8px 10px;
   font-size: 12px;
   color: var(--text-2);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .mine-flow__pow {

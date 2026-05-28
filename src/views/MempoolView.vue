@@ -128,6 +128,10 @@ const mineData = computed<MineBlockData>(() => ({
   nextHeight: confirmedStore.total ?? 0,
   pendingCount: mempoolStore.count,
   prevHash: '',
+  feeTotal: mempoolStore.transactions.reduce((sum, tx) => {
+    const f = Number((tx as PendingTx).fee ?? 0)
+    return sum + (Number.isFinite(f) ? f : 0)
+  }, 0),
 }))
 
 onMounted(async () => {

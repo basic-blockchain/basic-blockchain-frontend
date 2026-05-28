@@ -56,14 +56,35 @@ const txCount = computed(() => result.value?.transactions.length ?? 0)
 const elapsed = computed(() => result.value?.elapsedSeconds ?? 0)
 const attempts = computed(() => miningStore.lastAttempts)
 const feeTotal = computed(() => result.value?.feeTotal ?? null)
+
+function isCoinbaseTx(sender: string | undefined): boolean {
+  if (!sender) return false
+  const upper = sender.trim().toUpperCase()
+  return upper.startsWith('COINBASE') || upper.startsWith('MINT')
+}
+
+const coinbaseTx = computed(
+  () => result.value?.transactions.find((tx) => isCoinbaseTx(tx.sender)) ?? null
+)
+const baseReward = computed(() => {
+  const amount = coinbaseTx.value?.amount
+  return Number.isFinite(amount) ? Number(amount) : null
+})
+const rewardCurrency = computed(() => coinbaseTx.value?.currency ?? 'BTC')
 const feeText = computed(() => {
-  if (feeTotal.value === null || feeTotal.value === undefined) return '—'
-  return feeTotal.value.toLocaleString('es-AR', { maximumFractionDigits: 8 })
+  if (feeTotal.value === null || feeTotal.value === undefined) return '0,00'
+  if (feeTotal.value <= 0) return '0,00'
+  return feeTotal.value.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })
 })
 const rewardText = computed(() => {
-  if (feeTotal.value === null || feeTotal.value === undefined) return '50 BTC'
-  if (feeTotal.value <= 0) return '50 BTC'
-  return `50 BTC + ${feeText.value} fees`
+  if (baseReward.value === null) return '—'
+  return `${baseReward.value.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })} ${rewardCurrency.value} + ${feeText.value} fees`
 })
 </script>
 
@@ -125,6 +146,9 @@ const rewardText = computed(() => {
         <div class="mine-result__row">
           <span class="muted">Recompensa</span>
           <span>{{ rewardText }}</span>
+        </div>
+        <div v-if="rewardText === '—'" class="mine-result__row-hint">
+          Recompensa aun no disponible en esta version.
         </div>
       </div>
     </div>
@@ -229,6 +253,12 @@ const rewardText = computed(() => {
   justify-content: space-between;
   gap: 12px;
   font-size: 12.5px;
+}
+
+.mine-result__row-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: -2px;
 }
 
 .mine-result__footer {

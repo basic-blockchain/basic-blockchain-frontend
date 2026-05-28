@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useChainStore } from '@/stores/chain'
+import { useMempoolStore } from '@/stores/mempool'
 import { formatHash, type Block } from '@/domain/block'
 import MineBlockFlow, { type MineBlockData } from '@/components/flows/MineBlockFlow.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
@@ -10,6 +11,7 @@ import BaseButton from '@/components/atoms/BaseButton.vue'
 import HashChip from '@/components/atoms/HashChip.vue'
 
 const chainStore = useChainStore()
+const mempoolStore = useMempoolStore()
 const route = useRoute()
 const showMineFlow = ref(false)
 const selectedIndex = ref<number>(0)
@@ -32,7 +34,7 @@ async function focusBlock(index: number) {
 }
 
 onMounted(async () => {
-  await chainStore.fetchChain()
+  await Promise.all([chainStore.fetchChain(), mempoolStore.fetchPending()])
   const target = deepLinkedBlock()
   if (target !== null) await focusBlock(target)
 })
@@ -113,6 +115,12 @@ function timeAgo(ts: string | null | undefined): string {
 const heightLabel = computed(() => Math.max(0, chainStore.length - 1))
 const latestTime = computed(() => timeAgo(chainStore.latestBlock?.timestamp))
 const reversedBlocks = computed(() => [...chainStore.blocks].reverse())
+const mempoolFeeTotal = computed(() => {
+  return mempoolStore.transactions.reduce((sum, tx) => {
+    const f = Number((tx as { fee?: number }).fee ?? 0)
+    return sum + (Number.isFinite(f) ? f : 0)
+  }, 0)
+})
 
 const kvs = computed(() => {
   const b = selectedBlock.value
@@ -129,8 +137,9 @@ const kvs = computed(() => {
 
 const mineData = computed<MineBlockData>(() => ({
   nextHeight: chainStore.length,
-  pendingCount: 3,
+  pendingCount: mempoolStore.count,
   prevHash: chainStore.latestBlock?.previousHash ?? '',
+  feeTotal: mempoolFeeTotal.value,
 }))
 
 function isCoinbaseTx(sender: string): boolean {
