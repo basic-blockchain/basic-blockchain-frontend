@@ -1,4 +1,5 @@
 import client from './client'
+import type { SendsQuery, SendsResponse } from '@/domain/send'
 
 export interface AdminUser {
   user_id: string
@@ -304,5 +305,11 @@ export async function listAuditLog(
   params?: AuditParams
 ): Promise<{ entries: AuditEntry[]; count: number }> {
   const { data } = await client.get('/admin/audit', { params })
+  return data
+}
+
+/** Phase 7.10 — fetch classified sends + aggregates for /admin/sends. */
+export async function getAdminSends(params?: SendsQuery): Promise<SendsResponse> {
+  const { data } = await client.get<SendsResponse>('/admin/sends', { params })
   return data
 }
