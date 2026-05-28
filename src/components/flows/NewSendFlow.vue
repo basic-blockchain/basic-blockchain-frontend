@@ -14,6 +14,7 @@ import BaseModal from '@/components/atoms/BaseModal.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import AssetBadge from '@/components/atoms/AssetBadge.vue'
+import SlideToConfirm from '@/components/atoms/SlideToConfirm.vue'
 
 interface Props {
   open: boolean
@@ -140,6 +141,17 @@ async function loadCatalog() {
 function selectRecipient(u: AdminUser) {
   recipientUserId.value = u.user_id
   recipientQuery.value = u.username
+}
+
+function formatTimestamp(iso: string): string {
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return iso
+  return new Date(t).toLocaleString('es-AR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function goToConfirm() {
@@ -353,34 +365,55 @@ const TITLES: Record<0 | 1 | 2, string> = {
           Este envío requiere aprobación de un segundo admin con
           <code>APPROVE_TREASURY_DISTRIBUTION</code> antes de ejecutarse en cadena.
         </p>
+
+        <SlideToConfirm
+          v-if="!submitting"
+          class="confirm__slide"
+          @confirm="submit"
+        />
+        <p class="confirm__hint">o tocá el botón para confirmar</p>
       </div>
     </template>
 
     <!-- ──────────── Step 2 — receipt ──────────── -->
+    <!-- Layout mirrors docs/propuesta_rediseno_blockchain_2/flows.jsx:692-712
+         (the SendConfirmFlow success state) but uses the warning palette
+         instead of success because the send is not yet final — it sits
+         in pending_approval until a second admin signs. -->
     <template v-else-if="step === 2 && record">
       <div class="receipt">
         <div class="receipt__circle" aria-hidden="true">
           <span class="pi pi-clock" />
         </div>
-        <div class="receipt__amount">
-          {{ record.amount_per_wallet }} {{ record.currency }}
+        <div class="receipt__amount mono">
+          −{{ record.amount_per_wallet }} {{ record.currency }}
         </div>
-        <div class="muted small">Pendiente de aprobación</div>
+        <div class="receipt__sub muted">Iniciado · pendiente de aprobación</div>
 
-        <div class="kv">
+        <div class="kv kv--receipt">
           <div class="kv__row">
             <span class="muted">Operación</span>
             <span class="mono">{{ record.op_id }}</span>
           </div>
           <div class="kv__row">
             <span class="muted">Iniciado</span>
-            <span class="mono">{{ record.initiated_at }}</span>
+            <span class="mono">{{ formatTimestamp(record.initiated_at) }}</span>
+          </div>
+          <div class="kv__row">
+            <span class="muted">Destinatarios</span>
+            <span class="mono">{{ record.recipient_count }}</span>
           </div>
           <div class="kv__row">
             <span class="muted">Estado</span>
             <BaseBadge tone="warning">{{ record.status }}</BaseBadge>
           </div>
         </div>
+
+        <p class="receipt__hint">
+          La aprobación queda en manos de otro admin con
+          <code>APPROVE_TREASURY_DISTRIBUTION</code>. Hasta entonces el envío
+          aparece como <b>Pendiente</b> en la lista.
+        </p>
       </div>
     </template>
 
@@ -504,23 +537,48 @@ const TITLES: Record<0 | 1 | 2, string> = {
   padding: 4px 0;
 }
 .confirm__avatar, .receipt__circle {
-  width: 56px;
-  height: 56px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   font-weight: 600;
-  font-size: 20px;
-  margin-bottom: 4px;
+  flex-shrink: 0;
 }
 .confirm__avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 20px;
   background: var(--accent-soft);
   color: var(--accent-text);
+  margin-bottom: 4px;
 }
 .receipt__circle {
+  width: 72px;
+  height: 72px;
+  font-size: 32px;
   background: rgba(217, 119, 6, 0.15);
   color: var(--warning, #d97706);
-  font-size: 22px;
+  margin: 4px 0 14px;
+}
+.receipt__sub {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.receipt__hint {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.5;
+}
+.receipt__hint code {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  background: var(--muted-soft);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.kv--receipt {
+  text-align: left;
 }
 .confirm__name {
   font-size: 15px;
@@ -528,11 +586,12 @@ const TITLES: Record<0 | 1 | 2, string> = {
   color: var(--text);
 }
 .receipt__amount {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: var(--text);
-  margin-top: 4px;
+  margin-top: 2px;
+  margin-bottom: 4px;
 }
 
 .kv {
@@ -568,6 +627,17 @@ const TITLES: Record<0 | 1 | 2, string> = {
   font-size: 12px;
   color: var(--text-2);
   text-align: left;
+}
+
+.confirm__slide {
+  width: 100%;
+  margin-top: 14px;
+}
+.confirm__hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
 }
 .warning-copy code {
   font-family: var(--font-mono);
