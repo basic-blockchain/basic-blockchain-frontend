@@ -25,6 +25,7 @@ const consensusProgress = ref(0)
 const consensusStartedAt = ref<number | null>(null)
 const consensusFinishedAt = ref<number | null>(null)
 const consensusChain = ref<Block[]>([])
+const showFullMerkle = ref(false)
 let consensusTimer: ReturnType<typeof setInterval> | null = null
 let consensusAutoClose: ReturnType<typeof setTimeout> | null = null
 
@@ -41,6 +42,7 @@ async function resolveConsensus() {
   consensusStartedAt.value = Date.now()
   consensusFinishedAt.value = null
   consensusChain.value = []
+  showFullMerkle.value = false
   if (consensusTimer) clearInterval(consensusTimer)
   consensusTimer = setInterval(() => {
     consensusProgress.value = Math.min(92, consensusProgress.value + 6)
@@ -104,10 +106,32 @@ function openConsensusDetails() {
 
 function closeConsensusDetails() {
   consensusDetailOpen.value = false
+  showFullMerkle.value = false
 }
 
 function closeConsensusStart() {
   consensusStartOpen.value = false
+}
+
+async function copyMerkleRoot() {
+  const root = consensusLastBlock.value?.merkleRoot
+  if (!root) return
+  try {
+    await navigator.clipboard.writeText(root)
+    toast.add({
+      severity: 'success',
+      summary: 'Merkle root copiado',
+      detail: 'Listo para compartir o verificar.',
+      life: 2200,
+    })
+  } catch {
+    toast.add({
+      severity: 'error',
+      summary: 'No se pudo copiar',
+      detail: 'Intenta nuevamente.',
+      life: 2600,
+    })
+  }
 }
 
 async function registerPeer() {
@@ -235,6 +259,8 @@ const consensusLastHeight = computed(() =>
 const consensusLastMerkle = computed(() =>
   consensusLastBlock.value ? formatHash(consensusLastBlock.value.merkleRoot, 12) : '—'
 )
+
+const consensusFullMerkle = computed(() => consensusLastBlock.value?.merkleRoot ?? '')
 
 onBeforeUnmount(() => {
   if (consensusTimer) clearInterval(consensusTimer)
@@ -488,7 +514,28 @@ const peerColumns: PeerColumn[] = [
           </div>
           <div class="consensus-modal__kv">
             <span class="muted">Merkle root</span>
-            <span class="mono">{{ consensusLastMerkle }}</span>
+            <span class="consensus-modal__merkle">
+              <span class="mono">{{ consensusLastMerkle }}</span>
+              <button
+                type="button"
+                class="consensus-modal__copy"
+                :disabled="!consensusFullMerkle"
+                @click="copyMerkleRoot"
+              >
+                Copiar
+              </button>
+              <button
+                type="button"
+                class="consensus-modal__toggle"
+                :disabled="!consensusFullMerkle"
+                @click="showFullMerkle = !showFullMerkle"
+              >
+                {{ showFullMerkle ? 'Ocultar' : 'Expandir' }}
+              </button>
+            </span>
+          </div>
+          <div v-if="showFullMerkle && consensusFullMerkle" class="consensus-modal__hash">
+            <span class="mono">{{ consensusFullMerkle }}</span>
           </div>
           <div class="consensus-modal__kv">
             <span class="muted">Bloques en cadena</span>
@@ -704,6 +751,39 @@ const peerColumns: PeerColumn[] = [
   justify-content: space-between;
   gap: 12px;
   font-size: 12px;
+}
+.consensus-modal__merkle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.consensus-modal__copy,
+.consensus-modal__toggle {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.consensus-modal__copy:hover,
+.consensus-modal__toggle:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.consensus-modal__copy:disabled,
+.consensus-modal__toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.consensus-modal__hash {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  font-size: 11.5px;
+  word-break: break-all;
 }
 .consensus-modal__progress {
   width: 100%;
