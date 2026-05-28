@@ -1,41 +1,72 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getConfirmed, getPending } from '@/api/mempool'
-import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
+import { getAdminSends, grantPermission } from '@/api/admin'
+import { BlockchainApiError } from '@/api/errors'
+import type { SendRow, SendsAggregates, SendKind, SendStatus } from '@/domain/send'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '@/stores/auth'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import AssetBadge from '@/components/atoms/AssetBadge.vue'
+import UserChip from '@/components/atoms/UserChip.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const toast = useToast()
-const confirmed = ref<ConfirmedTransaction[]>([])
-const pending = ref<Transaction[]>([])
+const auth = useAuthStore()
+const rows = ref<SendRow[]>([])
+const aggregates = ref<SendsAggregates>({
+  count_24h: 0,
+  count_24h_by_kind: { internal: 0, onchain: 0, treasury: 0 },
+  volume_usd_24h: '0',
+  pending_onchain: 0,
+  fees_collected_usd_7d: '0',
+})
 const loading = ref(false)
+const needsElevation = ref(false)
+const elevating = ref(false)
 const activeTab = ref<'all' | 'internal' | 'onchain' | 'pending' | 'failed'>('all')
 const searchQuery = ref('')
 
 async function load() {
   loading.value = true
+  needsElevation.value = false
   try {
-    const [conf, pend] = await Promise.all([getConfirmed(), getPending()])
-    confirmed.value = conf.transactions
-    pending.value = pend.transactions
+    const res = await getAdminSends({ window: '24h', limit: 500 })
+    rows.value = res.rows
+    aggregates.value = res.aggregates
   } catch (e: unknown) {
-    toast.add({ severity: 'error', summary: 'Error al cargar', detail: String(e), life: 4000 })
+    if (e instanceof BlockchainApiError && e.code === 'FORBIDDEN') {
+      needsElevation.value = true
+    } else {
+      toast.add({ severity: 'error', summary: 'Error al cargar', detail: String(e), life: 4000 })
+    }
   } finally {
     loading.value = false
   }
 }
 
-interface SendRow {
-  type: 'Interno' | 'On-chain' | 'Tesorería'
-  from: string
-  to: string
-  amount: number
-  ref: string
-  status: 'completed' | 'pending' | 'failed'
-  when: string
+async function requestAccess() {
+  const userId = auth.user?.user_id
+  if (!userId) {
+    toast.add({ severity: 'error', summary: 'No autenticado', life: 3000 })
+    return
+  }
+  elevating.value = true
+  try {
+    await grantPermission(userId, 'VIEW_TRANSFERS')
+    toast.add({
+      severity: 'success',
+      summary: 'Permiso concedido',
+      detail: 'VIEW_TRANSFERS otorgado. La elevación queda registrada en audit_log.',
+      life: 4000,
+    })
+    await load()
+  } catch (e: unknown) {
+    toast.add({ severity: 'error', summary: 'No se pudo elevar', detail: String(e), life: 5000 })
+  } finally {
+    elevating.value = false
+  }
 }
 
 interface SendColumn {
@@ -45,75 +76,107 @@ interface SendColumn {
 }
 
 const sendColumns: SendColumn[] = [
-  { key: 'type', label: 'Tipo' },
+  { key: 'kind', label: 'Tipo' },
   { key: 'from', label: 'De' },
   { key: 'to', label: 'Para' },
+  { key: 'asset', label: 'Activo' },
   { key: 'amount', label: 'Monto', num: true },
   { key: 'ref', label: 'Hash / Ref' },
   { key: 'status', label: 'Estado' },
   { key: 'when', label: 'Cuando' },
 ]
 
-const allRows = computed<SendRow[]>(() => {
-  const c: SendRow[] = confirmed.value.map((t) => ({
-    type: 'Interno' as const,
-    from: t.sender,
-    to: t.receiver,
-    amount: t.amount,
-    ref: `blk-${t.blockIndex}`,
-    status: 'completed' as const,
-    when: t.blockTimestamp ?? '—',
-  }))
-  const p: SendRow[] = pending.value.map((t) => ({
-    type: 'Interno' as const,
-    from: t.sender,
-    to: t.receiver,
-    amount: t.amount,
-    ref: 'mempool',
-    status: 'pending' as const,
-    when: 'En mempool',
-  }))
-  return [...p, ...c]
-})
-
 const filteredRows = computed<SendRow[]>(() => {
   const q = searchQuery.value.toLowerCase()
-  return allRows.value.filter((r) => {
-    const matchQ =
-      !q ||
-      r.from.toLowerCase().includes(q) ||
-      r.to.toLowerCase().includes(q) ||
-      r.ref.toLowerCase().includes(q)
-    if (!matchQ) return false
-    if (activeTab.value === 'internal') return r.type === 'Interno'
-    if (activeTab.value === 'onchain') return r.type === 'On-chain'
+  return rows.value.filter((r) => {
+    if (q) {
+      const hay = [
+        r.tx_id,
+        r.ref_short,
+        r.from.username ?? '',
+        r.to.username ?? '',
+        r.from.address,
+        r.to.address,
+      ]
+        .join(' ')
+        .toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (activeTab.value === 'internal') return r.kind === 'internal'
+    if (activeTab.value === 'onchain') return r.kind === 'onchain'
     if (activeTab.value === 'pending') return r.status === 'pending'
     if (activeTab.value === 'failed') return r.status === 'failed'
     return true
   })
 })
 
-const stats = computed(() => ({
-  total: allRows.value.length,
-  pending: allRows.value.filter((r) => r.status === 'pending').length,
-  confirmed: allRows.value.filter((r) => r.status === 'completed').length,
-  volume: allRows.value.reduce((s, r) => s + r.amount, 0),
-}))
+const internalShare = computed(() => {
+  const total = aggregates.value.count_24h
+  if (total === 0) return { internal: 0, onchain: 0 }
+  return {
+    internal: Math.round((aggregates.value.count_24h_by_kind.internal / total) * 100),
+    onchain: Math.round((aggregates.value.count_24h_by_kind.onchain / total) * 100),
+  }
+})
 
-function typeTone(type: SendRow['type']): 'neutral' | 'info' | 'warning' {
-  if (type === 'On-chain') return 'info'
-  if (type === 'Tesorería') return 'warning'
+function kindLabel(kind: SendKind): string {
+  if (kind === 'internal') return 'Interno'
+  if (kind === 'onchain') return 'On-chain'
+  return 'Tesorería'
+}
+
+function kindTone(kind: SendKind): 'neutral' | 'info' | 'warning' {
+  if (kind === 'onchain') return 'info'
+  if (kind === 'treasury') return 'warning'
   return 'neutral'
 }
 
-function statusTone(status: SendRow['status']): 'success' | 'warning' | 'danger' {
+function statusLabel(status: SendStatus): string {
+  if (status === 'completed') return 'Completado'
+  if (status === 'pending') return 'Pendiente'
+  return 'Fallido'
+}
+
+function statusTone(status: SendStatus): 'success' | 'warning' | 'danger' {
   if (status === 'completed') return 'success'
   if (status === 'failed') return 'danger'
   return 'warning'
 }
 
-function truncate(s: string, n = 20): string {
-  return s.length > n ? `${s.slice(0, n / 2)}…${s.slice(-4)}` : s
+function formatUsd(value: string | null): string {
+  if (!value) return '—'
+  const n = Number(value)
+  if (Number.isNaN(n)) return value
+  if (n >= 1000) {
+    return `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K`
+  }
+  return `$${n.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`
+}
+
+function formatAmount(value: string): string {
+  const n = Number(value)
+  if (Number.isNaN(n)) return value
+  return n.toLocaleString('es-AR', { maximumFractionDigits: 8 })
+}
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return 'En mempool'
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return iso
+  const diff = Math.max(0, Date.now() - then)
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'hace segundos'
+  if (min < 60) return `hace ${min} min`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `hace ${hr} h`
+  const days = Math.floor(hr / 24)
+  return `hace ${days} d`
+}
+
+function displayName(row: SendRow, side: 'from' | 'to'): string {
+  const p = row[side]
+  if (p.username) return p.username
+  return p.address.length > 14 ? `${p.address.slice(0, 6)}…${p.address.slice(-4)}` : p.address
 }
 
 onMounted(load)
@@ -134,35 +197,54 @@ onMounted(load)
       </BaseButton>
     </div>
 
+    <!-- Permission elevation panel — surfaced when the backend returns
+         403 (VIEW_TRANSFERS not yet granted to this admin). Self-grant
+         is intentional: V009 leaves VIEW_TRANSFERS out of the ADMIN
+         baseline so every elevation lands in audit_log. -->
+    <BaseCard v-if="needsElevation" variant="default" class="elevation-panel">
+      <div class="elev">
+        <div class="elev__icon" aria-hidden="true">
+          <span class="pi pi-lock" />
+        </div>
+        <div class="elev__text">
+          <h2>Necesitás <code>VIEW_TRANSFERS</code> para ver envíos</h2>
+          <p>
+            Este permiso expone el historial financiero de toda la plataforma,
+            por eso no está en el baseline de ADMIN. Solicitalo aquí — la
+            elevación queda registrada en <code>audit_log</code>.
+          </p>
+        </div>
+        <BaseButton variant="primary" :loading="elevating" @click="requestAccess">
+          Solicitar acceso
+        </BaseButton>
+      </div>
+    </BaseCard>
+
     <!-- Big stats -->
     <div class="bigstat-row">
       <BaseCard variant="bigstat">
-        <template #header>
-          <span>Envíos totales</span>
+        <template #header><span>Envíos 24h</span></template>
+        {{ aggregates.count_24h.toLocaleString('es-AR') }}
+        <template #footer>
+          Internos {{ internalShare.internal }}% · On-chain {{ internalShare.onchain }}%
         </template>
-        {{ stats.total.toLocaleString('es-AR') }}
-        <template #footer> Confirmados + pendientes </template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          <span>Volumen total</span>
-        </template>
-        {{ stats.volume.toLocaleString('es-AR', { maximumFractionDigits: 2 }) }}
-        <template #footer> Suma de montos </template>
+        <template #header><span>Volumen 24h</span></template>
+        {{ formatUsd(aggregates.volume_usd_24h) }}
+        <template #footer>Suma en USD</template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          <span>Pendientes on-chain</span>
-        </template>
-        <span :class="{ 'kpi-warning': stats.pending > 0 }">{{ stats.pending }}</span>
-        <template #footer> Confirmaciones &lt; 3 </template>
+        <template #header><span>Pendientes on-chain</span></template>
+        <span :class="{ 'kpi-warning': aggregates.pending_onchain > 0 }">
+          {{ aggregates.pending_onchain }}
+        </span>
+        <template #footer>Confirmaciones &lt; 3</template>
       </BaseCard>
       <BaseCard variant="bigstat">
-        <template #header>
-          <span>Confirmados</span>
-        </template>
-        <span class="kpi-success">{{ stats.confirmed.toLocaleString('es-AR') }}</span>
-        <template #footer> En blockchain </template>
+        <template #header><span>Comisiones cobradas</span></template>
+        {{ formatUsd(aggregates.fees_collected_usd_7d) }}
+        <template #footer>Últimos 7 días</template>
       </BaseCard>
     </div>
 
@@ -202,38 +284,33 @@ onMounted(load)
     </div>
     <BaseCard v-else variant="default" padding="none">
       <PaginatedTable :columns="sendColumns" :rows="filteredRows">
-        <template #cell-type="{ row }">
-          <BaseBadge :tone="typeTone(row.type)">
-            {{ row.type }}
+        <template #cell-kind="{ row }">
+          <BaseBadge :tone="kindTone((row as SendRow).kind)">
+            {{ kindLabel((row as SendRow).kind) }}
           </BaseBadge>
         </template>
         <template #cell-from="{ row }">
-          <span class="mono cell-addr">{{ truncate(row.from) }}</span>
+          <UserChip :name="displayName(row as SendRow, 'from')" size="sm" />
         </template>
         <template #cell-to="{ row }">
-          <span class="mono cell-addr">{{ truncate(row.to) }}</span>
+          <UserChip :name="displayName(row as SendRow, 'to')" size="sm" />
+        </template>
+        <template #cell-asset="{ row }">
+          <AssetBadge :code="(row as SendRow).asset.code" />
         </template>
         <template #cell-amount="{ row }">
-          <span class="mono">
-            {{ row.amount.toLocaleString('es-AR', { maximumFractionDigits: 8 }) }}
-          </span>
+          <span class="mono">{{ formatAmount((row as SendRow).amount) }}</span>
         </template>
         <template #cell-ref="{ row }">
-          <span class="mono text-dim ref-cell">{{ row.ref }}</span>
+          <span class="mono text-dim ref-cell">{{ (row as SendRow).ref_short }}</span>
         </template>
         <template #cell-status="{ row }">
-          <BaseBadge :tone="statusTone(row.status)">
-            {{
-              row.status === 'completed'
-                ? 'Completado'
-                : row.status === 'pending'
-                  ? 'Pendiente'
-                  : 'Fallido'
-            }}
+          <BaseBadge :tone="statusTone((row as SendRow).status)">
+            {{ statusLabel((row as SendRow).status) }}
           </BaseBadge>
         </template>
         <template #cell-when="{ row }">
-          <span class="text-dim ts-cell">{{ row.when }}</span>
+          <span class="text-dim ts-cell">{{ relativeTime((row as SendRow).confirmed_at) }}</span>
         </template>
         <template #empty> Sin envíos en esta categoría. </template>
       </PaginatedTable>
@@ -272,9 +349,6 @@ onMounted(load)
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-}
-.kpi-success {
-  color: var(--success);
 }
 .kpi-warning {
   color: var(--warning);
@@ -372,18 +446,59 @@ onMounted(load)
 .text-dim {
   color: var(--text-3);
 }
-.cell-addr {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .ref-cell {
   font-size: 11px;
 }
 .ts-cell {
   font-size: 11.5px;
   white-space: nowrap;
+}
+
+/* Permission elevation panel */
+.elevation-panel {
+  border: 1px solid var(--warning, #d97706);
+}
+.elev {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+}
+.elev__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(217, 119, 6, 0.15);
+  color: var(--warning, #d97706);
+  flex-shrink: 0;
+}
+.elev__icon .pi {
+  font-size: 16px;
+}
+.elev__text {
+  flex: 1;
+  min-width: 0;
+}
+.elev__text h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.elev__text p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+.elev__text code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--muted-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
 @media (max-width: 900px) {
@@ -399,10 +514,11 @@ onMounted(load)
     flex-direction: column;
     align-items: flex-start;
   }
-  :deep(.base-tbl__head th:nth-child(5)),
-  :deep(.base-tbl__body td:nth-child(5)),
-  :deep(.base-tbl__head th:nth-child(7)),
-  :deep(.base-tbl__body td:nth-child(7)) {
+  /* Hide Hash/Ref (col 6) and Cuando (col 8) on small screens. */
+  :deep(.base-tbl__head th:nth-child(6)),
+  :deep(.base-tbl__body td:nth-child(6)),
+  :deep(.base-tbl__head th:nth-child(8)),
+  :deep(.base-tbl__body td:nth-child(8)) {
     display: none;
   }
 }
