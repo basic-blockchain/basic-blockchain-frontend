@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { SendRow, SendKind, SendStatus } from '@/domain/send'
+import {
+  approveTreasuryDistribution,
+  cancelTreasuryDistribution,
+} from '@/api/admin'
+import { BlockchainApiError } from '@/api/errors'
+import { useAuthStore } from '@/stores/auth'
+import { useToast } from 'primevue/usetoast'
 import BaseModal from '@/components/atoms/BaseModal.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
@@ -14,11 +21,99 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:open': [value: boolean]
   close: []
+  /** Fired after a successful approve/cancel so the parent view can
+   *  refresh the table. Carries the op_id for optional optimistic
+   *  removal in the future. */
+  'distribution-updated': [op_id: string]
 }>()
+
+const auth = useAuthStore()
+const toast = useToast()
+const approving = ref(false)
+const cancelling = ref(false)
 
 function close() {
   emit('update:open', false)
   emit('close')
+}
+
+const distribution = computed(() => props.row?.distribution ?? null)
+const isInitiator = computed(() => {
+  if (!distribution.value) return false
+  return distribution.value.initiated_by === auth.user?.user_id
+})
+const canApprove = computed(() => {
+  if (!distribution.value || !distribution.value.is_pending_approval) return false
+  // Backend enforces approver != initiator (SameSignerForbidden); mirror
+  // that gate on the client so the button never shows where the action
+  // will always fail. Permission check itself is optimistic — if the
+  // user lacks APPROVE_TREASURY_DISTRIBUTION the 403 surfaces as a toast.
+  return !isInitiator.value
+})
+const canCancel = computed(() => {
+  if (!distribution.value || !distribution.value.is_pending_approval) return false
+  return isInitiator.value
+})
+
+async function onApprove() {
+  if (!distribution.value) return
+  approving.value = true
+  try {
+    await approveTreasuryDistribution(distribution.value.op_id)
+    toast.add({
+      severity: 'success',
+      summary: 'Envío aprobado',
+      detail:
+        'Las transacciones se agregaron al mempool. Minan en el próximo bloque.',
+      life: 5000,
+    })
+    emit('distribution-updated', distribution.value.op_id)
+    close()
+  } catch (e: unknown) {
+    if (e instanceof BlockchainApiError && e.code === 'FORBIDDEN') {
+      toast.add({
+        severity: 'error',
+        summary: 'Permiso insuficiente',
+        detail:
+          'Necesitás APPROVE_TREASURY_DISTRIBUTION para aprobar envíos de tesorería.',
+        life: 6000,
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'No se pudo aprobar',
+        detail: String(e),
+        life: 5000,
+      })
+    }
+  } finally {
+    approving.value = false
+  }
+}
+
+async function onCancel() {
+  if (!distribution.value) return
+  cancelling.value = true
+  try {
+    await cancelTreasuryDistribution(distribution.value.op_id)
+    toast.add({
+      severity: 'success',
+      summary: 'Envío cancelado',
+      detail: 'La distribución pendiente fue revertida.',
+      life: 4000,
+    })
+    emit('distribution-updated', distribution.value.op_id)
+    close()
+  } catch (e: unknown) {
+    toast.add({
+      severity: 'error',
+      summary: 'No se pudo cancelar',
+      detail: String(e),
+      life: 5000,
+    })
+  } finally {
+    cancelling.value = false
+  }
 }
 
 const KIND_LABEL: Record<SendKind, string> = {
@@ -159,7 +254,36 @@ async function copyRef() {
 
     <template v-if="row" #footer>
       <BaseButton variant="ghost" @click="close">Cerrar</BaseButton>
-      <BaseButton variant="primary" disabled title="Próximamente">
+      <BaseButton
+        v-if="canCancel"
+        variant="danger"
+        :loading="cancelling"
+        :disabled="approving"
+        @click="onCancel"
+      >
+        <template #leading>
+          <span class="pi pi-times" aria-hidden="true" />
+        </template>
+        Cancelar envío
+      </BaseButton>
+      <BaseButton
+        v-if="canApprove"
+        variant="primary"
+        :loading="approving"
+        :disabled="cancelling"
+        @click="onApprove"
+      >
+        <template #leading>
+          <span class="pi pi-check" aria-hidden="true" />
+        </template>
+        Aprobar
+      </BaseButton>
+      <BaseButton
+        v-if="!canApprove && !canCancel"
+        variant="primary"
+        disabled
+        title="Próximamente"
+      >
         <template #leading>
           <span class="pi pi-external-link" aria-hidden="true" />
         </template>

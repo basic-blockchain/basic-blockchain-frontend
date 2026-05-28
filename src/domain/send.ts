@@ -22,6 +22,18 @@ export interface SendAsset {
   symbol: string
 }
 
+/**
+ * Present only on virtual rows that materialise a treasury
+ * distribution still in `pending_approval`. Real (Transaction-backed)
+ * rows leave this unset. The frontend uses these fields to render
+ * Aprobar / Cancelar buttons in the detail modal (Phase 7.10.e.b).
+ */
+export interface SendDistributionRef {
+  op_id: string
+  initiated_by: string
+  is_pending_approval: boolean
+}
+
 export interface SendRow {
   tx_id: string
   ref_short: string
@@ -39,6 +51,7 @@ export interface SendRow {
   note: string | null
   confirmed_at: string | null
   created_at: string | null
+  distribution?: SendDistributionRef
 }
 
 export interface SendsAggregates {
