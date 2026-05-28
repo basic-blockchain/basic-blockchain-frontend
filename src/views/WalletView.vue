@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/stores/wallet'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
+import { useAuthStore } from '@/stores/auth'
+import { defaultLandingFor } from '@/router'
 import { confirmWallet, listCurrencies, previewWallet, type CurrencyRecord, type Wallet } from '@/api/wallets'
 import { isValidMnemonic } from '@/lib/crypto'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
@@ -20,6 +23,8 @@ import type { ConvertData } from '@/components/flows/ConvertFlow.vue'
 
 const walletStore = useWalletStore()
 const confirmedStore = useConfirmedTransactionsStore()
+const auth = useAuthStore()
+const router = useRouter()
 const toast = useToast()
 
 const pendingMnemonic = ref('')
@@ -111,6 +116,21 @@ async function submitTransfer() {
 
 onMounted(async () => {
   await Promise.all([walletStore.fetchMine(), loadCurrencies(), confirmedStore.fetchConfirmed()])
+  // Defense in depth against BR-WL-11: the router guard already blocks
+  // ADMIN/OPERATOR from reaching this view, but a stale local token
+  // for an account whose role changed server-side will land here and
+  // get 403 from /wallets/me. Surface the failure as a toast and
+  // bounce the user to their role-appropriate landing instead of
+  // leaving the wallet shell rendered with no data.
+  if (walletStore.errorCode === 'FORBIDDEN') {
+    toast.add({
+      severity: 'warn',
+      summary: 'Acceso restringido',
+      detail: 'Tu rol no puede operar la vista de wallets de usuario.',
+      life: 4500,
+    })
+    await router.replace(defaultLandingFor(auth.user?.roles ?? []))
+  }
 })
 
 const sendFlowData = ref<SendData | null>(null)
@@ -210,14 +230,34 @@ function openConvert(w?: Wallet) {
         <p>Gestiona tus wallets y realiza transferencias</p>
       </div>
       <div class="page-actions">
-        <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
-          <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
+        <select
+          v-model="selectedCurrency"
+          class="field-select"
+          :disabled="creatingWallet"
+        >
+          <option
+            v-for="currency in currencies"
+            :key="currency.code"
+            :value="currency.code"
+          >
             {{ currency.code }} · {{ currency.name }}
           </option>
         </select>
-        <button class="btn btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
-          <span v-if="creatingWallet" class="pi pi-spin pi-spinner" aria-hidden="true" />
-          <span v-else class="pi pi-plus" aria-hidden="true" />
+        <button
+          class="btn btn-primary"
+          :disabled="creatingWallet"
+          @click="handleCreateWallet"
+        >
+          <span
+            v-if="creatingWallet"
+            class="pi pi-spin pi-spinner"
+            aria-hidden="true"
+          />
+          <span
+            v-else
+            class="pi pi-plus"
+            aria-hidden="true"
+          />
           Nueva wallet
         </button>
       </div>
@@ -226,57 +266,129 @@ function openConvert(w?: Wallet) {
     <!-- KPI tiles -->
     <div class="bigstat-row">
       <div class="bigstat">
-        <div class="lb">Wallets</div>
-        <div class="vl">{{ totalWallets }}</div>
-        <div class="ds">cuentas activas</div>
+        <div class="lb">
+          Wallets
+        </div>
+        <div class="vl">
+          {{ totalWallets }}
+        </div>
+        <div class="ds">
+          cuentas activas
+        </div>
       </div>
       <div class="bigstat">
-        <div class="lb">Balance NATIVE</div>
-        <div class="vl">{{ totalBalance }}</div>
-        <div class="ds">saldo nativo total</div>
+        <div class="lb">
+          Balance NATIVE
+        </div>
+        <div class="vl">
+          {{ totalBalance }}
+        </div>
+        <div class="ds">
+          saldo nativo total
+        </div>
       </div>
       <div class="bigstat">
-        <div class="lb">Monedas</div>
-        <div class="vl">{{ currencyCount }}</div>
-        <div class="ds">tipos de activo</div>
+        <div class="lb">
+          Monedas
+        </div>
+        <div class="vl">
+          {{ currencyCount }}
+        </div>
+        <div class="ds">
+          tipos de activo
+        </div>
       </div>
       <div class="bigstat">
-        <div class="lb">Congeladas</div>
-        <div class="vl" :class="{ 'vl-danger': frozenCount > 0 }">{{ frozenCount }}</div>
-        <div class="ds">requieren atención</div>
+        <div class="lb">
+          Congeladas
+        </div>
+        <div
+          class="vl"
+          :class="{ 'vl-danger': frozenCount > 0 }"
+        >
+          {{ frozenCount }}
+        </div>
+        <div class="ds">
+          requieren atención
+        </div>
       </div>
     </div>
 
     <!-- Quick actions — use selected wallet if any -->
     <div class="quick-actions">
-      <button class="btn btn-primary btn-sm" @click="openSend()">
-        <span class="pi pi-send" aria-hidden="true" /> Enviar
+      <button
+        class="btn btn-primary btn-sm"
+        @click="openSend()"
+      >
+        <span
+          class="pi pi-send"
+          aria-hidden="true"
+        /> Enviar
       </button>
-      <button class="btn btn-sm" @click="openReceive()">
-        <span class="pi pi-download" aria-hidden="true" /> Recibir
+      <button
+        class="btn btn-sm"
+        @click="openReceive()"
+      >
+        <span
+          class="pi pi-download"
+          aria-hidden="true"
+        /> Recibir
       </button>
-      <button class="btn btn-sm" @click="openWithdraw()">
-        <span class="pi pi-external-link" aria-hidden="true" /> Retirar
+      <button
+        class="btn btn-sm"
+        @click="openWithdraw()"
+      >
+        <span
+          class="pi pi-external-link"
+          aria-hidden="true"
+        /> Retirar
       </button>
-      <button class="btn btn-sm" @click="openConvert()">
-        <span class="pi pi-arrows-h" aria-hidden="true" /> Convertir
+      <button
+        class="btn btn-sm"
+        @click="openConvert()"
+      >
+        <span
+          class="pi pi-arrows-h"
+          aria-hidden="true"
+        /> Convertir
       </button>
-      <span v-if="activeWallet" class="selected-hint">
+      <span
+        v-if="activeWallet"
+        class="selected-hint"
+      >
         Usando: <strong>{{ shortAddr(activeWallet.wallet_id) }}</strong>
-        <button class="btn-clear" @click="selectedWalletId = null">✕</button>
+        <button
+          class="btn-clear"
+          @click="selectedWalletId = null"
+        >✕</button>
       </span>
     </div>
 
     <!-- Wallet list -->
-    <div v-if="walletStore.loading" class="empty-state">
-      <span class="pi pi-spin pi-spinner" aria-hidden="true" />
+    <div
+      v-if="walletStore.loading"
+      class="empty-state"
+    >
+      <span
+        class="pi pi-spin pi-spinner"
+        aria-hidden="true"
+      />
       Cargando wallets…
     </div>
-    <div v-else-if="walletStore.wallets.length === 0" class="empty-state">
-      <span class="pi pi-wallet empty-icon" aria-hidden="true" />
+    <div
+      v-else-if="walletStore.wallets.length === 0"
+      class="empty-state"
+    >
+      <span
+        class="pi pi-wallet empty-icon"
+        aria-hidden="true"
+      />
       <p>Sin wallets todavía. Crea una para empezar.</p>
     </div>
-    <section v-else class="panel">
+    <section
+      v-else
+      class="panel"
+    >
       <div class="panel-h">
         <span>Mis wallets</span>
         <span class="count-badge sm">{{ totalWallets }}</span>
@@ -294,27 +406,57 @@ function openConvert(w?: Wallet) {
           @keydown.space.prevent="selectWallet(w.wallet_id)"
         >
           <div class="wc-top">
-            <HashChip :hash="w.wallet_id" :length="16" label="wallet id" />
-            <span v-if="w.frozen" class="frozen-tag">
-              <span class="pi pi-lock" aria-hidden="true" /> Congelada
+            <HashChip
+              :hash="w.wallet_id"
+              :length="16"
+              label="wallet id"
+            />
+            <span
+              v-if="w.frozen"
+              class="frozen-tag"
+            >
+              <span
+                class="pi pi-lock"
+                aria-hidden="true"
+              /> Congelada
             </span>
           </div>
           <div class="wc-balance">
-            <AmountDisplay :amount="w.balance" :precision="8" :unit="w.currency" />
+            <AmountDisplay
+              :amount="w.balance"
+              :precision="8"
+              :unit="w.currency"
+            />
           </div>
           <div class="wc-key">
-            <HashChip :hash="w.public_key" :length="20" label="public key" />
+            <HashChip
+              :hash="w.public_key"
+              :length="20"
+              label="public key"
+            />
           </div>
-          <div class="wc-actions" @click.stop>
+          <div
+            class="wc-actions"
+            @click.stop
+          >
             <button
               class="btn btn-sm btn-primary"
               :disabled="w.frozen"
               @click="openSend(w)"
             >
-              <span class="pi pi-send" aria-hidden="true" /> Enviar
+              <span
+                class="pi pi-send"
+                aria-hidden="true"
+              /> Enviar
             </button>
-            <button class="btn btn-sm" @click="openReceive(w)">
-              <span class="pi pi-download" aria-hidden="true" /> Recibir
+            <button
+              class="btn btn-sm"
+              @click="openReceive(w)"
+            >
+              <span
+                class="pi pi-download"
+                aria-hidden="true"
+              /> Recibir
             </button>
           </div>
         </div>
@@ -322,40 +464,109 @@ function openConvert(w?: Wallet) {
     </section>
 
     <!-- Transfer panel -->
-    <section v-if="walletStore.wallets.length > 0" class="flow-card">
-      <div class="panel-h">Transferencia directa</div>
-      <form class="transfer-form" @submit.prevent="submitTransfer">
+    <section
+      v-if="walletStore.wallets.length > 0"
+      class="flow-card"
+    >
+      <div class="panel-h">
+        Transferencia directa
+      </div>
+      <form
+        class="transfer-form"
+        @submit.prevent="submitTransfer"
+      >
         <div class="form-row">
           <div class="field">
-            <label class="field-label" for="sender">Desde wallet</label>
-            <select id="sender" v-model="transferForm.senderWalletId" class="field-select" required>
-              <option value="" disabled>Selecciona wallet…</option>
-              <option v-for="w in walletStore.wallets.filter((w) => !w.frozen)" :key="w.wallet_id" :value="w.wallet_id">
+            <label
+              class="field-label"
+              for="sender"
+            >Desde wallet</label>
+            <select
+              id="sender"
+              v-model="transferForm.senderWalletId"
+              class="field-select"
+              required
+            >
+              <option
+                value=""
+                disabled
+              >
+                Selecciona wallet…
+              </option>
+              <option
+                v-for="w in walletStore.wallets.filter((w) => !w.frozen)"
+                :key="w.wallet_id"
+                :value="w.wallet_id"
+              >
                 {{ formatWalletOption(w.wallet_id, w.balance, w.currency) }}
               </option>
             </select>
-            <span v-if="selectedSender" class="field-hint">
-              <AmountDisplay :amount="selectedSender.balance" :precision="8" :unit="selectedSender.currency" />
+            <span
+              v-if="selectedSender"
+              class="field-hint"
+            >
+              <AmountDisplay
+                :amount="selectedSender.balance"
+                :precision="8"
+                :unit="selectedSender.currency"
+              />
             </span>
           </div>
           <div class="field">
-            <label class="field-label" for="receiver">Hacia wallet ID</label>
-            <input id="receiver" v-model="transferForm.receiverWalletId" class="field-input" type="text" placeholder="ID de la wallet destinataria" required />
+            <label
+              class="field-label"
+              for="receiver"
+            >Hacia wallet ID</label>
+            <input
+              id="receiver"
+              v-model="transferForm.receiverWalletId"
+              class="field-input"
+              type="text"
+              placeholder="ID de la wallet destinataria"
+              required
+            >
           </div>
         </div>
         <div class="form-row">
           <div class="field">
-            <label class="field-label" for="amount">Monto</label>
-            <input id="amount" v-model="transferForm.amount" class="field-input" type="number" min="0.00000001" step="any" placeholder="0.00" required />
+            <label
+              class="field-label"
+              for="amount"
+            >Monto</label>
+            <input
+              id="amount"
+              v-model="transferForm.amount"
+              class="field-input"
+              type="number"
+              min="0.00000001"
+              step="any"
+              placeholder="0.00"
+              required
+            >
           </div>
           <div class="field">
-            <label class="field-label" for="nonce">Nonce</label>
-            <input id="nonce" v-model="transferForm.nonce" class="field-input" type="number" min="1" step="1" placeholder="1" required />
+            <label
+              class="field-label"
+              for="nonce"
+            >Nonce</label>
+            <input
+              id="nonce"
+              v-model="transferForm.nonce"
+              class="field-input"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="1"
+              required
+            >
             <span class="field-hint">Debe ser mayor al nonce anterior de esta wallet</span>
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="mnemonic">Frase de recuperación</label>
+          <label
+            class="field-label"
+            for="mnemonic"
+          >Frase de recuperación</label>
           <textarea
             id="mnemonic"
             v-model="transferForm.mnemonic"
@@ -365,19 +576,40 @@ function openConvert(w?: Wallet) {
             rows="2"
             required
           />
-          <span v-if="!mnemonicValid" class="field-error">Frase de recuperación inválida</span>
-          <span v-else class="field-hint">Tu frase nunca sale del navegador — solo se usa para firmar la transacción localmente</span>
+          <span
+            v-if="!mnemonicValid"
+            class="field-error"
+          >Frase de recuperación inválida</span>
+          <span
+            v-else
+            class="field-hint"
+          >Tu frase nunca sale del navegador — solo se usa para firmar la transacción localmente</span>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" type="submit" :disabled="transferring || !mnemonicValid">
-            <span v-if="transferring" class="pi pi-spin pi-spinner" aria-hidden="true" />
-            <span v-else class="pi pi-send" aria-hidden="true" />
+          <button
+            class="btn btn-primary"
+            type="submit"
+            :disabled="transferring || !mnemonicValid"
+          >
+            <span
+              v-if="transferring"
+              class="pi pi-spin pi-spinner"
+              aria-hidden="true"
+            />
+            <span
+              v-else
+              class="pi pi-send"
+              aria-hidden="true"
+            />
             {{ transferring ? 'Enviando…' : 'Enviar transferencia' }}
           </button>
         </div>
       </form>
       <p class="transfer-note">
-        <span class="pi pi-info-circle" aria-hidden="true" />
+        <span
+          class="pi pi-info-circle"
+          aria-hidden="true"
+        />
         La transferencia queda en el mempool. Se confirma cuando se mine un bloque. El balance se actualiza tras la minería.
       </p>
     </section>
@@ -386,27 +618,49 @@ function openConvert(w?: Wallet) {
     <section class="panel">
       <div class="panel-h">
         <span>Historial de movimientos</span>
-        <span v-if="movements.length > 0" class="count-badge sm">{{ movements.length }}</span>
+        <span
+          v-if="movements.length > 0"
+          class="count-badge sm"
+        >{{ movements.length }}</span>
       </div>
-      <div v-if="confirmedStore.loading" class="empty-state sm">
-        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+      <div
+        v-if="confirmedStore.loading"
+        class="empty-state sm"
+      >
+        <span
+          class="pi pi-spin pi-spinner"
+          aria-hidden="true"
+        /> Cargando…
       </div>
-      <div v-else-if="movements.length === 0" class="empty-state sm muted">
+      <div
+        v-else-if="movements.length === 0"
+        class="empty-state sm muted"
+      >
         Sin movimientos confirmados todavía.
       </div>
-      <table v-else class="tbl">
+      <table
+        v-else
+        class="tbl"
+      >
         <thead>
           <tr>
             <th>Bloque</th>
             <th>Dirección</th>
             <th>Contraparte</th>
-            <th class="num">Monto</th>
+            <th class="num">
+              Monto
+            </th>
             <th>Confirmado</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(rec, i) in movements" :key="i">
-            <td class="mono">#{{ rec.blockIndex ?? '—' }}</td>
+          <tr
+            v-for="(rec, i) in movements"
+            :key="i"
+          >
+            <td class="mono">
+              #{{ rec.blockIndex ?? '—' }}
+            </td>
             <td>
               <span
                 class="dir-badge"
@@ -422,8 +676,12 @@ function openConvert(w?: Wallet) {
                   : shortAddr(rec.sender)
               }}
             </td>
-            <td class="num mono">{{ rec.amount }}</td>
-            <td class="muted xs">{{ rec.blockTimestamp ?? '—' }}</td>
+            <td class="num mono">
+              {{ rec.amount }}
+            </td>
+            <td class="muted xs">
+              {{ rec.blockTimestamp ?? '—' }}
+            </td>
           </tr>
         </tbody>
       </table>
