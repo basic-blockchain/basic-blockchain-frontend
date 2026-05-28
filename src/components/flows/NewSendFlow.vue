@@ -245,11 +245,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
           <span class="field__label">Wallet origen (tesorería)</span>
           <select v-model="sourceWalletId" class="field__input">
             <option value="" disabled>Elegí una wallet</option>
-            <option
-              v-for="w in treasuryWallets"
-              :key="w.wallet_id"
-              :value="w.wallet_id"
-            >
+            <option v-for="w in treasuryWallets" :key="w.wallet_id" :value="w.wallet_id">
               {{ w.username }} · {{ w.currency }} · saldo {{ w.balance }}
             </option>
           </select>
@@ -282,8 +278,8 @@ const TITLES: Record<0 | 1 | 2, string> = {
             v-else-if="recipientQuery.trim() && !recipientUserId && selectedSource"
             class="field__hint field__hint--warn"
           >
-            Sin coincidencias con wallet {{ selectedSource.currency }}.
-            Sólo aparecen usuarios que ya tienen una wallet en esa moneda.
+            Sin coincidencias con wallet {{ selectedSource.currency }}. Sólo aparecen usuarios que
+            ya tienen una wallet en esa moneda.
           </span>
           <span v-if="selectedRecipient" class="field__hint field__hint--ok">
             <span class="pi pi-check-circle" aria-hidden="true" />
@@ -295,11 +291,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
         <label class="field">
           <span class="field__label">
             Monto
-            <AssetBadge
-              v-if="selectedSource"
-              :code="selectedSource.currency"
-              size="sm"
-            />
+            <AssetBadge v-if="selectedSource" :code="selectedSource.currency" size="sm" />
           </span>
           <input
             v-model="amount"
@@ -366,11 +358,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
           <code>APPROVE_TREASURY_DISTRIBUTION</code> antes de ejecutarse en cadena.
         </p>
 
-        <SlideToConfirm
-          v-if="!submitting"
-          class="confirm__slide"
-          @confirm="submit"
-        />
+        <SlideToConfirm v-if="!submitting" class="confirm__slide" @confirm="submit" />
         <p class="confirm__hint">o tocá el botón para confirmar</p>
       </div>
     </template>
@@ -411,8 +399,8 @@ const TITLES: Record<0 | 1 | 2, string> = {
 
         <p class="receipt__hint">
           La aprobación queda en manos de otro admin con
-          <code>APPROVE_TREASURY_DISTRIBUTION</code>. Hasta entonces el envío
-          aparece como <b>Pendiente</b> en la lista.
+          <code>APPROVE_TREASURY_DISTRIBUTION</code>. Hasta entonces el envío aparece como
+          <b>Pendiente</b> en la lista.
         </p>
       </div>
     </template>
@@ -502,7 +490,8 @@ const TITLES: Record<0 | 1 | 2, string> = {
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  margin-top: 4px;
+  margin-top: 6px;
+  padding: 4px;
   max-height: 180px;
   overflow-y: auto;
 }
@@ -510,15 +499,35 @@ const TITLES: Record<0 | 1 | 2, string> = {
   text-align: left;
   background: transparent;
   border: 0;
-  padding: 7px 10px;
+  padding: 8px 10px;
   font-size: 12.5px;
   cursor: pointer;
   display: flex;
   gap: 6px;
   align-items: baseline;
+  border-radius: 8px;
+  color: var(--text);
+  width: 100%;
 }
-.autocomplete__item:hover {
-  background: var(--muted-soft);
+.autocomplete__item .mono {
+  color: var(--text);
+  font-weight: 600;
+}
+.autocomplete__item .muted {
+  color: var(--text-2);
+}
+.autocomplete__item:hover,
+.autocomplete__item:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.autocomplete__item:hover .mono,
+.autocomplete__item:focus-visible .mono {
+  color: var(--text);
+}
+.autocomplete__item:hover .muted,
+.autocomplete__item:focus-visible .muted {
+  color: var(--text);
 }
 
 .form-error {
@@ -529,14 +538,16 @@ const TITLES: Record<0 | 1 | 2, string> = {
   border-radius: var(--radius);
 }
 
-.confirm, .receipt {
+.confirm,
+.receipt {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   padding: 4px 0;
 }
-.confirm__avatar, .receipt__circle {
+.confirm__avatar,
+.receipt__circle {
   border-radius: 50%;
   display: grid;
   place-items: center;
