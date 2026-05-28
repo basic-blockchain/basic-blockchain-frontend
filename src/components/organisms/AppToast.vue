@@ -1,32 +1,43 @@
 <script setup lang="ts">
 import { useAppToast } from '@/composables/useAppToast'
+import { onMounted, watch } from 'vue'
 
-const { toasts, remove } = useAppToast()
+const app = useAppToast()
+
+onMounted(() => {
+  try {
+    console.debug('[AppToast] mounted, initial toasts:', app.toasts.length)
+  } catch (e) {}
+})
+
+watch(
+  () => app.toasts.length,
+  (n) => {
+    try {
+      console.debug('[AppToast] toasts count =>', n)
+    } catch (e) {}
+  }
+)
 </script>
 
 <template>
   <teleport to="body">
     <div class="app-toast" role="status" aria-live="polite">
       <transition-group name="toast" tag="div">
-        <div
-          v-for="t in toasts"
-          :key="t.id"
-          class="app-toast__item"
-          :data-severity="t.severity"
-        >
+        <div v-for="t in toasts" :key="t.id" class="app-toast__item" :data-severity="t.severity">
           <div class="app-toast__content">
             <div class="app-toast__icon" aria-hidden="true">
               <span v-if="t.severity === 'success'" class="pi pi-check"></span>
               <span v-else-if="t.severity === 'error'" class="pi pi-times"></span>
               <span v-else-if="t.severity === 'warn'" class="pi pi-exclamation-triangle"></span>
               <span v-else class="pi pi-info-circle"></span>
-            </div>
-            <div class="app-toast__body">
-              <div class="app-toast__summary">{{ t.summary }}</div>
-              <div v-if="t.detail" class="app-toast__detail">{{ t.detail }}</div>
-            </div>
-          </div>
-          <button class="app-toast__close" aria-label="Cerrar" @click="remove(t.id)">✕</button>
+            <div
+              v-for="t in app.toasts"
+              :key="t.id"
+              class="app-toast__item"
+              :data-severity="t.severity"
+            >
+          <button class="app-toast__close" aria-label="Cerrar" @click="app.remove(t.id)">✕</button>
         </div>
       </transition-group>
     </div>
