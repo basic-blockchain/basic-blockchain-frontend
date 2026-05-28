@@ -8,31 +8,37 @@ const { toasts, remove } = useAppToast()
   <teleport to="body">
     <div class="app-toast" role="status" aria-live="polite">
       <transition-group name="toast" tag="div">
-        <div v-for="t in toasts" :key="t.id" class="app-toast__item" :data-severity="t.severity">
+        <div
+          v-for="t in toasts"
+          :key="t.id"
+          class="app-toast__item"
+          :data-severity="t.severity"
+        >
           <div class="app-toast__content">
             <div class="app-toast__icon" aria-hidden="true">
-              <span v-if="t.severity === 'success'" class="pi pi-check" />
-              <span v-else-if="t.severity === 'error'" class="pi pi-times" />
-              <span v-else-if="t.severity === 'warn'" class="pi pi-exclamation-triangle" />
-              <span v-else class="pi pi-info-circle" />
-            .app-toast {
-              position: fixed;
-              top: 16px;
-              right: 16px;
-              z-index: 2000;
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-            }
-            .app-toast__item {
+              <span v-if="t.severity === 'success'" class="pi pi-check"></span>
+              <span v-else-if="t.severity === 'error'" class="pi pi-times"></span>
+              <span v-else-if="t.severity === 'warn'" class="pi pi-exclamation-triangle"></span>
+              <span v-else class="pi pi-info-circle"></span>
+            </div>
+            <div class="app-toast__body">
+              <div class="app-toast__summary">{{ t.summary }}</div>
+              <div v-if="t.detail" class="app-toast__detail">{{ t.detail }}</div>
+            </div>
+          </div>
+          <button class="app-toast__close" aria-label="Cerrar" @click="remove(t.id)">✕</button>
+        </div>
+      </transition-group>
+    </div>
+  </teleport>
 </template>
 
-<style scoped>
+<style>
 .app-toast {
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 1200;
+  z-index: 2000;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -48,8 +54,8 @@ const { toasts, remove } = useAppToast()
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
-
-            </style>
+}
+.app-toast__content {
   display: flex;
   gap: 10px;
   align-items: flex-start;
