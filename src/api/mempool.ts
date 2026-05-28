@@ -8,6 +8,9 @@ interface TransactionPayload {
   sender_wallet_id?: string
   receiver_wallet_id?: string
   receiver_amount?: number | null
+  /** Platform fee charged to the sender (BR-TX-10/11). Backed by
+   * `transactions.fee` / `mempool.fee` (V024) on the simulator. */
+  fee?: number
 }
 
 interface ConfirmedTransactionPayload extends TransactionPayload {
@@ -23,6 +26,7 @@ function fromPayload(tx: TransactionPayload): Transaction {
     senderWalletId: tx.sender_wallet_id || undefined,
     receiverWalletId: tx.receiver_wallet_id || undefined,
     receiverAmount: tx.receiver_amount ?? null,
+    fee: tx.fee ?? 0,
   }
 }
 

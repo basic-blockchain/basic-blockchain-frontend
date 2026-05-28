@@ -10,6 +10,10 @@ export interface Transaction {
    * transfer crosses currencies (the receiving wallet is in a different
    * asset). `null` when the simulator has no separate receiver amount. */
   receiverAmount?: number | null
+  /** Platform fee charged to the sender (BR-TX-10/11 on the simulator).
+   * Denominated in the sender's currency. `0` for coinbase / treasury /
+   * fee-collector rows. */
+  fee?: number
 }
 
 export interface ConfirmedTransaction extends Transaction {
