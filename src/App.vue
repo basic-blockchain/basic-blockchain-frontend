@@ -183,7 +183,7 @@ function avatarInitial(name: string): string {
   <div v-if="isAuthRoute">
     <RouterView />
     <AppToast />
-    <Toast position="bottom-right" />
+    <Toast position="bottom-left" />
   </div>
 
   <div v-else class="app">
