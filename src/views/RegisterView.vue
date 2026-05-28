@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { register } from '@/api/auth'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import AuthLayout from '@/components/molecules/AuthLayout.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'

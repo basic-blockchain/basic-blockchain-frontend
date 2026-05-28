@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { listAuditLog, type AuditEntry } from '@/api/admin'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'

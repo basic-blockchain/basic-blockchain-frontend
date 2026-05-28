@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { activate } from '@/api/auth'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import AuthLayout from '@/components/molecules/AuthLayout.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
@@ -31,17 +31,32 @@ onMounted(() => {
 
 async function submit() {
   if (password.value.length < 8) {
-    toast.add({ severity: 'warn', summary: 'Contraseña corta', detail: 'Mínimo 8 caracteres', life: 3000 })
+    toast.add({
+      severity: 'warn',
+      summary: 'Contraseña corta',
+      detail: 'Mínimo 8 caracteres',
+      life: 3000,
+    })
     return
   }
   if (password.value !== confirmPassword.value) {
-    toast.add({ severity: 'warn', summary: 'No coinciden', detail: 'Las contraseñas no coinciden', life: 3000 })
+    toast.add({
+      severity: 'warn',
+      summary: 'No coinciden',
+      detail: 'Las contraseñas no coinciden',
+      life: 3000,
+    })
     return
   }
   loading.value = true
   try {
     await activate(username.value, activationCode.value, password.value)
-    toast.add({ severity: 'success', summary: 'Cuenta activada', detail: 'Ya podés ingresar', life: 3000 })
+    toast.add({
+      severity: 'success',
+      summary: 'Cuenta activada',
+      detail: 'Ya podés ingresar',
+      life: 3000,
+    })
     await router.push('/login')
   } catch (e) {
     toast.add({
@@ -58,24 +73,17 @@ async function submit() {
 
 <template>
   <AuthLayout>
-    <form
-      class="auth-form"
-      @submit.prevent="submit"
-    >
-      <Stepper
-        :steps="signupSteps"
-        :current="currentStepIndex"
-      />
-      <BaseBadge
-        variant="outline"
-        tone="neutral"
-      >
-        Paso {{ currentStepIndex + 1 }} de {{ signupSteps.length }} · {{ signupSteps[currentStepIndex].label }}
+    <form class="auth-form" @submit.prevent="submit">
+      <Stepper :steps="signupSteps" :current="currentStepIndex" />
+      <BaseBadge variant="outline" tone="neutral">
+        Paso {{ currentStepIndex + 1 }} de {{ signupSteps.length }} ·
+        {{ signupSteps[currentStepIndex].label }}
       </BaseBadge>
 
       <h1>Activar cuenta</h1>
       <p class="auth-sub">
-        Bienvenido/a, <strong>{{ username }}</strong>. Elegí una contraseña para completar la activación.
+        Bienvenido/a, <strong>{{ username }}</strong
+        >. Elegí una contraseña para completar la activación.
       </p>
 
       <div class="fld">
@@ -88,7 +96,7 @@ async function submit() {
           placeholder="mínimo 8 caracteres"
           required
           minlength="8"
-        >
+        />
       </div>
       <div class="fld">
         <label for="confirm">Confirmar contraseña</label>
@@ -99,40 +107,28 @@ async function submit() {
           autocomplete="new-password"
           placeholder="repetir contraseña"
           required
-        >
+        />
       </div>
 
-      <div
-        v-if="activationCode"
-        class="code-hint"
-      >
+      <div v-if="activationCode" class="code-hint">
         Código de activación: <span class="mono">{{ activationCode }}</span>
       </div>
 
-      <BaseButton
-        variant="primary"
-        size="lg"
-        block
-        type="submit"
-        :loading="loading"
-      >
+      <BaseButton variant="primary" size="lg" block type="submit" :loading="loading">
         Activar cuenta
       </BaseButton>
 
       <div class="auth-switch">
-        ¿Ya activaste tu cuenta? <RouterLink to="/login">
-          Ingresar
-        </RouterLink>
+        ¿Ya activaste tu cuenta? <RouterLink to="/login"> Ingresar </RouterLink>
       </div>
     </form>
 
     <template #right-panel>
       <div class="auth-right-content">
-        <div class="auth-right-label">
-          Seguridad
-        </div>
+        <div class="auth-right-label">Seguridad</div>
         <p class="auth-quote">
-          "Tu contraseña se almacena con hashing seguro. Nunca la enviamos por email ni la conocemos."
+          "Tu contraseña se almacena con hashing seguro. Nunca la enviamos por email ni la
+          conocemos."
         </p>
       </div>
 
@@ -140,24 +136,15 @@ async function submit() {
         <h4>Recomendaciones</h4>
         <div class="tip-list">
           <div class="tip-item">
-            <span
-              class="tip-dot"
-              style="background: var(--success)"
-            />
+            <span class="tip-dot" style="background: var(--success)" />
             <span>Mínimo 8 caracteres con letras y números</span>
           </div>
           <div class="tip-item">
-            <span
-              class="tip-dot"
-              style="background: var(--warning)"
-            />
+            <span class="tip-dot" style="background: var(--warning)" />
             <span>Evitá contraseñas fáciles de adivinar</span>
           </div>
           <div class="tip-item">
-            <span
-              class="tip-dot"
-              style="background: var(--info)"
-            />
+            <span class="tip-dot" style="background: var(--info)" />
             <span>Usá un gestor de contraseñas</span>
           </div>
         </div>

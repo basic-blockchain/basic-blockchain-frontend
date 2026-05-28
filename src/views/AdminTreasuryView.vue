@@ -10,7 +10,7 @@ import {
 import { mint as mintApi } from '@/api/wallets'
 import HashChip from '@/components/atoms/HashChip.vue'
 import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import TreasuryApprovalFlow from '@/components/flows/TreasuryApprovalFlow.vue'
 import type { TreasuryData } from '@/components/flows/TreasuryApprovalFlow.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'

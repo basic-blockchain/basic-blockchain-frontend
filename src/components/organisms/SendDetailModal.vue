@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { SendRow, SendKind, SendStatus } from '@/domain/send'
-import {
-  approveTreasuryDistribution,
-  cancelTreasuryDistribution,
-} from '@/api/admin'
+import { approveTreasuryDistribution, cancelTreasuryDistribution } from '@/api/admin'
 import { BlockchainApiError } from '@/api/errors'
 import { useAuthStore } from '@/stores/auth'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/atoms/BaseModal.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
@@ -63,8 +60,7 @@ async function onApprove() {
     toast.add({
       severity: 'success',
       summary: 'Envío aprobado',
-      detail:
-        'Las transacciones se agregaron al mempool. Minan en el próximo bloque.',
+      detail: 'Las transacciones se agregaron al mempool. Minan en el próximo bloque.',
       life: 5000,
     })
     emit('distribution-updated', distribution.value.op_id)
@@ -74,8 +70,7 @@ async function onApprove() {
       toast.add({
         severity: 'error',
         summary: 'Permiso insuficiente',
-        detail:
-          'Necesitás APPROVE_TREASURY_DISTRIBUTION para aprobar envíos de tesorería.',
+        detail: 'Necesitás APPROVE_TREASURY_DISTRIBUTION para aprobar envíos de tesorería.',
         life: 6000,
       })
     } else {
@@ -198,9 +193,7 @@ async function copyRef() {
       <div class="hdr">
         <div>
           <h2 class="hdr__title">{{ title }}</h2>
-          <p class="hdr__sub">
-            {{ row.ref_short }} · {{ relativeTime(row.confirmed_at) }}
-          </p>
+          <p class="hdr__sub">{{ row.ref_short }} · {{ relativeTime(row.confirmed_at) }}</p>
         </div>
         <button class="hdr__close" type="button" aria-label="Cerrar" @click="close">×</button>
       </div>
@@ -208,16 +201,16 @@ async function copyRef() {
 
     <template v-if="row">
       <div class="amount-block">
-        <div class="amount-block__big">
-          {{ formatAmount(row.amount) }} {{ row.asset.code }}
-        </div>
+        <div class="amount-block__big">{{ formatAmount(row.amount) }} {{ row.asset.code }}</div>
         <div class="amount-block__sub">≈ {{ formatUsd(row.amount_usd) }}</div>
       </div>
 
       <dl class="kv">
         <div class="kv__row">
           <dt>Tipo</dt>
-          <dd><BaseBadge :tone="kindTone">{{ KIND_LABEL[row.kind] }}</BaseBadge></dd>
+          <dd>
+            <BaseBadge :tone="kindTone">{{ KIND_LABEL[row.kind] }}</BaseBadge>
+          </dd>
         </div>
         <div class="kv__row">
           <dt>De</dt>
@@ -235,19 +228,16 @@ async function copyRef() {
           <dt>Hash / Ref</dt>
           <dd class="kv__ref">
             <span class="mono">{{ row.ref_short }}</span>
-            <button
-              type="button"
-              class="kv__copy"
-              aria-label="Copiar referencia"
-              @click="copyRef"
-            >
+            <button type="button" class="kv__copy" aria-label="Copiar referencia" @click="copyRef">
               <span class="pi pi-copy" aria-hidden="true" />
             </button>
           </dd>
         </div>
         <div class="kv__row">
           <dt>Estado</dt>
-          <dd><BaseBadge :tone="statusTone">{{ STATUS_LABEL[row.status] }}</BaseBadge></dd>
+          <dd>
+            <BaseBadge :tone="statusTone">{{ STATUS_LABEL[row.status] }}</BaseBadge>
+          </dd>
         </div>
       </dl>
     </template>
@@ -278,12 +268,7 @@ async function copyRef() {
         </template>
         Aprobar
       </BaseButton>
-      <BaseButton
-        v-if="!canApprove && !canCancel"
-        variant="primary"
-        disabled
-        title="Próximamente"
-      >
+      <BaseButton v-if="!canApprove && !canCancel" variant="primary" disabled title="Próximamente">
         <template #leading>
           <span class="pi pi-external-link" aria-hidden="true" />
         </template>

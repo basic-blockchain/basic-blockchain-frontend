@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import Stepper, { type Step } from '@/components/atoms/Stepper.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import {
@@ -464,7 +464,10 @@ const confirmations = () => Math.floor((progress.value / 100) * 12)
           <button class="btn" @click="emit('close')">Cerrar</button>
           <button
             class="btn btn-primary"
-            @click="emit('complete'); emit('close')"
+            @click="
+              emit('complete')
+              emit('close')
+            "
           >
             Ver en auditoría
           </button>
