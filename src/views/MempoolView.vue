@@ -3,7 +3,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMempoolStore } from '@/stores/mempool'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
+import { useAuthStore } from '@/stores/auth'
 import type { Transaction } from '@/domain/transaction'
+import { listAllWallets } from '@/api/admin'
+import { myWallets } from '@/api/wallets'
 import MineBlockFlow, { type MineBlockData } from '@/components/flows/MineBlockFlow.vue'
 import TransactionDetailFlow, {
   type TxDetailData,
@@ -25,7 +28,92 @@ interface PendingTx extends Transaction {
 
 const mempoolStore = useMempoolStore()
 const confirmedStore = useConfirmedTransactionsStore()
+const auth = useAuthStore()
 const router = useRouter()
+
+// Wallet resolution maps. The transaction model carries wallet IDs
+// (post BR-TX-09) but no currency — currency lives on the wallet. We
+// hydrate these maps from `/admin/wallets` when the caller's role
+// allows it (ADMIN / OPERATOR hold VIEW_WALLETS), and fall back to
+// `/wallets/me` for VIEWER so at least the caller's own counterparty
+// rows resolve. Unknown wallet IDs leave the modal showing
+// "unidad desconocida" — honest, per the no-lying-defaults rule.
+const walletIdToCurrency = ref<Record<string, string>>({})
+const walletIdToUsername = ref<Record<string, string>>({})
+const walletIdToType = ref<Record<string, string>>({})
+
+async function loadWalletIndex() {
+  try {
+    if (auth.hasRole('ADMIN') || auth.hasRole('OPERATOR')) {
+      const res = await listAllWallets()
+      const c: Record<string, string> = {}
+      const u: Record<string, string> = {}
+      const t: Record<string, string> = {}
+      for (const w of res.wallets) {
+        c[w.wallet_id] = w.currency
+        u[w.wallet_id] = w.username
+        t[w.wallet_id] = w.wallet_type
+      }
+      walletIdToCurrency.value = c
+      walletIdToUsername.value = u
+      walletIdToType.value = t
+      return
+    }
+    if (auth.isAuthenticated) {
+      const res = await myWallets()
+      const c: Record<string, string> = {}
+      for (const w of res.wallets) {
+        c[w.wallet_id] = w.currency
+      }
+      walletIdToCurrency.value = c
+      // /wallets/me does not carry username/wallet_type — that's
+      // fine, the modal falls back to the tx's existing labels.
+    }
+  } catch {
+    // Resolution is best-effort: the modal still works without it,
+    // just with "—" / "unidad desconocida" in the gaps.
+  }
+}
+
+function roleFromType(walletType: string | undefined): string | undefined {
+  if (!walletType) return undefined
+  if (walletType === 'TREASURY') return 'Tesorería'
+  if (walletType === 'USER') return 'Usuario'
+  if (walletType === 'FEE_COLLECTOR') return 'Recolector'
+  return walletType
+}
+
+function resolveCurrency(walletId: string | undefined): string | undefined {
+  if (!walletId) return undefined
+  return walletIdToCurrency.value[walletId]
+}
+
+function resolveLabel(walletId: string | undefined, fallback: string): string {
+  if (walletId && walletIdToUsername.value[walletId]) {
+    return walletIdToUsername.value[walletId]
+  }
+  return fallback
+}
+
+function resolveRole(walletId: string | undefined): string | undefined {
+  if (!walletId) return undefined
+  return roleFromType(walletIdToType.value[walletId])
+}
+
+// Chain height = highest blockIndex we've seen confirmed, used to
+// derive a "Confirmaciones" count for the detail modal.
+const chainHeight = computed<number | null>(() => {
+  let max = -1
+  for (const r of confirmedStore.records) {
+    if (r.blockIndex != null && r.blockIndex > max) max = r.blockIndex
+  }
+  return max >= 0 ? max : null
+})
+
+function confirmationsFor(blockIndex: number | undefined): number | null {
+  if (blockIndex == null || chainHeight.value === null) return null
+  return Math.max(0, chainHeight.value - blockIndex + 1)
+}
 
 function viewInChain() {
   const block = selectedTx.value?.block
@@ -42,9 +130,12 @@ const mineData = computed<MineBlockData>(() => ({
   prevHash: '',
 }))
 
-onMounted(() => {
-  mempoolStore.fetchPending()
-  confirmedStore.fetchConfirmed()
+onMounted(async () => {
+  await Promise.all([
+    mempoolStore.fetchPending(),
+    confirmedStore.fetchConfirmed(),
+    loadWalletIndex(),
+  ])
 })
 
 function shortId(tx: PendingTx, i: number): string {
@@ -93,27 +184,56 @@ function txSize(tx: Transaction): number {
   return JSON.stringify(tx).length
 }
 
-function openTx(tx: Transaction, i: number, status: 'pending' | 'completed') {
+interface OpenTxBlockInfo {
+  blockIndex?: number
+  blockTimestamp?: string
+}
+
+function openTx(
+  tx: Transaction,
+  i: number,
+  status: 'pending' | 'completed',
+  block: OpenTxBlockInfo = {},
+) {
   const ptx = tx as PendingTx
-  const fee = Number(ptx.fee ?? 0)
+  const fee = Number(tx.fee ?? ptx.fee ?? 0)
+  // BR-WL-11 + BR-TX-09: resolve currency / username / role through
+  // wallet_id, which is the authoritative key shared with
+  // `/admin/wallets`. Sender side first; receiver as fallback for
+  // coinbase-style rows whose sender wallet is not in the index.
+  const senderCurrency = resolveCurrency(tx.senderWalletId)
+  const receiverCurrency = resolveCurrency(tx.receiverWalletId)
+  const currency = senderCurrency ?? receiverCurrency
+  const crossCurrency =
+    senderCurrency !== undefined &&
+    receiverCurrency !== undefined &&
+    senderCurrency !== receiverCurrency
   selectedTx.value = {
     tx: {
       id: shortId(ptx, i),
       sender: tx.sender,
       receiver: tx.receiver,
+      senderLabel: resolveLabel(tx.senderWalletId, tx.sender),
+      receiverLabel: resolveLabel(tx.receiverWalletId, tx.receiver),
+      senderRole: resolveRole(tx.senderWalletId),
+      receiverRole: resolveRole(tx.receiverWalletId),
       amount: String(tx.amount),
-      // `currency` is intentionally unset — the Transaction model
-      // does not carry a currency field; the wallet does. Non-admin
-      // contexts cannot resolve the counterpart wallet, so the modal
-      // renders "unidad desconocida" rather than lie with a default.
-      currency: ptx.currency,
-      // Real platform fee (BR-TX-11). `undefined` when the row lacks
-      // one (e.g. legacy / coinbase) — `TransactionDetailFlow` hides
-      // the Fee row when undefined.
+      // Real currency when we can resolve it; left undefined
+      // otherwise so the modal renders "unidad desconocida" rather
+      // than lie with a default.
+      currency,
+      receiverAmount:
+        crossCurrency && tx.receiverAmount != null
+          ? String(tx.receiverAmount)
+          : undefined,
+      receiverCurrency: crossCurrency ? receiverCurrency : undefined,
       fee: fee > 0 ? String(fee) : undefined,
       size: txSize(tx),
     },
     status,
+    block: block.blockIndex,
+    confirmedAt: block.blockTimestamp,
+    confirmations: confirmationsFor(block.blockIndex),
   }
 }
 
@@ -155,15 +275,18 @@ const confirmedColumns: ConfirmedColumn[] = [
 function onPendingRowClick(payload: { row: PendingRow }) {
   openTx(payload.row.tx, payload.row.index, 'pending')
 }
-interface ConfirmedRow {
-  sender: string
-  receiver: string
-  amount: number
+interface ConfirmedRow extends Transaction {
   blockIndex: number
   blockTimestamp: string
 }
 function onConfirmedRowClick(payload: { row: ConfirmedRow; index: number }) {
-  openTx(payload.row as unknown as Transaction, payload.index, 'completed')
+  // BR-TX-09 confirmed rows carry block + timestamp; thread them
+  // through so the detail modal can render the "Confirmada en Bloque
+  // #N" header and the per-row Confirmaciones count.
+  openTx(payload.row, payload.index, 'completed', {
+    blockIndex: payload.row.blockIndex,
+    blockTimestamp: payload.row.blockTimestamp,
+  })
 }
 function pendingRowKey(r: PendingRow): string {
   return `${r.index}-${r.tx.sender}`
