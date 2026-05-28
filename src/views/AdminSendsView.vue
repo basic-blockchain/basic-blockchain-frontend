@@ -368,6 +368,7 @@ onMounted(load)
       :open="selectedRow !== null"
       :row="selectedRow"
       @close="closeDetail"
+      @distribution-updated="load"
     />
 
     <NewSendFlow
