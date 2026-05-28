@@ -12,6 +12,7 @@ import AssetBadge from '@/components/atoms/AssetBadge.vue'
 import UserChip from '@/components/atoms/UserChip.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 import SendDetailModal from '@/components/organisms/SendDetailModal.vue'
+import NewSendFlow from '@/components/flows/NewSendFlow.vue'
 
 const toast = useToast()
 const auth = useAuthStore()
@@ -29,6 +30,7 @@ const elevating = ref(false)
 const activeTab = ref<'all' | 'internal' | 'onchain' | 'pending' | 'failed'>('all')
 const searchQuery = ref('')
 const selectedRow = ref<SendRow | null>(null)
+const newSendOpen = ref(false)
 
 function openDetail(payload: { row: SendRow }) {
   selectedRow.value = payload.row
@@ -36,6 +38,25 @@ function openDetail(payload: { row: SendRow }) {
 function closeDetail() {
   selectedRow.value = null
 }
+
+function openNewSend() {
+  newSendOpen.value = true
+}
+function onSendCreated() {
+  toast.add({
+    severity: 'success',
+    summary: 'Envío iniciado',
+    detail: 'Pendiente de aprobación por un segundo admin.',
+    life: 5000,
+  })
+  load()
+}
+
+/** Gate for the "Nuevo envío" button. The canonical permission is
+ * INITIATE_TREASURY_DISTRIBUTION; it's in the ADMIN baseline, so we
+ * surface the button to ADMINs and OPERATORs aren't expected to use
+ * this path. */
+const canInitiateTreasurySend = computed(() => auth.hasRole('ADMIN'))
 
 async function load() {
   loading.value = true
@@ -198,12 +219,25 @@ onMounted(load)
         <h1>Envíos</h1>
         <p>Transferencias entre wallets · internas y on-chain.</p>
       </div>
-      <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
-        <template #leading>
-          <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
-        </template>
-        Actualizar
-      </BaseButton>
+      <div class="page-h__actions">
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
+          <template #leading>
+            <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
+          </template>
+          Actualizar
+        </BaseButton>
+        <BaseButton
+          v-if="canInitiateTreasurySend"
+          variant="primary"
+          size="sm"
+          @click="openNewSend"
+        >
+          <template #leading>
+            <span class="pi pi-plus" aria-hidden="true" />
+          </template>
+          Nuevo envío
+        </BaseButton>
+      </div>
     </div>
 
     <!-- Permission elevation panel — surfaced when the backend returns
@@ -335,6 +369,12 @@ onMounted(load)
       :row="selectedRow"
       @close="closeDetail"
     />
+
+    <NewSendFlow
+      :open="newSendOpen"
+      @update:open="newSendOpen = $event"
+      @complete="onSendCreated"
+    />
   </div>
 </template>
 
@@ -362,6 +402,11 @@ onMounted(load)
   margin: 0;
   font-size: 13px;
   color: var(--text-2);
+}
+.page-h__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 /* Big stats */
