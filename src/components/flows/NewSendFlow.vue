@@ -30,9 +30,19 @@ const toast = useToast()
 const step = ref<0 | 1 | 2>(0)
 const submitting = ref(false)
 const loading = ref(false)
+/** Tracks whether the user has tried to advance past the form at
+ *  least once. We hide the form-error block until then so the user
+ *  isn't slapped with a red banner before they've filled anything. */
+const formTouched = ref(false)
 
 const treasuryWallets = ref<WalletAdminRecord[]>([])
 const allUsers = ref<AdminUser[]>([])
+/** Map user_id → set of currency codes the user holds a non-frozen,
+ *  non-treasury wallet for. Used to filter the recipient autocomplete
+ *  to only users who can actually receive the chosen currency — the
+ *  backend (treasury_distribution_service.py:398) requires an exact
+ *  currency match and tires RecipientNoWallet otherwise. */
+const userCurrencies = ref<Map<string, Set<string>>>(new Map())
 
 // Form state
 const sourceWalletId = ref<string>('')
@@ -52,10 +62,17 @@ const selectedRecipient = computed<AdminUser | null>(() => {
 })
 
 const recipientMatches = computed<AdminUser[]>(() => {
+  if (recipientUserId.value) return [] // hide dropdown once a pick is made
   const q = recipientQuery.value.trim().toLowerCase()
   if (!q) return []
+  const targetCurrency = selectedSource.value?.currency
   return allUsers.value
     .filter((u) => !u.banned && !u.deleted_at)
+    .filter((u) => {
+      if (!targetCurrency) return true
+      const owned = userCurrencies.value.get(u.user_id)
+      return owned ? owned.has(targetCurrency) : false
+    })
     .filter(
       (u) =>
         u.username.toLowerCase().includes(q) ||
@@ -97,6 +114,17 @@ async function loadCatalog() {
       (w) => w.wallet_type === 'TREASURY' && !w.frozen
     )
     allUsers.value = usersRes.users
+    // Build the user -> currencies map for the recipient-currency
+    // filter. Treasury and frozen wallets are excluded — they wouldn't
+    // be usable as recipients server-side anyway.
+    const map = new Map<string, Set<string>>()
+    for (const w of walletsRes.wallets) {
+      if (w.wallet_type === 'TREASURY' || w.frozen) continue
+      const set = map.get(w.user_id) ?? new Set<string>()
+      set.add(w.currency)
+      map.set(w.user_id, set)
+    }
+    userCurrencies.value = map
   } catch (e: unknown) {
     toast.add({
       severity: 'error',
@@ -115,6 +143,7 @@ function selectRecipient(u: AdminUser) {
 }
 
 function goToConfirm() {
+  formTouched.value = true
   if (!formValid.value) return
   step.value = 1
 }
@@ -169,6 +198,7 @@ function close() {
   amount.value = ''
   note.value = ''
   record.value = null
+  formTouched.value = false
   emit('update:open', false)
   emit('close')
 }
@@ -224,7 +254,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
             placeholder="Buscar por usuario…"
             @input="recipientUserId = ''"
           />
-          <div v-if="recipientMatches.length > 0 && !recipientUserId" class="autocomplete">
+          <div v-if="recipientMatches.length > 0" class="autocomplete">
             <button
               v-for="u in recipientMatches"
               :key="u.user_id"
@@ -236,9 +266,17 @@ const TITLES: Record<0 | 1 | 2, string> = {
               <span class="muted">· {{ u.display_name }}</span>
             </button>
           </div>
-          <span v-if="selectedRecipient" class="field__hint">
-            Seleccionado: <b>@{{ selectedRecipient.username }}</b>
-            ({{ selectedRecipient.display_name }})
+          <span
+            v-else-if="recipientQuery.trim() && !recipientUserId && selectedSource"
+            class="field__hint field__hint--warn"
+          >
+            Sin coincidencias con wallet {{ selectedSource.currency }}.
+            Sólo aparecen usuarios que ya tienen una wallet en esa moneda.
+          </span>
+          <span v-if="selectedRecipient" class="field__hint field__hint--ok">
+            <span class="pi pi-check-circle" aria-hidden="true" />
+            <b>@{{ selectedRecipient.username }}</b>
+            · {{ selectedRecipient.display_name }}
           </span>
         </label>
 
@@ -275,7 +313,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
           />
         </label>
 
-        <div v-if="formError" class="form-error">{{ formError }}</div>
+        <div v-if="formError && formTouched" class="form-error">{{ formError }}</div>
       </div>
     </template>
 
@@ -411,6 +449,18 @@ const TITLES: Record<0 | 1 | 2, string> = {
 .field__hint {
   font-size: 11.5px;
   color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.field__hint--ok {
+  color: var(--success, rgb(22, 101, 52));
+}
+.field__hint--warn {
+  color: var(--warning, #b45309);
+}
+.field__hint--ok .pi {
+  font-size: 12px;
 }
 
 .autocomplete {
@@ -450,8 +500,8 @@ const TITLES: Record<0 | 1 | 2, string> = {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 0 4px;
+  gap: 2px;
+  padding: 4px 0;
 }
 .confirm__avatar, .receipt__circle {
   width: 56px;
@@ -461,7 +511,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
   place-items: center;
   font-weight: 600;
   font-size: 20px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .confirm__avatar {
   background: var(--accent-soft);
@@ -487,7 +537,7 @@ const TITLES: Record<0 | 1 | 2, string> = {
 
 .kv {
   width: 100%;
-  margin-top: 18px;
+  margin-top: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
