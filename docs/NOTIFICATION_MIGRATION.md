@@ -29,3 +29,16 @@ Responsable
 
 Fecha objetivo sugerida
 - Iteración siguiente (sprint inmediato) — revisión en staging antes de merge a `develop`.
+
+Rollback (estado actual)
+- Se ha revertido temporalmente la integración de `AppToast` por problemas de compilación en entornos locales (plantillas SAX/HTML mal cerradas y errores HMR durante el desarrollo).
+- Motivo: priorizar estabilidad y reproducibilidad del entorno de desarrollo; el comportamiento previo con `PrimeVue` Toast funciona y debe mantenerse mientras se planifica una migración segura.
+
+Plan inmediato
+- Restaurar `useToast` para que proxee a `PrimeVue` (`useToast` -> `primevue/usetoast`).
+- Quitar el render de `AppToast` del `App.vue` para evitar que el HMR cargue plantillas no estables.
+- Documentar el diseño y API propuesta en este archivo y reintentar la implementación en una rama feature/notifications-migration cuando haya pruebas en staging.
+
+Acción requerida
+- Validar en el equipo la API y la posición por defecto (`top-right`) antes de reintroducir `AppToast`.
+- Añadir pruebas visuales y un pequeño e2e para asegurar que el nuevo toaster no rompe el layout ni el flujo de tareas en background.
