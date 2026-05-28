@@ -27,7 +27,15 @@ const router = createRouter({
     },
 
     // ── Authenticated routes ──────────────────────────────────────────────
-    { path: '/wallet', name: 'wallet', component: () => import('@/views/WalletView.vue') },
+    {
+      path: '/wallet',
+      name: 'wallet',
+      component: () => import('@/views/WalletView.vue'),
+      // BR-WL-11 (simulator side): the personal-wallet view is for
+      // end users only. ADMIN and OPERATOR must reach platform data
+      // through `/admin/*`, not by impersonating a customer.
+      meta: { requireRole: 'VIEWER' },
+    },
     {
       path: '/admin',
       name: 'admin',
@@ -120,6 +128,23 @@ const router = createRouter({
   ],
 })
 
+/**
+ * Pick the landing route for an authenticated user based on their role.
+ * Staff roles go to the admin overview; end users go to their wallet;
+ * unknown / role-less accounts fall back to the public dashboard.
+ *
+ * Single source of truth so the post-login redirect, the
+ * public-route bounce, and the requireRole-failure redirect cannot
+ * drift apart and accidentally drop a staff account on `/wallet`
+ * (which is now VIEWER-only — see BR-WL-11 in the simulator).
+ */
+export function defaultLandingFor(roles: readonly string[]): string {
+  if (roles.includes('ADMIN')) return '/admin'
+  if (roles.includes('OPERATOR')) return '/admin'
+  if (roles.includes('VIEWER')) return '/wallet'
+  return '/dashboard'
+}
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
   const isPublic = to.meta.public === true
@@ -129,15 +154,18 @@ router.beforeEach((to) => {
     return { name: 'login' }
   }
 
-  // Role check (e.g. /admin requires ADMIN).
+  // Role check (e.g. /admin requires ADMIN, /wallet requires VIEWER).
+  // Redirecting to the role-appropriate landing keeps the user out of
+  // the bounce loop that the old "always go to /wallet" guard caused
+  // for ADMIN now that /wallet is no longer reachable by them.
   const requiredRole = to.meta.requireRole as string | undefined
   if (requiredRole && !auth.hasRole(requiredRole)) {
-    return { name: 'wallet' }
+    return defaultLandingFor(auth.user?.roles ?? [])
   }
 
-  // Authenticated user hitting /login or /register → /wallet.
+  // Authenticated user hitting /login or /register → role landing.
   if (isPublic && auth.isAuthenticated && to.name !== 'activate') {
-    return { name: 'wallet' }
+    return defaultLandingFor(auth.user?.roles ?? [])
   }
 })
 
