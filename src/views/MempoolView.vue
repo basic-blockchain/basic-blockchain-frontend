@@ -193,7 +193,7 @@ function openTx(
   tx: Transaction,
   i: number,
   status: 'pending' | 'completed',
-  block: OpenTxBlockInfo = {},
+  block: OpenTxBlockInfo = {}
 ) {
   const ptx = tx as PendingTx
   const fee = Number(tx.fee ?? ptx.fee ?? 0)
@@ -223,9 +223,7 @@ function openTx(
       // than lie with a default.
       currency,
       receiverAmount:
-        crossCurrency && tx.receiverAmount != null
-          ? String(tx.receiverAmount)
-          : undefined,
+        crossCurrency && tx.receiverAmount != null ? String(tx.receiverAmount) : undefined,
       receiverCurrency: crossCurrency ? receiverCurrency : undefined,
       fee: fee > 0 ? String(fee) : undefined,
       size: txSize(tx),
@@ -304,18 +302,16 @@ function confirmedRowKey(r: ConfirmedRow): string {
         <p>Transacciones pendientes de confirmación · se incluyen en el próximo bloque.</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="mempoolStore.fetchPending()"
-        >
+        <BaseButton variant="ghost" size="sm" @click="mempoolStore.fetchPending()">
+          <template #leading>
+            <span class="pi pi-refresh" aria-hidden="true" />
+          </template>
           Refrescar
         </BaseButton>
-        <BaseButton
-          variant="primary"
-          size="sm"
-          @click="showMineFlow = true"
-        >
+        <BaseButton variant="primary" size="sm" @click="showMineFlow = true">
+          <template #leading>
+            <span aria-hidden="true">⛏</span>
+          </template>
           Minar ahora
         </BaseButton>
       </div>
@@ -327,54 +323,38 @@ function confirmedRowKey(r: ConfirmedRow): string {
           <span>Pendientes</span>
         </template>
         {{ mempoolStore.count }}
-        <template #footer>
-          en cola para el próximo bloque
-        </template>
+        <template #footer> en cola para el próximo bloque </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Operaciones con fee</span>
         </template>
         {{ txsWithFee }}
-        <template #footer>
-          aportan al recolector de fees
-        </template>
+        <template #footer> aportan al recolector de fees </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Tamaño total</span>
         </template>
         {{ totalSize }}
-        <template #footer>
-          aproximado por JSON serializado
-        </template>
+        <template #footer> aproximado por JSON serializado </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Tiempo medio espera</span>
         </template>
         —
-        <template #footer>
-          sin telemetría aún
-        </template>
+        <template #footer> sin telemetría aún </template>
       </BaseCard>
     </div>
 
-    <div
-      v-if="mempoolStore.loading"
-      class="loading-wrap"
-    >
+    <div v-if="mempoolStore.loading" class="loading-wrap">
       <div class="spinner" />
     </div>
 
     <section>
-      <div class="section-h">
-        Transacciones pendientes ({{ mempoolStore.count }})
-      </div>
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <div class="section-h">Transacciones pendientes ({{ mempoolStore.count }})</div>
+      <BaseCard variant="default" padding="none">
         <PaginatedTable
           :columns="pendingColumns"
           :rows="pendingRows"
@@ -385,7 +365,9 @@ function confirmedRowKey(r: ConfirmedRow): string {
             <span class="mono xs">{{ shortId(row.tx as PendingTx, row.index) }}</span>
           </template>
           <template #cell-route="{ row }">
-            <span class="mono xs">{{ shortAddr(row.tx.sender) }} → {{ shortAddr(row.tx.receiver) }}</span>
+            <span class="mono xs"
+              >{{ shortAddr(row.tx.sender) }} → {{ shortAddr(row.tx.receiver) }}</span
+            >
           </template>
           <template #cell-amount="{ row }">
             <span class="mono">{{ row.tx.amount }}</span>
@@ -397,9 +379,7 @@ function confirmedRowKey(r: ConfirmedRow): string {
             <span class="muted">{{ txSize(row.tx) }} B</span>
           </template>
           <template #cell-status>
-            <BaseBadge tone="warning">
-              En mempool
-            </BaseBadge>
+            <BaseBadge tone="warning"> En mempool </BaseBadge>
           </template>
           <template #row-actions="{ row }">
             <BaseButton
@@ -412,21 +392,14 @@ function confirmedRowKey(r: ConfirmedRow): string {
               <span class="pi pi-external-link" />
             </BaseButton>
           </template>
-          <template #empty>
-            No hay transacciones pendientes en el mempool
-          </template>
+          <template #empty> No hay transacciones pendientes en el mempool </template>
         </PaginatedTable>
       </BaseCard>
     </section>
 
     <section>
-      <div class="section-h">
-        Confirmadas recientemente
-      </div>
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <div class="section-h">Confirmadas recientemente</div>
+      <BaseCard variant="default" padding="none">
         <PaginatedTable
           :columns="confirmedColumns"
           :rows="confirmedStore.records"
@@ -448,9 +421,7 @@ function confirmedRowKey(r: ConfirmedRow): string {
           <template #cell-when="{ row }">
             <span class="muted xs">{{ row.blockTimestamp ?? '—' }}</span>
           </template>
-          <template #empty>
-            Aún no hay transacciones confirmadas.
-          </template>
+          <template #empty> Aún no hay transacciones confirmadas. </template>
         </PaginatedTable>
       </BaseCard>
     </section>

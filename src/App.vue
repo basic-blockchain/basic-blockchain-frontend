@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import ProfileDrawer from '@/components/drawers/ProfileDrawer.vue'
 import MiningNotification from '@/components/organisms/MiningNotification.vue'
+import MiningResultModal from '@/components/organisms/MiningResultModal.vue'
 import NotificationCenter from '@/components/topbar/NotificationCenter.vue'
 import CommandPalette from '@/components/topbar/CommandPalette.vue'
 
@@ -183,21 +184,12 @@ function avatarInitial(name: string): string {
     <Toast position="bottom-right" />
   </div>
 
-  <div
-    v-else
-    class="app"
-  >
-    <a
-      href="#main-content"
-      class="skip-link"
-    >Saltar al contenido</a>
+  <div v-else class="app">
+    <a href="#main-content" class="skip-link">Saltar al contenido</a>
 
     <!-- Mobile top bar -->
     <header class="mobile-bar">
-      <span
-        class="sb-brand-mark"
-        aria-hidden="true"
-      >C</span>
+      <span class="sb-brand-mark" aria-hidden="true">C</span>
       <span class="mobile-title">Cadena</span>
       <button
         class="hamburger"
@@ -206,20 +198,11 @@ function avatarInitial(name: string): string {
         aria-label="Abrir navegación"
         @click="navOpen = !navOpen"
       >
-        <span
-          class="pi"
-          :class="navOpen ? 'pi-times' : 'pi-bars'"
-          aria-hidden="true"
-        />
+        <span class="pi" :class="navOpen ? 'pi-times' : 'pi-bars'" aria-hidden="true" />
       </button>
     </header>
 
-    <div
-      v-if="navOpen"
-      class="nav-overlay"
-      aria-hidden="true"
-      @click="navOpen = false"
-    />
+    <div v-if="navOpen" class="nav-overlay" aria-hidden="true" @click="navOpen = false" />
 
     <!-- Sidebar -->
     <aside
@@ -229,32 +212,16 @@ function avatarInitial(name: string): string {
       aria-label="Navegación principal"
     >
       <div class="sb-brand">
-        <span
-          class="sb-brand-mark"
-          aria-hidden="true"
-        >C</span>
+        <span class="sb-brand-mark" aria-hidden="true">C</span>
         <span>Cadena</span>
       </div>
 
       <nav aria-label="Secciones">
-        <template
-          v-for="group in navGroups"
-          :key="group.label"
-        >
+        <template v-for="group in navGroups" :key="group.label">
           <span class="sb-section">{{ group.label }}</span>
-          <template
-            v-for="item in group.items"
-            :key="item.label + item.to"
-          >
-            <span
-              v-if="item.disabled"
-              class="sb-link sb-link-disabled"
-              aria-disabled="true"
-            >
-              <span
-                :class="item.icon"
-                aria-hidden="true"
-              />
+          <template v-for="item in group.items" :key="item.label + item.to">
+            <span v-if="item.disabled" class="sb-link sb-link-disabled" aria-disabled="true">
+              <span :class="item.icon" aria-hidden="true" />
               <span class="sb-link-label">{{ item.label }}</span>
               <span class="sb-link-soon">Pronto</span>
             </span>
@@ -265,29 +232,16 @@ function avatarInitial(name: string): string {
               :class="{ active: isActive(item.to) }"
               :aria-current="isActive(item.to) ? 'page' : undefined"
             >
-              <span
-                :class="item.icon"
-                aria-hidden="true"
-              />
+              <span :class="item.icon" aria-hidden="true" />
               <span>{{ item.label }}</span>
             </RouterLink>
           </template>
         </template>
       </nav>
 
-      <div
-        v-if="auth.isAuthenticated && auth.user"
-        class="sb-foot"
-      >
-        <button
-          class="sb-profile-btn"
-          aria-label="Abrir perfil"
-          @click="showProfile = true"
-        >
-          <span
-            class="sb-avatar"
-            aria-hidden="true"
-          >{{
+      <div v-if="auth.isAuthenticated && auth.user" class="sb-foot">
+        <button class="sb-profile-btn" aria-label="Abrir perfil" @click="showProfile = true">
+          <span class="sb-avatar" aria-hidden="true">{{
             avatarInitial(auth.user.display_name)
           }}</span>
           <div class="sb-foot-text">
@@ -295,16 +249,8 @@ function avatarInitial(name: string): string {
             <span class="sb-foot-role">{{ auth.user.roles[0] ?? 'VIEWER' }}</span>
           </div>
         </button>
-        <button
-          class="sb-logout"
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-          @click="logout"
-        >
-          <span
-            class="pi pi-sign-out"
-            aria-hidden="true"
-          />
+        <button class="sb-logout" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
+          <span class="pi pi-sign-out" aria-hidden="true" />
         </button>
       </div>
 
@@ -315,10 +261,7 @@ function avatarInitial(name: string): string {
         aria-live="polite"
         :aria-label="`WebSocket: ${wsStatus === 'OPEN' ? 'conectado' : 'conectando'}`"
       >
-        <span
-          class="ws-dot"
-          aria-hidden="true"
-        />
+        <span class="ws-dot" aria-hidden="true" />
         <span>{{ wsStatus === 'OPEN' ? 'Live' : 'Conectando…' }}</span>
       </div>
     </aside>
@@ -327,19 +270,9 @@ function avatarInitial(name: string): string {
     <div class="main">
       <!-- Topbar with breadcrumbs -->
       <header class="topbar">
-        <nav
-          class="crumbs"
-          aria-label="Breadcrumb"
-        >
-          <template
-            v-for="(crumb, i) in breadcrumbs"
-            :key="crumb.label"
-          >
-            <span
-              v-if="i > 0"
-              class="crumb-sep"
-              aria-hidden="true"
-            >·</span>
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <template v-for="(crumb, i) in breadcrumbs" :key="crumb.label">
+            <span v-if="i > 0" class="crumb-sep" aria-hidden="true">·</span>
             <strong v-if="i === breadcrumbs.length - 1">{{ crumb.label }}</strong>
             <span v-else>{{ crumb.label }}</span>
           </template>
@@ -350,11 +283,7 @@ function avatarInitial(name: string): string {
           :title="theme === 'dark' ? 'Modo claro' : 'Modo oscuro'"
           @click="toggleTheme"
         >
-          <span
-            class="pi"
-            :class="theme === 'dark' ? 'pi-sun' : 'pi-moon'"
-            aria-hidden="true"
-          />
+          <span class="pi" :class="theme === 'dark' ? 'pi-sun' : 'pi-moon'" aria-hidden="true" />
         </button>
         <button
           class="topbar-search"
@@ -362,37 +291,24 @@ function avatarInitial(name: string): string {
           aria-label="Abrir búsqueda global"
           @click="showPalette = true"
         >
-          <span
-            class="pi pi-search"
-            aria-hidden="true"
-          />
+          <span class="pi pi-search" aria-hidden="true" />
           <span class="topbar-search-placeholder">Buscar…</span>
           <kbd class="topbar-kbd">⌘K</kbd>
         </button>
         <NotificationCenter />
       </header>
 
-      <main
-        id="main-content"
-        class="page-content"
-        tabindex="-1"
-      >
+      <main id="main-content" class="page-content" tabindex="-1">
         <RouterView />
       </main>
     </div>
 
     <Toast position="bottom-right" />
     <MiningNotification />
+    <MiningResultModal />
 
-    <ProfileDrawer
-      :user="auth.user"
-      :open="showProfile"
-      @close="showProfile = false"
-    />
-    <CommandPalette
-      :open="showPalette"
-      @close="showPalette = false"
-    />
+    <ProfileDrawer :user="auth.user" :open="showProfile" @close="showProfile = false" />
+    <CommandPalette :open="showPalette" @close="showPalette = false" />
   </div>
 </template>
 
@@ -665,7 +581,9 @@ function avatarInitial(name: string): string {
   text-align: left;
   font-family: inherit;
 }
-.topbar-search:hover { background: var(--hover, var(--surface-2)); }
+.topbar-search:hover {
+  background: var(--hover, var(--surface-2));
+}
 .topbar-search-placeholder {
   flex: 1;
   color: var(--text-3);

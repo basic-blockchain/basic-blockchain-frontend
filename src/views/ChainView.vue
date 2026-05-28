@@ -154,9 +154,15 @@ function txRef(index: number, blockIndex: number): string {
       </div>
       <div class="page-actions">
         <BaseButton variant="ghost" size="sm" @click="chainStore.fetchChain()">
+          <template #leading>
+            <span class="pi pi-refresh" aria-hidden="true" />
+          </template>
           Sincronizar
         </BaseButton>
         <BaseButton variant="primary" size="sm" @click="showMineFlow = true">
+          <template #leading>
+            <span aria-hidden="true">⛏</span>
+          </template>
           Minar bloque
         </BaseButton>
       </div>
