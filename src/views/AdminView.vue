@@ -128,12 +128,7 @@ async function loadStats() {
 
 async function refreshAll() {
   fetch.reset()
-  await Promise.allSettled([
-    loadStats(),
-    loadVolume(),
-    loadRecentMovements(),
-    loadCriticalEvents(),
-  ])
+  await Promise.allSettled([loadStats(), loadVolume(), loadRecentMovements(), loadCriticalEvents()])
 }
 
 function changeRange(range: VolumeRange) {
@@ -251,25 +246,11 @@ onMounted(() => {
         <p>Panel de administración de la plataforma</p>
       </div>
       <div class="page-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="refreshAll"
-        >
-          Actualizar
-        </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="router.push('/admin/users')"
-        >
+        <BaseButton variant="ghost" size="sm" @click="refreshAll"> Actualizar </BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="router.push('/admin/users')">
           Ver usuarios
         </BaseButton>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          @click="router.push('/admin/audit')"
-        >
+        <BaseButton variant="ghost" size="sm" @click="router.push('/admin/audit')">
           Ver auditoría
         </BaseButton>
       </div>
@@ -277,14 +258,8 @@ onMounted(() => {
 
     <!-- Stepper refresh indicator -->
     <Transition name="fade">
-      <div
-        v-if="fetch.hasStarted.value && !fetch.refreshComplete.value"
-        class="refresh-indicator"
-      >
-        <Stepper
-          :steps="fetch.steps.value"
-          :current="fetch.currentIndex.value"
-        />
+      <div v-if="fetch.hasStarted.value && !fetch.refreshComplete.value" class="refresh-indicator">
+        <Stepper :steps="fetch.steps.value" :current="fetch.currentIndex.value" />
       </div>
     </Transition>
 
@@ -302,9 +277,7 @@ onMounted(() => {
           </BaseBadge>
         </template>
         {{ statsStore.stats?.users.total ?? '—' }}
-        <template #footer>
-          {{ statsStore.stats?.users.active ?? '—' }} activos
-        </template>
+        <template #footer> {{ statsStore.stats?.users.active ?? '—' }} activos </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -319,9 +292,7 @@ onMounted(() => {
           </BaseBadge>
         </template>
         {{ statsStore.stats?.users.active ?? '—' }}
-        <template #footer>
-          {{ statsStore.stats?.users.banned ?? 0 }} baneados
-        </template>
+        <template #footer> {{ statsStore.stats?.users.banned ?? 0 }} baneados </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -337,27 +308,18 @@ onMounted(() => {
       <BaseCard variant="bigstat">
         <template #header>
           <span>Transacciones · 7d</span>
-          <BaseBadge
-            v-if="txTrend"
-            variant="outline"
-            :tone="trendBadgeTone(txTrend.delta_pct)"
-          >
+          <BaseBadge v-if="txTrend" variant="outline" :tone="trendBadgeTone(txTrend.delta_pct)">
             {{ formatPct(txTrend.delta_pct) }}
           </BaseBadge>
         </template>
         {{ txTrend?.current ?? '—' }}
-        <template #footer>
-          vs {{ txTrend?.previous ?? '—' }} previo
-        </template>
+        <template #footer> vs {{ txTrend?.previous ?? '—' }} previo </template>
       </BaseCard>
     </div>
 
     <!-- Volume chart + Composición del saldo -->
     <div class="volume-grid">
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
           <div class="panel-h chart-h">
             <div class="panel-title">
@@ -379,49 +341,24 @@ onMounted(() => {
           </div>
         </template>
         <div class="chart-body">
-          <div
-            v-if="fetch.status.volume === 'current'"
-            class="chart-loading"
-          >
-            <span
-              class="pi pi-spin pi-spinner"
-              aria-hidden="true"
-            /> Cargando…
+          <div v-if="fetch.status.volume === 'current'" class="chart-loading">
+            <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
           </div>
-          <VChart
-            v-else-if="volume"
-            class="chart"
-            :option="volumeOptions"
-            autoresize
-          />
-          <div
-            v-else
-            class="chart-empty"
-          >
-            Sin datos en el rango.
-          </div>
+          <VChart v-else-if="volume" class="chart" :option="volumeOptions" autoresize />
+          <div v-else class="chart-empty">Sin datos en el rango.</div>
         </div>
-        <div
-          v-if="volume"
-          class="chart-totals"
-        >
+        <div v-if="volume" class="chart-totals">
           <span>
             Total <strong>${{ formatUsd(volume.totals.volume_usd) }}</strong>
           </span>
           <span>· {{ volume.totals.tx_count }} tx</span>
-          <span
-            v-if="volume.totals.unpriced_count > 0"
-            class="unpriced-note"
-          >
+          <span v-if="volume.totals.unpriced_count > 0" class="unpriced-note">
             · {{ volume.totals.unpriced_count }} sin tasa FX
           </span>
         </div>
       </BaseCard>
 
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
           <div class="panel-h">
             <div class="panel-title">
@@ -430,21 +367,11 @@ onMounted(() => {
             </div>
           </div>
         </template>
-        <div
-          v-if="composition.length === 0"
-          class="panel-empty"
-        >
+        <div v-if="composition.length === 0" class="panel-empty">
           Sin balances en circulación todavía.
         </div>
-        <ul
-          v-else
-          class="composition-list"
-        >
-          <li
-            v-for="item in composition"
-            :key="item.currency"
-            class="composition-row"
-          >
+        <ul v-else class="composition-list">
+          <li v-for="item in composition" :key="item.currency" class="composition-row">
             <div class="comp-meta">
               <span class="comp-currency">{{ item.currency }}</span>
               <span class="comp-pct">{{ item.pct }}%</span>
@@ -463,50 +390,28 @@ onMounted(() => {
 
     <!-- Critical events + Top movements -->
     <div class="content-grid">
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
-          <div class="panel-h">
-            Eventos críticos · 24h
-          </div>
+          <div class="panel-h">Eventos críticos · 24h</div>
         </template>
-        <div
-          v-if="fetch.status['critical-events'] === 'current'"
-          class="panel-loading"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="fetch.status['critical-events'] === 'current'" class="panel-loading">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
-        <div
-          v-else-if="criticalEvents.length === 0"
-          class="panel-empty"
-        >
+        <div v-else-if="criticalEvents.length === 0" class="panel-empty">
           Sin eventos críticos en las últimas 24h.
         </div>
-        <ul
-          v-else
-          class="event-list"
-        >
-          <li
-            v-for="e in criticalEvents"
-            :key="e.id"
-            class="event-row"
-          >
-            <span
-              class="event-dot"
-              :class="`sev-${e.severity ?? 'info'}`"
-            />
+        <ul v-else class="event-list">
+          <li v-for="e in criticalEvents" :key="e.id" class="event-row">
+            <span class="event-dot" :class="`sev-${e.severity ?? 'info'}`" />
             <div class="event-body">
               <div class="event-action mono">
                 {{ e.action }}
               </div>
               <div class="event-meta">
                 <span class="mono">{{ shortenId(e.actor_id) }}</span>
-                <span v-if="e.target_id">→ <span class="mono">{{ shortenId(e.target_id) }}</span></span>
+                <span v-if="e.target_id"
+                  >→ <span class="mono">{{ shortenId(e.target_id) }}</span></span
+                >
               </div>
             </div>
             <div class="event-ts">
@@ -516,37 +421,20 @@ onMounted(() => {
         </ul>
       </BaseCard>
 
-      <BaseCard
-        variant="default"
-        padding="none"
-      >
+      <BaseCard variant="default" padding="none">
         <template #header>
           <div class="panel-h">
             <div class="panel-title">
               <span>Movimientos recientes · 24h</span>
               <span class="panel-sub">Últimas transacciones confirmadas en la plataforma</span>
             </div>
-            <RouterLink
-              to="/admin/movements"
-              class="panel-link"
-            >
-              Ver todos →
-            </RouterLink>
+            <RouterLink to="/admin/movements" class="panel-link"> Ver todos → </RouterLink>
           </div>
         </template>
-        <div
-          v-if="fetch.status['recent-movements'] === 'current'"
-          class="panel-loading"
-        >
-          <span
-            class="pi pi-spin pi-spinner"
-            aria-hidden="true"
-          /> Cargando…
+        <div v-if="fetch.status['recent-movements'] === 'current'" class="panel-loading">
+          <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
         </div>
-        <div
-          v-else-if="recentMovements.length === 0"
-          class="panel-empty"
-        >
+        <div v-else-if="recentMovements.length === 0" class="panel-empty">
           Sin movimientos en las últimas 24h.
         </div>
         <PaginatedTable
@@ -781,11 +669,21 @@ onMounted(() => {
   border-radius: 999px;
   transition: width var(--duration-base) var(--ease-out);
 }
-.comp-bar-fill.tone-green { background: var(--success, #2f9e44); }
-.comp-bar-fill.tone-orange { background: var(--warning, #e8590c); }
-.comp-bar-fill.tone-blue { background: var(--accent, #4263eb); }
-.comp-bar-fill.tone-teal { background: var(--info, #1098ad); }
-.comp-bar-fill.tone-gray { background: var(--border-strong, #adb5bd); }
+.comp-bar-fill.tone-green {
+  background: var(--success, #2f9e44);
+}
+.comp-bar-fill.tone-orange {
+  background: var(--warning, #e8590c);
+}
+.comp-bar-fill.tone-blue {
+  background: var(--accent, #4263eb);
+}
+.comp-bar-fill.tone-teal {
+  background: var(--info, #1098ad);
+}
+.comp-bar-fill.tone-gray {
+  background: var(--border-strong, #adb5bd);
+}
 
 .panel-loading,
 .panel-empty {

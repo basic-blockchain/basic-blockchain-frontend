@@ -42,14 +42,9 @@ async function submit() {
 
 <template>
   <AuthLayout>
-    <form
-      class="auth-form"
-      @submit.prevent="submit"
-    >
+    <form class="auth-form" @submit.prevent="submit">
       <h1>Ingresar</h1>
-      <p class="auth-sub">
-        Accedé a tu panel de la plataforma.
-      </p>
+      <p class="auth-sub">Accedé a tu panel de la plataforma.</p>
 
       <div class="fld">
         <label for="username">Email o usuario</label>
@@ -60,7 +55,7 @@ async function submit() {
           autocomplete="username"
           placeholder="usuario o email"
           required
-        >
+        />
       </div>
       <div class="fld">
         <label for="password">Contraseña</label>
@@ -71,16 +66,10 @@ async function submit() {
           autocomplete="current-password"
           placeholder="••••••••"
           required
-        >
+        />
       </div>
 
-      <BaseButton
-        variant="primary"
-        size="lg"
-        block
-        type="submit"
-        :loading="loading"
-      >
+      <BaseButton variant="primary" size="lg" block type="submit" :loading="loading">
         Continuar
       </BaseButton>
 
@@ -90,25 +79,14 @@ async function submit() {
         <span class="auth-divider-line" />
       </div>
 
-      <RouterLink
-        v-slot="{ navigate }"
-        to="/register"
-        custom
-      >
-        <BaseButton
-          variant="ghost"
-          size="lg"
-          block
-          @click="navigate"
-        >
+      <RouterLink v-slot="{ navigate }" to="/register" custom>
+        <BaseButton variant="ghost" size="lg" block @click="navigate">
           Crear una cuenta
         </BaseButton>
       </RouterLink>
 
       <div class="auth-switch">
-        ¿No tenés cuenta? <RouterLink to="/register">
-          Crear una
-        </RouterLink>
+        ¿No tenés cuenta? <RouterLink to="/register"> Crear una </RouterLink>
       </div>
     </form>
 
@@ -121,11 +99,10 @@ async function submit() {
 
     <template #right-panel>
       <div class="auth-right-content">
-        <div class="auth-right-label">
-          Plataforma
-        </div>
+        <div class="auth-right-label">Plataforma</div>
         <p class="auth-quote">
-          "Operaciones, cumplimiento y tesorería sobre la misma capa de datos blockchain — sin reconciliaciones manuales."
+          "Operaciones, cumplimiento y tesorería sobre la misma capa de datos blockchain — sin
+          reconciliaciones manuales."
         </p>
       </div>
 
@@ -133,30 +110,21 @@ async function submit() {
         <h4>Roles de la plataforma</h4>
         <div class="role-list">
           <div class="role-item">
-            <span
-              class="role-dot"
-              style="background: #a78bfa"
-            />
+            <span class="role-dot" style="background: #a78bfa" />
             <div>
               <b>ADMIN</b>
               <span>Gobierno total · tesorería, configuración, eliminación de usuarios</span>
             </div>
           </div>
           <div class="role-item">
-            <span
-              class="role-dot"
-              style="background: #67e8f9"
-            />
+            <span class="role-dot" style="background: #67e8f9" />
             <div>
               <b>OPERATOR</b>
               <span>Operativa diaria · KYC, congelar/desbanear, mover fondos según política</span>
             </div>
           </div>
           <div class="role-item">
-            <span
-              class="role-dot"
-              style="background: #86efac"
-            />
+            <span class="role-dot" style="background: #86efac" />
             <div>
               <b>USER</b>
               <span>Cliente final · wallets, P2P, exchange, envíos y recepción</span>
