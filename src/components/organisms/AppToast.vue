@@ -15,17 +15,16 @@ const { toasts, remove } = useAppToast()
               <span v-else-if="t.severity === 'error'" class="pi pi-times" />
               <span v-else-if="t.severity === 'warn'" class="pi pi-exclamation-triangle" />
               <span v-else class="pi pi-info-circle" />
-            </div>
-            <div class="app-toast__body">
-              <div class="app-toast__summary">{{ t.summary }}</div>
-              <div v-if="t.detail" class="app-toast__detail">{{ t.detail }}</div>
-            </div>
-          </div>
-          <button class="app-toast__close" aria-label="Cerrar" @click="remove(t.id)">✕</button>
-        </div>
-      </transition-group>
-    </div>
-  </teleport>
+            .app-toast {
+              position: fixed;
+              top: 16px;
+              right: 16px;
+              z-index: 2000;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+            .app-toast__item {
 </template>
 
 <style scoped>
@@ -49,8 +48,8 @@ const { toasts, remove } = useAppToast()
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
-}
-.app-toast__content {
+
+            </style>
   display: flex;
   gap: 10px;
   align-items: flex-start;
