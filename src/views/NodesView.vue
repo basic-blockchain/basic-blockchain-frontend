@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
+import { useAppToast } from '@/composables/useAppToast'
 import { useNodesStore } from '@/stores/nodes'
 import type { Block } from '@/domain/block'
 import { formatHash } from '@/domain/block'
@@ -12,7 +12,7 @@ import BackgroundTaskIndicator from '@/components/organisms/BackgroundTaskIndica
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const nodesStore = useNodesStore()
-const toast = useToast()
+const toast = useAppToast()
 
 const newUrl = ref('http://localhost:5001')
 const resolving = ref(false)

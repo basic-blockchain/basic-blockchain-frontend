@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
+import AppToast from '@/components/organisms/AppToast.vue'
 import { useBlockchainWs } from '@/composables/useBlockchainWs'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
@@ -181,6 +182,7 @@ function avatarInitial(name: string): string {
   <!-- Auth views render full-screen without the shell -->
   <div v-if="isAuthRoute">
     <RouterView />
+    <AppToast />
     <Toast position="bottom-right" />
   </div>
 
