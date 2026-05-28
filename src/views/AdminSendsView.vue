@@ -11,6 +11,7 @@ import BaseButton from '@/components/atoms/BaseButton.vue'
 import AssetBadge from '@/components/atoms/AssetBadge.vue'
 import UserChip from '@/components/atoms/UserChip.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
+import SendDetailModal from '@/components/organisms/SendDetailModal.vue'
 
 const toast = useToast()
 const auth = useAuthStore()
@@ -27,6 +28,14 @@ const needsElevation = ref(false)
 const elevating = ref(false)
 const activeTab = ref<'all' | 'internal' | 'onchain' | 'pending' | 'failed'>('all')
 const searchQuery = ref('')
+const selectedRow = ref<SendRow | null>(null)
+
+function openDetail(payload: { row: SendRow }) {
+  selectedRow.value = payload.row
+}
+function closeDetail() {
+  selectedRow.value = null
+}
 
 async function load() {
   loading.value = true
@@ -283,7 +292,12 @@ onMounted(load)
       <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
     <BaseCard v-else variant="default" padding="none">
-      <PaginatedTable :columns="sendColumns" :rows="filteredRows">
+      <PaginatedTable
+        :columns="sendColumns"
+        :rows="filteredRows"
+        class="sends-table"
+        @row-click="openDetail"
+      >
         <template #cell-kind="{ row }">
           <BaseBadge :tone="kindTone((row as SendRow).kind)">
             {{ kindLabel((row as SendRow).kind) }}
@@ -315,6 +329,12 @@ onMounted(load)
         <template #empty> Sin envíos en esta categoría. </template>
       </PaginatedTable>
     </BaseCard>
+
+    <SendDetailModal
+      :open="selectedRow !== null"
+      :row="selectedRow"
+      @close="closeDetail"
+    />
   </div>
 </template>
 
@@ -445,6 +465,14 @@ onMounted(load)
 }
 .text-dim {
   color: var(--text-3);
+}
+
+/* Hint that table rows open a detail modal. */
+.sends-table :deep(.base-tbl__body tr) {
+  cursor: pointer;
+}
+.sends-table :deep(.base-tbl__body tr:hover) {
+  background: var(--muted-soft);
 }
 .ref-cell {
   font-size: 11px;
