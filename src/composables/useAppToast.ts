@@ -17,6 +17,12 @@ function add(msg: Omit<ToastMessage, 'id'>) {
   const id = idCounter++
   const toast: ToastMessage = { id, ...msg }
   state.toasts.push(toast)
+  // Debug logging to help trace toast creation in runtime
+  try {
+    console.debug('[useAppToast] add', toast)
+  } catch (e) {
+    /* ignore */
+  }
   if (toast.life && toast.life > 0) {
     setTimeout(() => remove(id), toast.life)
   }
@@ -26,6 +32,11 @@ function add(msg: Omit<ToastMessage, 'id'>) {
 function remove(id: number) {
   const idx = state.toasts.findIndex((t) => t.id === id)
   if (idx >= 0) state.toasts.splice(idx, 1)
+  try {
+    console.debug('[useAppToast] remove', id)
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 function success(summary: string, detail?: string, life = 3000) {
