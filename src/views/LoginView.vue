@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { defaultLandingFor } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
 import { BlockchainApiError } from '@/api/errors'
@@ -20,7 +21,11 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(username.value.trim(), password.value)
-    await router.push('/wallet')
+    // Role-aware landing: ADMIN / OPERATOR → /admin, VIEWER → /wallet,
+    // anything else → /dashboard. Hard-coded `/wallet` here used to
+    // strand staff accounts on the customer surface (and now, with
+    // BR-WL-11, would bounce them right back out).
+    await router.push(defaultLandingFor(auth.user?.roles ?? []))
   } catch (e) {
     const msg =
       e instanceof BlockchainApiError && e.httpStatus === 401
