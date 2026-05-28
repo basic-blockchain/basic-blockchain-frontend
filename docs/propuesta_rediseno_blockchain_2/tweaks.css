@@ -1,0 +1,276 @@
+/* ── Tweak modes — reshape the feel of the whole platform ─────────── */
+
+/* ── MOOD: palette + personality ─────────────────────────────────── */
+
+/* Sober (default — Mercury/Stripe) is already in :root in styles.css */
+
+/* Terminal — Bloomberg/Linear dark, dense, charts-first */
+html[data-mood="terminal"] {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --hover: #242424;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+  --text: #e8e8e3;
+  --text-2: #a0a09a;
+  --text-3: #6a6a64;
+  --accent: #00d484;
+  --accent-soft: #003a26;
+  --accent-text: #00d484;
+  --success: #00d484;
+  --success-soft: #003a26;
+  --warning: #ffaa00;
+  --warning-soft: #3a2800;
+  --danger: #ff4444;
+  --danger-soft: #3a0e0e;
+  --info: #4499ff;
+  --info-soft: #0a1f3a;
+  --muted: #6a6a64;
+  --muted-soft: #242424;
+}
+html[data-mood="terminal"] body {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+html[data-mood="terminal"] .bdg-active { background: #003a26; color: #00d484; }
+html[data-mood="terminal"] .bdg-pending_kyc { background: #3a2800; color: #ffaa00; }
+html[data-mood="terminal"] .bdg-frozen { background: #0a1f3a; color: #4499ff; }
+html[data-mood="terminal"] .bdg-banned { background: #3a0e0e; color: #ff4444; }
+html[data-mood="terminal"] .bdg-deleted { background: #242424; color: #a0a09a; }
+html[data-mood="terminal"] .bdg-kyc { background: #1c1c1c; color: #a0a09a; border-color: #2a2a2a; }
+html[data-mood="terminal"] .btn-primary { background: #00d484; color: #0a0a0a; border-color: #00d484; }
+html[data-mood="terminal"] .btn-primary:hover { background: #00b870; border-color: #00b870; }
+html[data-mood="terminal"] .sb-brand-mark,
+html[data-mood="terminal"] .auth-brand .mark,
+html[data-mood="terminal"] .mark {
+  background: #00d484 !important; color: #0a0a0a !important;
+}
+html[data-mood="terminal"] .wallet-hero,
+html[data-mood="terminal"] .kpi-dark,
+html[data-mood="terminal"] .auth-right {
+  background: linear-gradient(135deg, #1c1c1c 0%, #141414 100%) !important;
+  color: #e8e8e3;
+  border: 1px solid #2a2a2a;
+}
+html[data-mood="terminal"] .wallet-hero::before,
+html[data-mood="terminal"] .wallet-hero::after,
+html[data-mood="terminal"] .auth-right::before,
+html[data-mood="terminal"] .auth-right::after { display: none; }
+html[data-mood="terminal"] .topbar-kbd,
+html[data-mood="terminal"] .topbar-search { background: #141414; }
+html[data-mood="terminal"] .env-pill { background: #3a2800; color: #ffaa00; }
+html[data-mood="terminal"] .env-pill::before { background: #ffaa00; }
+html[data-mood="terminal"] .stat-delta.up,
+html[data-mood="terminal"] .pill-up { color: #00d484; background: rgba(0,212,132,0.12); }
+html[data-mood="terminal"] .pill-dn { color: #ff4444; background: rgba(255,68,68,0.12); }
+html[data-mood="terminal"] .mv-buy { background: #003a26; color: #00d484; }
+html[data-mood="terminal"] .mv-sell { background: #3a0e0e; color: #ff4444; }
+html[data-mood="terminal"] .mv-dep { background: #0a1f3a; color: #4499ff; }
+
+/* Editorial — FT / WSJ cream + deep accent, print-like */
+html[data-mood="editorial"] {
+  --bg: #fff1e5;
+  --surface: #fbf8ee;
+  --surface-2: #f5ead4;
+  --hover: #f0e0bf;
+  --border: #d9c9a8;
+  --border-strong: #c2ad7e;
+  --text: #1a1310;
+  --text-2: #6b5c4d;
+  --text-3: #998769;
+  --accent: #990f3d;
+  --accent-soft: #f9dde3;
+  --accent-text: #6e0a2c;
+  --success: #2a5e2a;
+  --success-soft: #e1ecd8;
+  --warning: #8a4f00;
+  --warning-soft: #f5e4c8;
+  --danger: #8a1e1e;
+  --danger-soft: #f5d8d8;
+  --info: #1a4a6e;
+  --info-soft: #d6e4ee;
+  --muted: #6b5c4d;
+  --muted-soft: #ede0c2;
+}
+html[data-mood="editorial"] .auth-right,
+html[data-mood="editorial"] .wallet-hero,
+html[data-mood="editorial"] .kpi-dark {
+  background: linear-gradient(135deg, #2a1a14 0%, #1a1310 100%) !important;
+  color: #fff1e5;
+}
+html[data-mood="editorial"] .btn-primary { background: #990f3d; color: #fff1e5; border-color: #990f3d; }
+html[data-mood="editorial"] .btn-primary:hover { background: #7a0a30; border-color: #7a0a30; }
+html[data-mood="editorial"] .sb-brand-mark,
+html[data-mood="editorial"] .auth-brand .mark,
+html[data-mood="editorial"] .mark { background: #990f3d !important; color: #fff1e5 !important; }
+html[data-mood="editorial"] .env-pill { background: #f5e4c8; color: #8a4f00; }
+
+/* Vivid — modern crypto, violet + saturated */
+html[data-mood="vivid"] {
+  --bg: #faf7ff;
+  --surface: #ffffff;
+  --surface-2: #f1ecfd;
+  --hover: #e7defb;
+  --border: #e1d6f7;
+  --border-strong: #c9b8ed;
+  --text: #1a1428;
+  --text-2: #5a4d78;
+  --text-3: #8c80a8;
+  --accent: #6d28d9;
+  --accent-soft: #ede5fb;
+  --accent-text: #5b21b6;
+  --success: #059669;
+  --success-soft: #d1fae5;
+  --warning: #d97706;
+  --warning-soft: #fef3c7;
+  --danger: #db2777;
+  --danger-soft: #fce7f3;
+  --info: #0284c7;
+  --info-soft: #dbeafe;
+  --muted: #8c80a8;
+  --muted-soft: #ede9fe;
+}
+html[data-mood="vivid"] .auth-right,
+html[data-mood="vivid"] .wallet-hero,
+html[data-mood="vivid"] .kpi-dark {
+  background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 50%, #1a1428 100%) !important;
+  color: #faf7ff;
+}
+html[data-mood="vivid"] .btn-primary { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border-color: transparent; }
+html[data-mood="vivid"] .sb-brand-mark,
+html[data-mood="vivid"] .auth-brand .mark,
+html[data-mood="vivid"] .mark { background: linear-gradient(135deg, #7c3aed, #ec4899) !important; color: white !important; }
+html[data-mood="vivid"] .env-pill { background: var(--accent-soft); color: var(--accent-text); }
+html[data-mood="vivid"] .env-pill::before { background: var(--accent); }
+
+/* ── TYPEFACE: type system reshapes the personality ──────────────── */
+html[data-type="mono"] {
+  --font-sans: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+}
+html[data-type="mono"] body { letter-spacing: -0.01em; }
+html[data-type="mono"] .scr-title,
+html[data-type="mono"] .auth-form h1,
+html[data-type="mono"] .stat-val,
+html[data-type="mono"] .bigstat .vl,
+html[data-type="mono"] .wallet-hero .bal,
+html[data-type="mono"] .kpi-dark .vl {
+  font-family: "Geist Mono", monospace; letter-spacing: -0.04em; font-weight: 500;
+}
+
+html[data-type="serif"] {
+  --font-sans: "Source Serif 4", "Source Serif Pro", "Georgia", serif;
+}
+html[data-type="serif"] .scr-title,
+html[data-type="serif"] .auth-form h1 {
+  font-family: "Source Serif 4", "Source Serif Pro", "Georgia", serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+html[data-type="serif"] h1, html[data-type="serif"] h2, html[data-type="serif"] h3 {
+  font-family: "Source Serif 4", "Source Serif Pro", "Georgia", serif;
+}
+html[data-type="serif"] .btn,
+html[data-type="serif"] .tab,
+html[data-type="serif"] .bdg,
+html[data-type="serif"] .chip,
+html[data-type="serif"] .sb-link,
+html[data-type="serif"] .pill {
+  font-family: "Geist", sans-serif;
+}
+html[data-type="serif"] .stat-val,
+html[data-type="serif"] .bigstat .vl,
+html[data-type="serif"] .wallet-hero .bal,
+html[data-type="serif"] .kpi-dark .vl {
+  font-family: "Source Serif 4", "Georgia", serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-style: normal;
+}
+
+/* ── SURFACE: card treatment dramatically changes feel ───────────── */
+html[data-surface="flat"] {
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 0 0 1px var(--border);
+  --radius-sm: 0;
+  --radius: 2px;
+  --radius-lg: 4px;
+}
+html[data-surface="flat"] .card,
+html[data-surface="flat"] .table-wrap,
+html[data-surface="flat"] .bigstat,
+html[data-surface="flat"] .treasury-card,
+html[data-surface="flat"] .modal {
+  box-shadow: none;
+  border-color: var(--border-strong);
+}
+html[data-surface="flat"] .btn { box-shadow: none; border-radius: 2px; }
+html[data-surface="flat"] .wallet-hero,
+html[data-surface="flat"] .kpi-dark { border-radius: 4px; box-shadow: none; }
+html[data-surface="flat"] .qr { border-radius: 4px; }
+html[data-surface="flat"] .bdg { border-radius: 2px; }
+html[data-surface="flat"] .chip { border-radius: 2px; }
+
+html[data-surface="sharp"] {
+  --shadow-sm: 0 1px 0 rgba(20,18,12,0.08);
+  --shadow-md: 0 2px 0 rgba(20,18,12,0.06), 0 1px 0 rgba(20,18,12,0.1);
+  --shadow-lg: 0 8px 0 rgba(20,18,12,0.04), 0 2px 0 rgba(20,18,12,0.12);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 14px;
+}
+html[data-surface="sharp"] .card,
+html[data-surface="sharp"] .bigstat,
+html[data-surface="sharp"] .treasury-card,
+html[data-surface="sharp"] .modal,
+html[data-surface="sharp"] .table-wrap {
+  border: 1.5px solid var(--text);
+  box-shadow: 4px 4px 0 var(--text);
+}
+html[data-surface="sharp"] .btn {
+  border: 1.5px solid var(--text);
+  box-shadow: 2px 2px 0 var(--text);
+  border-radius: 6px;
+}
+html[data-surface="sharp"] .btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--text);
+}
+html[data-surface="sharp"] .btn-primary { box-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
+html[data-surface="sharp"] .wallet-hero,
+html[data-surface="sharp"] .kpi-dark,
+html[data-surface="sharp"] .auth-right {
+  border: 1.5px solid var(--text);
+  box-shadow: 6px 6px 0 var(--text);
+  border-radius: 14px;
+}
+html[data-surface="sharp"] .qr {
+  border: 1.5px solid var(--text);
+  box-shadow: 4px 4px 0 var(--text);
+  border-radius: 12px;
+}
+html[data-surface="sharp"] .mob {
+  box-shadow: 8px 8px 0 var(--text), 0 30px 60px rgba(0,0,0,0.18);
+  border: 2px solid var(--text);
+}
+html[data-surface="sharp"] .bdg { border: 1px solid currentColor; }
+
+/* Sharp surface in terminal mood needs different shadow color */
+html[data-mood="terminal"][data-surface="sharp"] .card,
+html[data-mood="terminal"][data-surface="sharp"] .bigstat,
+html[data-mood="terminal"][data-surface="sharp"] .treasury-card,
+html[data-mood="terminal"][data-surface="sharp"] .table-wrap {
+  border-color: #00d484;
+  box-shadow: 4px 4px 0 #00d484;
+}
+html[data-mood="terminal"][data-surface="sharp"] .btn {
+  border-color: #2a2a2a;
+  box-shadow: 2px 2px 0 #2a2a2a;
+}
+html[data-mood="terminal"][data-surface="sharp"] .btn-primary {
+  border-color: #00d484;
+  box-shadow: 2px 2px 0 #00b870;
+}

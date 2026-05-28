@@ -2,6 +2,7 @@ export interface BlockTransaction {
   sender: string
   receiver: string
   amount: number
+  currency?: string | null
 }
 
 export interface Block {

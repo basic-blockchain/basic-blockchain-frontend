@@ -5,6 +5,7 @@ interface TransactionPayload {
   sender: string
   receiver: string
   amount: number
+  currency?: string
   sender_wallet_id?: string
   receiver_wallet_id?: string
   receiver_amount?: number | null
@@ -23,6 +24,7 @@ function fromPayload(tx: TransactionPayload): Transaction {
     sender: tx.sender,
     receiver: tx.receiver,
     amount: tx.amount,
+    currency: tx.currency,
     senderWalletId: tx.sender_wallet_id || undefined,
     receiverWalletId: tx.receiver_wallet_id || undefined,
     receiverAmount: tx.receiver_amount ?? null,

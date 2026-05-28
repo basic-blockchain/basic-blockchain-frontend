@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { register } from '@/api/auth'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import AuthLayout from '@/components/molecules/AuthLayout.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
@@ -43,7 +43,7 @@ async function submit() {
     const resp = await register(
       username.value.trim(),
       displayName.value.trim() || username.value.trim(),
-      country.value || undefined,
+      country.value || undefined
     )
     await router.push({
       path: '/activate',
@@ -64,25 +64,15 @@ async function submit() {
 
 <template>
   <AuthLayout>
-    <form
-      class="auth-form"
-      @submit.prevent="submit"
-    >
-      <Stepper
-        :steps="signupSteps"
-        :current="currentStepIndex"
-      />
-      <BaseBadge
-        variant="outline"
-        tone="neutral"
-      >
-        Paso {{ currentStepIndex + 1 }} de {{ signupSteps.length }} · {{ signupSteps[currentStepIndex].label }}
+    <form class="auth-form" @submit.prevent="submit">
+      <Stepper :steps="signupSteps" :current="currentStepIndex" />
+      <BaseBadge variant="outline" tone="neutral">
+        Paso {{ currentStepIndex + 1 }} de {{ signupSteps.length }} ·
+        {{ signupSteps[currentStepIndex].label }}
       </BaseBadge>
 
       <h1>Crear cuenta</h1>
-      <p class="auth-sub">
-        Elegí un nombre de usuario para acceder a la plataforma.
-      </p>
+      <p class="auth-sub">Elegí un nombre de usuario para acceder a la plataforma.</p>
 
       <div class="fld">
         <label for="username">Usuario</label>
@@ -93,7 +83,7 @@ async function submit() {
           autocomplete="username"
           placeholder="alice"
           required
-        >
+        />
       </div>
       <div class="fld">
         <label for="display-name">Nombre para mostrar <span class="opt">(opcional)</span></label>
@@ -103,50 +93,30 @@ async function submit() {
           type="text"
           autocomplete="name"
           placeholder="Alice Smith"
-        >
+        />
       </div>
       <div class="fld">
         <label for="country">País <span class="opt">(opcional)</span></label>
-        <select
-          id="country"
-          v-model="country"
-          autocomplete="country"
-        >
-          <option value="">
-            Seleccioná un país…
-          </option>
-          <option
-            v-for="opt in COUNTRY_OPTIONS"
-            :key="opt.code"
-            :value="opt.code"
-          >
+        <select id="country" v-model="country" autocomplete="country">
+          <option value="">Seleccioná un país…</option>
+          <option v-for="opt in COUNTRY_OPTIONS" :key="opt.code" :value="opt.code">
             {{ opt.label }}
           </option>
         </select>
       </div>
 
-      <BaseButton
-        variant="primary"
-        size="lg"
-        block
-        type="submit"
-        :loading="loading"
-      >
+      <BaseButton variant="primary" size="lg" block type="submit" :loading="loading">
         Continuar
       </BaseButton>
 
       <div class="auth-switch">
-        ¿Ya tenés cuenta? <RouterLink to="/login">
-          Ingresar
-        </RouterLink>
+        ¿Ya tenés cuenta? <RouterLink to="/login"> Ingresar </RouterLink>
       </div>
     </form>
 
     <template #right-panel>
       <div class="auth-right-content">
-        <div class="auth-right-label">
-          Onboarding
-        </div>
+        <div class="auth-right-label">Onboarding</div>
         <p class="auth-quote">
           "Verificación progresiva. Empezás operando en minutos, subís de nivel cuando te conviene."
         </p>

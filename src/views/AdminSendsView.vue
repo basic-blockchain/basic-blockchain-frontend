@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getAdminSends, grantPermission } from '@/api/admin'
 import { BlockchainApiError } from '@/api/errors'
 import type { SendRow, SendsAggregates, SendKind, SendStatus } from '@/domain/send'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
@@ -226,12 +226,7 @@ onMounted(load)
           </template>
           Actualizar
         </BaseButton>
-        <BaseButton
-          v-if="canInitiateTreasurySend"
-          variant="primary"
-          size="sm"
-          @click="openNewSend"
-        >
+        <BaseButton v-if="canInitiateTreasurySend" variant="primary" size="sm" @click="openNewSend">
           <template #leading>
             <span class="pi pi-plus" aria-hidden="true" />
           </template>
@@ -252,9 +247,9 @@ onMounted(load)
         <div class="elev__text">
           <h2>Necesitás <code>VIEW_TRANSFERS</code> para ver envíos</h2>
           <p>
-            Este permiso expone el historial financiero de toda la plataforma,
-            por eso no está en el baseline de ADMIN. Solicitalo aquí — la
-            elevación queda registrada en <code>audit_log</code>.
+            Este permiso expone el historial financiero de toda la plataforma, por eso no está en el
+            baseline de ADMIN. Solicitalo aquí — la elevación queda registrada en
+            <code>audit_log</code>.
           </p>
         </div>
         <BaseButton variant="primary" :loading="elevating" @click="requestAccess">
