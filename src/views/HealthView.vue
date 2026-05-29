@@ -268,41 +268,43 @@ function healthLabel(status: string | null | undefined): string {
   gap: 18px;
   align-items: start;
 }
-.components-card {
+/* KPI card styling to visually group bigstats */
+.kpi-card {
+  border-radius: var(--radius);
+  background: var(--surface-2);
   padding: 12px 14px;
+}
+
+/* Components card: no fixed min-height, content-driven */
+.components-card {
+  padding: 10px;
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
-  min-height: 360px;
 }
-.comp-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.comp-name {
-  font-weight: 600;
-}
-.comp-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.comp-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+
+/* KVS grid: key / value / badge */
+.kvs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
   gap: 12px;
-  padding: 8px 6px;
-  border-radius: 6px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
 }
-.comp-title {
-  font-weight: 600;
+.kvs-row:last-child { border-bottom: none }
+.kvs-key { font-weight: 600 }
+.kvs-val { color: var(--text-2); font-size: 14px }
+.kvs-badge { justify-self: end }
+
+/* Compact spacing */
+.components-card .kvs-row { padding-left: 18px; padding-right: 18px }
+
+@media (max-width: 1200px) {
+  .two-col-row { grid-template-columns: 1fr 360px; }
 }
-.muted {
-  color: var(--text-2);
-  font-size: 13px;
+@media (max-width: 900px) {
+  .two-col-row { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
