@@ -4,15 +4,14 @@ import { listAuditLog } from '@/api/admin'
 import type { AuditEntry, AuditSeverity } from '@/api/admin'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
-import BaseButton from '@/components/atoms/BaseButton.vue'
+import AuditEntryDetailModal from '@/components/organisms/AuditEntryDetailModal.vue'
 const STORAGE_KEY = 'healthLogs_state_v1'
 
 const entries = ref<AuditEntry[]>([])
 const loading = ref(false)
 const search = ref('')
 const severityFilter = ref<string | null>(null)
-const showModal = ref(false)
-const modalContent = ref('')
+const selectedEntry = ref<AuditEntry | null>(null)
 let timer: number | null = null
 let searchTimer: number | null = null
 
@@ -97,22 +96,12 @@ function debouncedSearch() {
 
 watch(search, () => debouncedSearch())
 
-// helper to open modal with full details
 function openDetail(e: AuditEntry) {
-  try {
-    modalContent.value = JSON.stringify(e.details, null, 2)
-  } catch {
-    modalContent.value = String(e.details)
-  }
-  showModal.value = true
+  selectedEntry.value = e
 }
 
 function closeModal() {
-  showModal.value = false
-}
-
-function copyModal() {
-  navigator.clipboard?.writeText(modalContent.value)
+  selectedEntry.value = null
 }
 
 function updateStickyTop() {
@@ -189,21 +178,11 @@ function shortTime(iso?: string) {
     </div>
   </BaseCard>
 
-  <!-- Modal para detalle completo -->
-  <div v-if="showModal" class="logs-modal" role="dialog" aria-modal="true">
-    <div class="logs-modal__backdrop" @click="closeModal" />
-    <div class="logs-modal__card">
-      <div class="logs-modal__header">
-        <h3>Detalle del evento</h3>
-        <button class="icon-btn" @click="closeModal">✖</button>
-      </div>
-      <pre class="logs-modal__pre">{{ modalContent }}</pre>
-      <div class="logs-modal__footer">
-        <BaseButton @click="copyModal">Copiar</BaseButton>
-        <BaseButton @click="closeModal">Cerrar</BaseButton>
-      </div>
-    </div>
-  </div>
+  <AuditEntryDetailModal
+    v-if="selectedEntry"
+    :entry="selectedEntry"
+    @close="closeModal"
+  />
 </template>
 
 <style scoped>
@@ -339,51 +318,6 @@ function shortTime(iso?: string) {
   border-radius: 6px;
   color: var(--text);
   cursor: pointer;
-}
-
-/* Modal styles */
-.logs-modal {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
-}
-.logs-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-}
-.logs-modal__card {
-  position: relative;
-  background: var(--surface);
-  border-radius: 8px;
-  padding: 16px;
-  width: min(880px, 92vw);
-  max-height: 80vh;
-  overflow: auto;
-  box-shadow: var(--shadow-lg);
-}
-.logs-modal__pre {
-  background: var(--bg-muted);
-  padding: 12px;
-  border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
-}
-.logs-modal__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-.logs-modal__footer {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 12px;
 }
 
 
