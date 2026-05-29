@@ -827,7 +827,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 4px 2px -2px;
+  margin: 2px 2px -2px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 12px;
@@ -881,10 +881,13 @@ onUnmounted(() => {
 .validation-list-title {
   font-weight: 600;
   color: var(--text);
+  line-height: 1.2;
 }
 .validation-list-desc {
   font-size: 12px;
   color: var(--text-2);
+  line-height: 1.35;
+  margin-top: 1px;
 }
 
 .validation-list-right {
@@ -1022,6 +1025,7 @@ onUnmounted(() => {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
+  line-height: 1.2;
 }
 .validation-table-row.pending .validation-table-label {
   color: var(--text-2);
@@ -1030,6 +1034,7 @@ onUnmounted(() => {
   font-size: 11.5px;
   color: var(--text-3);
   line-height: 1.35;
+  margin-top: 1px;
 }
 .validation-table-row.active .validation-table-desc {
   color: var(--text-2);
@@ -1078,6 +1083,7 @@ onUnmounted(() => {
   gap: 12px;
   font-size: 12px;
   color: var(--text-2);
+  line-height: 1.35;
 }
 .validation-result {
   display: flex;
@@ -1153,6 +1159,7 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--text-3);
   margin: 0;
+  line-height: 1.45;
 }
 
 /* History */
