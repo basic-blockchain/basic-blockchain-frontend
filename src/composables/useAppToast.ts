@@ -20,7 +20,7 @@ function add(msg: Omit<ToastMessage, 'id'>) {
   // Debug logging to help trace toast creation in runtime
   try {
     console.debug('[useAppToast] add', toast)
-  } catch (e) {
+  } catch {
     /* ignore */
   }
   if (toast.life && toast.life > 0) {
@@ -34,7 +34,7 @@ function remove(id: number) {
   if (idx >= 0) state.toasts.splice(idx, 1)
   try {
     console.debug('[useAppToast] remove', id)
-  } catch (e) {
+  } catch {
     /* ignore */
   }
 }

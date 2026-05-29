@@ -7,7 +7,7 @@ const app = useAppToast()
 onMounted(() => {
   try {
     console.debug('[AppToast] mounted, initial toasts:', app.toasts.length)
-  } catch (e) {}
+  } catch {}
 })
 
 watch(
@@ -15,7 +15,7 @@ watch(
   (n) => {
     try {
       console.debug('[AppToast] toasts count =>', n)
-    } catch (e) {}
+    } catch {}
   }
 )
 </script>
