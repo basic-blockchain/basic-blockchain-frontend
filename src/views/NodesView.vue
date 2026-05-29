@@ -1,24 +1,136 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useAppToast } from '@/composables/useAppToast'
 import { useNodesStore } from '@/stores/nodes'
+import type { Block } from '@/domain/block'
+import { formatHash } from '@/domain/block'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import BaseModal from '@/components/atoms/BaseModal.vue'
+import BackgroundTaskIndicator from '@/components/organisms/BackgroundTaskIndicator.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
 
 const nodesStore = useNodesStore()
+const toast = useAppToast()
 
 const newUrl = ref('http://localhost:5001')
 const resolving = ref(false)
+const consensusStartOpen = ref(false)
+const consensusIndicatorOpen = ref(false)
+const consensusDetailOpen = ref(false)
+const consensusStatus = ref<'running' | 'success' | 'info' | 'error'>('running')
+const consensusMessage = ref('')
+const consensusProgress = ref(0)
+const consensusStartedAt = ref<number | null>(null)
+const consensusFinishedAt = ref<number | null>(null)
+const consensusChain = ref<Block[]>([])
+const showFullMerkle = ref(false)
+let consensusTimer: ReturnType<typeof setInterval> | null = null
+let consensusAutoClose: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => nodesStore.fetchNodes())
 
 async function resolveConsensus() {
   resolving.value = true
+  consensusStartOpen.value = true
+  consensusIndicatorOpen.value = true
+  consensusDetailOpen.value = false
+  consensusStatus.value = 'running'
+  consensusMessage.value = 'Resolviendo consenso entre peers...'
+  consensusProgress.value = 8
+  consensusStartedAt.value = Date.now()
+  consensusFinishedAt.value = null
+  consensusChain.value = []
+  showFullMerkle.value = false
+  if (consensusTimer) clearInterval(consensusTimer)
+  consensusTimer = setInterval(() => {
+    consensusProgress.value = Math.min(92, consensusProgress.value + 6)
+  }, 280)
   try {
-    await nodesStore.resolve()
+    const result = await nodesStore.resolve()
+    consensusStatus.value = result.replaced ? 'success' : 'info'
+    consensusMessage.value = result.message
+    consensusProgress.value = 100
+    consensusFinishedAt.value = Date.now()
+    consensusChain.value = result.chain ?? []
+    toast.add({
+      severity: result.replaced ? 'success' : 'info',
+      summary: result.replaced ? 'Consenso aplicado' : 'Consenso finalizado',
+      detail: result.replaced
+        ? 'La cadena local fue reemplazada por una mas larga y valida.'
+        : 'La cadena local ya era la mas larga.',
+      life: 4200,
+    })
+  } catch (error: unknown) {
+    consensusStatus.value = 'error'
+    consensusMessage.value = 'No se pudo resolver el consenso.'
+    consensusProgress.value = 100
+    consensusFinishedAt.value = Date.now()
+    consensusChain.value = []
+    toast.add({
+      severity: 'error',
+      summary: 'Error de consenso',
+      detail: error instanceof Error ? error.message : 'No se pudo completar la operacion.',
+      life: 5000,
+    })
   } finally {
     resolving.value = false
+    if (consensusTimer) {
+      clearInterval(consensusTimer)
+      consensusTimer = null
+    }
+    if (consensusAutoClose) clearTimeout(consensusAutoClose)
+    consensusAutoClose = setTimeout(() => {
+      if (consensusStatus.value !== 'running') consensusIndicatorOpen.value = false
+    }, 1600)
+    if (consensusStatus.value !== 'running') {
+      consensusDetailOpen.value = true
+      consensusStartOpen.value = false
+    }
+  }
+}
+
+function closeConsensusIndicator() {
+  if (consensusStatus.value === 'running') return
+  if (consensusAutoClose) {
+    clearTimeout(consensusAutoClose)
+    consensusAutoClose = null
+  }
+  consensusIndicatorOpen.value = false
+}
+
+function openConsensusDetails() {
+  consensusDetailOpen.value = true
+}
+
+function closeConsensusDetails() {
+  consensusDetailOpen.value = false
+  showFullMerkle.value = false
+}
+
+function closeConsensusStart() {
+  consensusStartOpen.value = false
+}
+
+async function copyMerkleRoot() {
+  const root = consensusLastBlock.value?.merkleRoot
+  if (!root) return
+  try {
+    await navigator.clipboard.writeText(root)
+    toast.add({
+      severity: 'success',
+      summary: 'Merkle root copiado',
+      detail: 'Listo para compartir o verificar.',
+      life: 2200,
+    })
+  } catch {
+    toast.add({
+      severity: 'error',
+      summary: 'No se pudo copiar',
+      detail: 'Intenta nuevamente.',
+      life: 2600,
+    })
   }
 }
 
@@ -88,6 +200,73 @@ function peerStatusLabel(status: PeerStatus): string {
   return STATUS_LABEL[status]
 }
 
+const consensusTitle = computed(() =>
+  consensusStatus.value === 'running' ? 'Resolviendo consenso' : 'Consenso finalizado'
+)
+
+const consensusActionLabel = computed(() =>
+  consensusStatus.value === 'running' ? 'Ver estado' : 'Ver detalles'
+)
+
+const consensusResultLabel = computed(() => {
+  if (consensusStatus.value === 'success') return 'Cadena actualizada'
+  if (consensusStatus.value === 'info') return 'Cadena local vigente'
+  if (consensusStatus.value === 'error') return 'No se pudo resolver'
+  return 'En progreso'
+})
+
+const consensusSummary = computed(() => {
+  if (consensusStatus.value === 'success') {
+    return 'La cadena local fue reemplazada por una mas larga y valida.'
+  }
+  if (consensusStatus.value === 'info') {
+    return 'La cadena local ya era la mas larga y valida.'
+  }
+  if (consensusStatus.value === 'error') {
+    return 'No se pudo validar el consenso. Revisa el estado de los peers.'
+  }
+  return 'Sincronizando peers y validando cadena.'
+})
+
+const consensusDuration = computed(() => {
+  if (!consensusStartedAt.value) return '—'
+  const end = consensusFinishedAt.value ?? Date.now()
+  const seconds = Math.max(0, Math.round((end - consensusStartedAt.value) / 1000))
+  return `${seconds}s`
+})
+
+const consensusFinishedLabel = computed(() => {
+  if (!consensusFinishedAt.value) return '—'
+  return new Date(consensusFinishedAt.value).toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+})
+
+const consensusChainLength = computed(() =>
+  consensusChain.value.length > 0 ? `${consensusChain.value.length}` : '—'
+)
+
+const consensusLastBlock = computed(() =>
+  consensusChain.value.length > 0 ? consensusChain.value[consensusChain.value.length - 1] : null
+)
+
+const consensusLastHeight = computed(() =>
+  consensusLastBlock.value ? `#${consensusLastBlock.value.index}` : '—'
+)
+
+const consensusLastMerkle = computed(() =>
+  consensusLastBlock.value ? formatHash(consensusLastBlock.value.merkleRoot, 12) : '—'
+)
+
+const consensusFullMerkle = computed(() => consensusLastBlock.value?.merkleRoot ?? '')
+
+onBeforeUnmount(() => {
+  if (consensusTimer) clearInterval(consensusTimer)
+  if (consensusAutoClose) clearTimeout(consensusAutoClose)
+})
+
 interface PeerColumn {
   key: string
   label: string
@@ -113,6 +292,9 @@ const peerColumns: PeerColumn[] = [
       </div>
       <div class="page-actions">
         <BaseButton variant="primary" size="sm" :loading="resolving" @click="resolveConsensus">
+          <template #leading>
+            <span class="pi pi-refresh" aria-hidden="true" />
+          </template>
           Resolver consenso
         </BaseButton>
       </div>
@@ -221,6 +403,163 @@ const peerColumns: PeerColumn[] = [
         </div>
       </BaseCard>
     </section>
+
+    <BaseModal :open="consensusStartOpen" width="520px" @close="closeConsensusStart">
+      <template #header>
+        <div class="consensus-modal__header">
+          <div>
+            <h2 class="consensus-modal__title">Consenso en curso</h2>
+            <p class="consensus-modal__sub">Validando peers y sincronizando la cadena.</p>
+          </div>
+          <button
+            type="button"
+            class="consensus-modal__close"
+            aria-label="Cerrar"
+            @click="closeConsensusStart"
+          >
+            <span class="pi pi-times" aria-hidden="true" />
+          </button>
+        </div>
+      </template>
+
+      <div class="consensus-modal__body">
+        <div class="consensus-modal__status is-info">
+          <span class="pi pi-spin pi-spinner" />
+        </div>
+        <div class="consensus-modal__message">Resolviendo consenso entre peers...</div>
+        <div class="consensus-modal__summary">
+          Esto puede tardar unos segundos. Puedes seguir navegando mientras el sistema valida la
+          cadena y compara alturas.
+        </div>
+        <div class="consensus-modal__kvs">
+          <div class="consensus-modal__kv">
+            <span class="muted">Peers registrados</span>
+            <span class="mono">{{ nodesStore.peers.length }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Estado</span>
+            <span class="mono">En progreso</span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="consensus-modal__footer">
+          <BaseButton variant="ghost" size="sm" @click="closeConsensusStart">
+            Continuar en segundo plano
+          </BaseButton>
+          <BaseButton variant="primary" size="sm" @click="openConsensusDetails">
+            Ver estado
+          </BaseButton>
+        </div>
+      </template>
+    </BaseModal>
+
+    <BackgroundTaskIndicator
+      :open="consensusIndicatorOpen"
+      position="pill"
+      :title="consensusTitle"
+      :subtitle="consensusMessage"
+      :status="consensusStatus"
+      :progress="consensusProgress"
+      :show-action="true"
+      :action-label="consensusActionLabel"
+      :dismissible="consensusStatus !== 'running'"
+      @action="openConsensusDetails"
+      @close="closeConsensusIndicator"
+    />
+
+    <BaseModal :open="consensusDetailOpen" width="520px" @close="closeConsensusDetails">
+      <template #header>
+        <div class="consensus-modal__header">
+          <div>
+            <h2 class="consensus-modal__title">Resolver consenso</h2>
+            <p class="consensus-modal__sub">Estado de sincronizacion de red.</p>
+          </div>
+          <button
+            type="button"
+            class="consensus-modal__close"
+            aria-label="Cerrar"
+            @click="closeConsensusDetails"
+          >
+            <span class="pi pi-times" aria-hidden="true" />
+          </button>
+        </div>
+      </template>
+
+      <div class="consensus-modal__body">
+        <div class="consensus-modal__status" :class="`is-${consensusStatus}`">
+          <span v-if="consensusStatus === 'running'" class="pi pi-spin pi-spinner" />
+          <span v-else-if="consensusStatus === 'success'" class="pi pi-check" />
+          <span v-else-if="consensusStatus === 'info'" class="pi pi-info-circle" />
+          <span v-else class="pi pi-exclamation-triangle" />
+        </div>
+        <div class="consensus-modal__message">{{ consensusMessage }}</div>
+        <div class="consensus-modal__summary">{{ consensusSummary }}</div>
+        <div class="consensus-modal__progress" aria-hidden="true">
+          <div class="consensus-modal__progress-bar" :style="{ width: `${consensusProgress}%` }" />
+        </div>
+        <div class="consensus-modal__kvs">
+          <div class="consensus-modal__kv">
+            <span class="muted">Estado</span>
+            <span class="mono">{{ consensusResultLabel }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Peers registrados</span>
+            <span class="mono">{{ nodesStore.peers.length }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Altura final</span>
+            <span class="mono">{{ consensusLastHeight }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Merkle root</span>
+            <span class="consensus-modal__merkle">
+              <span class="mono">{{ consensusLastMerkle }}</span>
+              <button
+                type="button"
+                class="consensus-modal__copy"
+                :disabled="!consensusFullMerkle"
+                @click="copyMerkleRoot"
+              >
+                Copiar
+              </button>
+              <button
+                type="button"
+                class="consensus-modal__toggle"
+                :disabled="!consensusFullMerkle"
+                @click="showFullMerkle = !showFullMerkle"
+              >
+                {{ showFullMerkle ? 'Ocultar' : 'Expandir' }}
+              </button>
+            </span>
+          </div>
+          <div v-if="showFullMerkle && consensusFullMerkle" class="consensus-modal__hash">
+            <span class="mono">{{ consensusFullMerkle }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Bloques en cadena</span>
+            <span class="mono">{{ consensusChainLength }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Duracion</span>
+            <span class="mono">{{ consensusDuration }}</span>
+          </div>
+          <div class="consensus-modal__kv">
+            <span class="muted">Finalizado</span>
+            <span class="mono">{{ consensusFinishedLabel }}</span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="consensus-modal__footer">
+          <BaseButton variant="primary" size="sm" @click="closeConsensusDetails">
+            Listo
+          </BaseButton>
+        </div>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -324,6 +663,144 @@ const peerColumns: PeerColumn[] = [
   display: grid;
   place-items: center;
   padding: 40px;
+}
+.consensus-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.consensus-modal__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+.consensus-modal__sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.consensus-modal__close {
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+.consensus-modal__close:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.consensus-modal__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 4px;
+  text-align: center;
+}
+.consensus-modal__status {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.consensus-modal__status.is-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.consensus-modal__status.is-info {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.consensus-modal__status.is-error {
+  background: var(--danger-soft, rgba(185, 28, 28, 0.12));
+  color: var(--danger, #b91c1c);
+}
+.consensus-modal__message {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.consensus-modal__summary {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+  max-width: 420px;
+}
+.consensus-modal__kvs {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.consensus-modal__kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.consensus-modal__merkle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.consensus-modal__copy,
+.consensus-modal__toggle {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.consensus-modal__copy:hover,
+.consensus-modal__toggle:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.consensus-modal__copy:disabled,
+.consensus-modal__toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.consensus-modal__hash {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  font-size: 11.5px;
+  word-break: break-all;
+}
+.consensus-modal__progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.consensus-modal__progress-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.28s ease;
+}
+.consensus-modal__footer {
+  display: flex;
+  justify-content: flex-end;
 }
 @media (max-width: 900px) {
   .bigstat-row {

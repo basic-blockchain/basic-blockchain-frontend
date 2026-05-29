@@ -1,7 +1,7 @@
 # Frontend Architecture — Basic Blockchain Simulator Dashboard
 
 Status: Accepted
-Last updated: 2026-05-25 (Phase 7 closed — Design v2 + Atomic migration shipped in v0.9.0)
+Last updated: 2026-05-29 (Phase 7 closed — Design v2 + Atomic migration shipped in v0.9.0)
 Audience: Frontend engineers, tech leads, SRE, DevSecOps
 
 ---
@@ -75,7 +75,8 @@ on top of the **Design v2** contract ([DESIGN-v2.md](DESIGN-v2.md)):
 atoms       — Base{Button,Badge,Card,Table,Modal,Drawer}, Stepper,
               HashChip, AmountDisplay
 molecules   — AuthLayout, BlockCard, TransactionRow, MetricTile, …
-organisms   — ChainList, MempoolTable, MetricsBar, PaginatedTable, …
+organisms   — ChainList, MempoolTable, MetricsBar, PaginatedTable,
+              HealthLogsPanel, AuditEntryDetailModal, …
 flows       — TreasuryApprovalFlow (dual-sign), KYCReviewFlow,
               SendConfirmFlow, ExchangeOrderFlow, …
 drawers     — UserDrawer, WalletDrawer, ProfileDrawer (all built on
@@ -197,6 +198,7 @@ flowchart TB
 | `api/admin_routes.py`                        | `src/api/admin.ts`, `src/views/Admin*.vue`                     | Admin workflows (users, wallets, mint).             |
 | `api/websocket_hub.py`                       | `src/api/websocket.ts` + `composables/useBlockchainWs`         | VueUse `useWebSocket` with reconnection.            |
 | `api/errors.py` (error envelope)             | `src/api/client.ts` (axios interceptor)                        | Normalises `{code, message}` into typed `ApiError`. |
+| `GET /health` → `components[]`               | `src/api/health.ts → getHealth()`                              | Maps snake_case `components` array to `ComponentStatus[]`; field is optional — fallback static rows shown in HealthView when absent |
 
 ---
 
@@ -371,6 +373,11 @@ classDiagram
 - `useWalletStore` — wallet list + signed transfer submission.
 - `useValidationHistoryStore` — client-side validation history export.
 
+**Domain types (relevant additions):**
+
+- `ComponentStatus` (`src/domain/metrics.ts`) — per-subsystem health item returned by `GET /health components[]`. Fields: `id`, `label`, `meta?`, `status`.
+- `Health.components?: ComponentStatus[]` — optional field added to `Health`; absent when backend hasn't shipped the feature yet.
+
 ---
 
 ## 7. Atomic Design Hierarchy
@@ -397,6 +404,8 @@ flowchart LR
     O5[MetricsBar]
     O6[MineButton]
     O7[MiningChart]
+    O8[HealthLogsPanel]
+    O9[AuditEntryDetailModal]
     end
     subgraph Views
     V1[LoginView]

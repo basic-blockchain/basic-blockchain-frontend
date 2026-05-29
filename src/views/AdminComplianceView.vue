@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { listUsers, type UserAdminRecord } from '@/api/admin'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import KYCReviewFlow from '@/components/flows/KYCReviewFlow.vue'
 import type { KYCData } from '@/components/flows/KYCReviewFlow.vue'
 import DisputeResolutionFlow from '@/components/flows/DisputeResolutionFlow.vue'

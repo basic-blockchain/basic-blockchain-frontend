@@ -335,6 +335,9 @@ _(Phase 7 closed; next scope TBD. See §5 Backlog for candidate work.)_
 - **Websocket subscription filtering** — today `/stream` pushes all
   events; clients should be able to opt-in (e.g., `?target=tx` or
   `?user_id=USR-XXXXX`) to reduce bandwidth on slow links.
+- **Consensus UX follow-up** — add a "Ver hash completo" action in the
+  NodesView consensus detail that opens a dedicated modal with the full
+  Merkle root (copyable) and any audit metadata once available.
 - **Audit log export** — users + admins want to download CSV / JSON
   snapshots of audit trails for compliance.
 - **Custom dashboard widgets** — Phase 7.3 is static; allowing users

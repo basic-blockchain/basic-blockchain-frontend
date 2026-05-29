@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Versiones · Basic Blockchain</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body { background: var(--bg); padding: 40px 20px 80px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .hero { padding: 40px 0 28px; }
+  .hero h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.025em; margin: 0 0 8px; }
+  .hero p { font-size: 15px; color: var(--text-2); margin: 0; max-width: 640px; line-height: 1.55; }
+  .ver-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+  .ver {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .ver:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .ver-thumb { aspect-ratio: 16/10; background: var(--surface-2); position: relative; overflow: hidden; border-bottom: 1px solid var(--border); }
+  .ver-body { padding: 18px 20px 20px; flex: 1; display: flex; flex-direction: column; }
+  .ver-label { font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; }
+  .ver-name { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 4px 0 2px; }
+  .ver-tag { font-size: 12px; color: var(--text-2); margin-bottom: 12px; }
+  .ver-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.55; margin-bottom: 14px; flex: 1; }
+  .ver-bullets { font-size: 11.5px; color: var(--text-2); line-height: 1.7; margin-bottom: 16px; padding-left: 16px; }
+  .ver-bullets li { margin-bottom: 2px; }
+  .ver-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .ver-foot { display: flex; gap: 8px; }
+  .ver-btn { flex: 1; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; font-weight: 500; border-radius: 6px; text-decoration: none; }
+  .ver-btn.primary { background: var(--text); color: var(--bg); }
+  .ver-btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+  /* Thumb 1: v1 — Current (existing dark) */
+  .thumb-v1 { background: linear-gradient(135deg, #0b0a1a 0%, #131225 100%); padding: 22px; }
+  .thumb-v1 .tv-side { background: rgba(124, 58, 237, 0.15); height: 100%; width: 32%; border-radius: 8px; padding: 10px; position: absolute; left: 12px; top: 12px; bottom: 12px; }
+  .thumb-v1 .tv-row { background: rgba(255,255,255,0.04); height: 16px; border-radius: 3px; margin-bottom: 6px; }
+  .thumb-v1 .tv-main { position: absolute; right: 12px; top: 12px; bottom: 12px; left: calc(32% + 22px); }
+  .thumb-v1 .tv-h { color: white; font-weight: 600; font-size: 13px; margin-bottom: 12px; }
+  .thumb-v1 .tv-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; height: 90px; margin-bottom: 8px; }
+
+  /* Thumb 2: v2 Sober */
+  .thumb-v2 { background: #faf9f6; padding: 22px; }
+  .thumb-v2 .tv-side { background: #f1efe9; height: calc(100% - 24px); width: 32%; border-radius: 8px; padding: 10px; position: absolute; left: 12px; top: 12px; bottom: 12px; }
+  .thumb-v2 .tv-row { background: rgba(20,18,12,0.06); height: 14px; border-radius: 3px; margin-bottom: 6px; }
+  .thumb-v2 .tv-row.active { background: white; border: 1px solid #e6e3db; box-shadow: 0 1px 2px rgba(20,18,12,0.04); }
+  .thumb-v2 .tv-main { position: absolute; right: 12px; top: 12px; bottom: 12px; left: calc(32% + 22px); }
+  .thumb-v2 .tv-h { font-size: 13px; font-weight: 600; color: #1a1917; margin-bottom: 10px; }
+  .thumb-v2 .tv-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+  .thumb-v2 .tv-stat { background: white; border: 1px solid #e6e3db; border-radius: 6px; padding: 8px; }
+  .thumb-v2 .tv-stat-v { font-size: 14px; font-weight: 600; color: #1a1917; }
+  .thumb-v2 .tv-stat-l { font-size: 8px; color: #8e8b82; }
+  .thumb-v2 .tv-card { background: white; border: 1px solid #e6e3db; border-radius: 6px; height: 60px; }
+
+  /* Thumb 3: v3 Terminal */
+  .thumb-v3 { background: #0a0a0a; padding: 22px; background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px); background-size: 12px 12px; }
+  .thumb-v3 .tv-side { background: #141414; border: 1px solid #2a2a2a; height: calc(100% - 24px); width: 32%; border-radius: 4px; padding: 8px; position: absolute; left: 12px; top: 12px; bottom: 12px; }
+  .thumb-v3 .tv-row { background: rgba(255,255,255,0.04); height: 12px; border-radius: 2px; margin-bottom: 5px; }
+  .thumb-v3 .tv-row.active { background: rgba(0,212,132,0.18); border-left: 2px solid #00d484; }
+  .thumb-v3 .tv-main { position: absolute; right: 12px; top: 12px; bottom: 12px; left: calc(32% + 22px); }
+  .thumb-v3 .tv-h { font-size: 13px; font-weight: 600; color: #e8e8e3; margin-bottom: 10px; font-family: 'Geist Mono', monospace; }
+  .thumb-v3 .tv-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+  .thumb-v3 .tv-stat { background: #141414; border: 1px solid #2a2a2a; border-radius: 2px; padding: 7px; font-family: 'Geist Mono', monospace; }
+  .thumb-v3 .tv-stat-v { font-size: 13px; font-weight: 600; color: #00d484; }
+  .thumb-v3 .tv-stat-l { font-size: 8px; color: #6a6a64; text-transform: uppercase; letter-spacing: 0.08em; }
+  .thumb-v3 .tv-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 2px; height: 60px; }
+
+  .badge-line { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .matrix { margin-top: 64px; }
+  .matrix h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 18px; }
+  .matrix table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .matrix th, .matrix td { padding: 12px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+  .matrix th { background: var(--surface-2); font-size: 11.5px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+  .matrix td b { color: var(--text); }
+  .matrix tr:last-child td { border-bottom: 0; }
+  .yes { color: var(--success); font-weight: 500; }
+  .no { color: var(--text-3); }
+
+  .notes { margin-top: 56px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
+  .notes h3 { margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+  .notes p { color: var(--text-2); font-size: 13.5px; line-height: 1.6; margin: 0 0 10px; }
+  .notes a { color: var(--accent-text); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="ver-label" style="color: var(--accent-text);">Sistema de diseño · iteraciones</span>
+    <h1>Tres versiones, un mismo producto</h1>
+    <p>El producto actual funciona. Esta sesión propone dos refactorizaciones visuales con el mismo modelo de datos y endpoints. La estructura de información se mantiene; cambia el lenguaje visual, la densidad y la calidad de los flujos críticos.</p>
+  </div>
+
+  <div class="ver-grid">
+
+    <!-- ─── v1 ─── -->
+    <div class="ver">
+      <div class="ver-thumb thumb-v1">
+        <div class="tv-side">
+          <div class="tv-row" style="background: rgba(124,58,237,0.5); border-radius: 4px;"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+        </div>
+        <div class="tv-main">
+          <div class="tv-h">My Wallets</div>
+          <div class="tv-card" style="display: grid; place-items: center; color: rgba(255,255,255,0.3); font-size: 10px;">No wallets yet</div>
+        </div>
+      </div>
+      <div class="ver-body">
+        <span class="ver-label">v1 · existente</span>
+        <div class="ver-name">Blockchain · oscuro púrpura</div>
+        <div class="ver-tag">El admin que ya está en producción</div>
+        <div class="ver-desc">Funcionalmente completa pero visualmente espartana. Tablas planas, sin jerarquía clara, todo compite por la misma atención. Cubre los primitivos blockchain (Chain, Mempool, Nodes, Validación, Health) que la v2 inicialmente había dejado fuera.</div>
+        <ul class="ver-bullets">
+          <li>Cobertura: 100% del backend</li>
+          <li>Lenguaje visual: ad-hoc, oscuro</li>
+          <li>Flujos críticos: básicos</li>
+          <li>Mobile: no</li>
+        </ul>
+        <div class="ver-meta badge-line">
+          <span class="bdg bdg-active">en producción</span>
+          <span class="bdg bdg-kyc">referencia</span>
+        </div>
+        <div class="ver-foot">
+          <a href="#" class="ver-btn secondary" onclick="alert('Es tu app actual en localhost:3000'); return false;">Ver descripción</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── v2 ─── -->
+    <div class="ver">
+      <div class="ver-thumb thumb-v2">
+        <div class="tv-side">
+          <div class="tv-row active"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+        </div>
+        <div class="tv-main">
+          <div class="tv-h">Resumen</div>
+          <div class="tv-stats">
+            <div class="tv-stat"><div class="tv-stat-l">USUARIOS</div><div class="tv-stat-v">8,247</div></div>
+            <div class="tv-stat"><div class="tv-stat-l">SALDO</div><div class="tv-stat-v">$24.8M</div></div>
+            <div class="tv-stat"><div class="tv-stat-l">VOL 24h</div><div class="tv-stat-v">$1.92M</div></div>
+            <div class="tv-stat"><div class="tv-stat-l">CHAIN</div><div class="tv-stat-v">#11</div></div>
+          </div>
+          <div class="tv-card"></div>
+        </div>
+      </div>
+      <div class="ver-body">
+        <span class="ver-label" style="color: var(--accent-text);">v2 · propuesta principal</span>
+        <div class="ver-name">Cadena · sober admin</div>
+        <div class="ver-tag">Mercury / Stripe vibe · claro y cálido</div>
+        <div class="ver-desc">Refactor visual completo. Tipografía Geist, paleta neutra cálida con acento azul, jerarquía clara con stat-cards arriba y tablas con espacio. Cubre toda la superficie del producto incluyendo P2P, exchange, compliance, auditoría y tesorería con aprobación dual.</div>
+        <ul class="ver-bullets">
+          <li>9 flujos interactivos completos</li>
+          <li>Lenguaje visual: design system documentado</li>
+          <li>Roles: Admin · Operator · Viewer</li>
+          <li>Mobile: 5 pantallas responsive</li>
+        </ul>
+        <div class="ver-meta badge-line">
+          <span class="bdg bdg-active">recomendado</span>
+          <span class="bdg bdg-kyc">tweakable</span>
+        </div>
+        <div class="ver-foot">
+          <a href="App.html" class="ver-btn primary">Abrir prototipo</a>
+          <a href="Platform.html" class="ver-btn secondary">Canvas</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── v3 ─── -->
+    <div class="ver">
+      <div class="ver-thumb thumb-v3">
+        <div class="tv-side">
+          <div class="tv-row active"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+          <div class="tv-row"></div>
+        </div>
+        <div class="tv-main">
+          <div class="tv-h">CHAIN</div>
+          <div class="tv-stats">
+            <div class="tv-stat"><div class="tv-stat-l">HEIGHT</div><div class="tv-stat-v">11</div></div>
+            <div class="tv-stat"><div class="tv-stat-l">DIFF</div><div class="tv-stat-v">4</div></div>
+            <div class="tv-stat"><div class="tv-stat-l">PEERS</div><div class="tv-stat-v">3/5</div></div>
+            <div class="tv-stat"><div class="tv-stat-l">TPS</div><div class="tv-stat-v">42</div></div>
+          </div>
+          <div class="tv-card"></div>
+        </div>
+      </div>
+      <div class="ver-body">
+        <span class="ver-label">v3 · variante</span>
+        <div class="ver-name">Cadena · terminal</div>
+        <div class="ver-tag">Bloomberg / Linear oscuro · monoespaciado</div>
+        <div class="ver-desc">Misma estructura que v2 con tratamiento radicalmente distinto: fondo negro con grid, acento verde, tipografía mono. Para operadores power-user que viven en el terminal. Se obtiene cambiando 3 tweaks (mood, type, surface) sin tocar componentes.</div>
+        <ul class="ver-bullets">
+          <li>Mismos componentes que v2</li>
+          <li>Activado con un toggle</li>
+          <li>Optimizado para densidad</li>
+          <li>Mismas funcionalidades, +contrast</li>
+        </ul>
+        <div class="ver-meta badge-line">
+          <span class="bdg bdg-kyc">variante de v2</span>
+        </div>
+        <div class="ver-foot">
+          <a href="App.html#terminal" class="ver-btn primary"
+             onclick="try { localStorage.setItem('PROTO_TWEAKS', JSON.stringify({mood:'terminal',type:'mono',surface:'flat'})); } catch(e){}">Probar terminal</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="matrix">
+    <h2>Cobertura por módulo</h2>
+    <table>
+      <thead>
+        <tr><th>Módulo</th><th>v1 actual</th><th>v2 sober</th><th>v3 terminal</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Login / Registro</b></td><td>Sign in básico</td><td class="yes">+ 2FA, roles documentados</td><td class="yes">+ 2FA, roles documentados</td></tr>
+        <tr><td><b>Dashboard</b></td><td>Chain Height · Pending · Mine Time</td><td class="yes">KPIs + gráfico volumen + eventos críticos</td><td class="yes">KPIs densos · grid background</td></tr>
+        <tr><td><b>Chain</b></td><td>Lista de bloques</td><td class="yes">Lista + detalle con merkle, prev, nonce, txs</td><td class="yes">Lista densa · tipografía mono</td></tr>
+        <tr><td><b>Mempool</b></td><td>Pendientes + historial</td><td class="yes">+ stats acumulados · click a detalle de tx</td><td class="yes">+ stats acumulados · click a detalle de tx</td></tr>
+        <tr><td><b>Nodes</b></td><td>Lista de peers · register</td><td class="yes">+ latencia, región, versión, estado por peer</td><td class="yes">+ latencia, región, versión, estado por peer</td></tr>
+        <tr><td><b>Validation</b></td><td>—</td><td class="yes">Reglas verificadas + re-validar</td><td class="yes">Reglas verificadas + re-validar</td></tr>
+        <tr><td><b>Health</b></td><td>—</td><td class="yes">Componentes + logs en vivo</td><td class="yes">Componentes + logs en vivo</td></tr>
+        <tr><td><b>Admin · Mint tokens</b></td><td>Wallet ID + Amount</td><td class="yes">→ Aprobación dual en Tesorería</td><td class="yes">→ Aprobación dual en Tesorería</td></tr>
+        <tr><td><b>Users</b></td><td>Ban / status</td><td class="yes">Drawer completo · KYC · auditoría · bulk</td><td class="yes">Drawer completo · KYC · auditoría · bulk</td></tr>
+        <tr><td><b>Wallets</b></td><td>Filter · freeze</td><td class="yes">+ saldo USD, congelar lote, drawer</td><td class="yes">+ saldo USD, congelar lote, drawer</td></tr>
+        <tr><td><b>Currencies</b></td><td>CRUD básico</td><td class="yes">+ tipos (native/stablecoin/platform)</td><td class="yes">+ tipos (native/stablecoin/platform)</td></tr>
+        <tr><td><b>Treasury</b></td><td>—</td><td class="yes">Wallets corporativas · ratio cobertura · aprobación dual</td><td class="yes">Wallets corporativas · ratio cobertura · aprobación dual</td></tr>
+        <tr><td><b>Exchange Rates</b></td><td>Binance sync · manual rate</td><td class="yes">+ historial con source</td><td class="yes">+ historial con source</td></tr>
+        <tr><td><b>P2P</b></td><td>—</td><td class="yes">Mercado completo · ofertas · disputas</td><td class="yes">Mercado completo · ofertas · disputas</td></tr>
+        <tr><td><b>Exchange</b></td><td>—</td><td class="yes">Order book · velas · trade panel</td><td class="yes">Order book · velas · trade panel</td></tr>
+        <tr><td><b>Compliance</b></td><td>—</td><td class="yes">Cola priorizada · KYC review modal</td><td class="yes">Cola priorizada · KYC review modal</td></tr>
+        <tr><td><b>Auditoría</b></td><td>—</td><td class="yes">Log inmutable por categoría · IP</td><td class="yes">Log inmutable por categoría · IP</td></tr>
+        <tr><td><b>Mobile</b></td><td class="no">—</td><td class="yes">5 pantallas: login, home, QR, send, P2P</td><td class="yes">5 pantallas: login, home, QR, send, P2P</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="notes">
+    <h3>Decisión recomendada</h3>
+    <p>Mantener la v1 actual operativa mientras se migra módulo por módulo a v2. Empezar por las pantallas de cliente final (USER/VIEWER) — son las que tienen mayor impacto visible — y dejar los primitivos blockchain (Chain, Mempool, Validation, Health) en su forma v2 sober. La v3 terminal queda como toggle para operadores power-user.</p>
+    <p>Para arrancar la migración, abrí <a href="App.html">App.html</a> y comparalo con tu app en <code style="background: var(--surface-2); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); font-size: 12px;">localhost:3000</code> módulo por módulo.</p>
+  </div>
+</div>
+
+</body>
+</html>
