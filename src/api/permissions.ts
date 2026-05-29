@@ -51,6 +51,30 @@ export async function loadStaffUsers(): Promise<StaffUser[]> {
     })
 }
 
+// ── Email ─────────────────────────────────────────────────────────────────────
+
+export interface SendActivationEmailResponse {
+  sent_to: string
+  user_id: string
+}
+
+/**
+ * Ask the backend to send the activation email to the new user.
+ * The activation_code from POST /auth/register is forwarded so the backend
+ * can embed it in the link without needing to store the raw code itself.
+ */
+export async function sendActivationEmail(
+  userId: string,
+  activationCode: string,
+  displayName: string,
+): Promise<SendActivationEmailResponse> {
+  const { data } = await client.post<SendActivationEmailResponse>(
+    `/admin/users/${userId}/send-activation-email`,
+    { activation_code: activationCode, display_name: displayName },
+  )
+  return data
+}
+
 // ── Create staff user ─────────────────────────────────────────────────────────
 
 export interface CreateStaffParams {
@@ -66,8 +90,10 @@ export interface CreateStaffParams {
 export interface CreateStaffResult {
   user_id: string
   username: string
-  /** Activation code — needed if notify=email-link so admin can share it. */
+  /** Activation code — shown as fallback when email-link is chosen. */
   activation_code: string
+  /** True when the activation email was successfully dispatched. */
+  email_sent: boolean
   /** Only populated when notify=temp-password. */
   temp_password: string | null
   staffUser: StaffUser
@@ -78,10 +104,11 @@ export interface CreateStaffResult {
  *   1. register (VIEWER by default)
  *   2. grantRole → promote to ADMIN/OPERATOR
  *   3. grantPermission for each extra beyond the role preset
- *   4. issueTempPassword if notify=temp-password
+ *   4a. sendActivationEmail  (notify=email-link)
+ *   4b. issueTempPassword    (notify=temp-password)
  */
 export async function createStaffUser(params: CreateStaffParams): Promise<CreateStaffResult> {
-  // Derive a username from the email (sanitise to ≤64 alphanumeric/underscore chars).
+  // Derive username from email — sanitise to ≤64 alphanumeric/underscore chars.
   const username = params.email
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '_')
@@ -89,16 +116,16 @@ export async function createStaffUser(params: CreateStaffParams): Promise<Create
     .slice(0, 60)
     + '_' + Date.now().toString(36).slice(-4)
 
-  // 1. Register → creates VIEWER account
+  // 1. Register → VIEWER account
   const reg = await register(username, params.name, params.country || undefined, params.email)
   const userId = reg.user_id
 
-  // 2. Grant desired role (skip if VIEWER — that's the default)
+  // 2. Promote to desired role
   if (params.role !== 'VIEWER') {
     await grantRole(userId, params.role)
   }
 
-  // 3. Grant permissions that exceed the role preset
+  // 3. Grant permissions beyond the role preset
   const preset = new Set(ROLE_PRESETS[params.role])
   const extras = [...params.perms].filter((p) => !preset.has(p))
   for (const perm of extras) {
@@ -107,7 +134,12 @@ export async function createStaffUser(params: CreateStaffParams): Promise<Create
 
   // 4. Access method
   let tempPassword: string | null = null
-  if (params.notify === 'temp-password') {
+  let emailSent = false
+
+  if (params.notify === 'email-link') {
+    await sendActivationEmail(userId, reg.activation_code, params.name)
+    emailSent = true
+  } else {
     const tp = await issueTempPassword(userId)
     tempPassword = tp.temp_password
   }
@@ -130,6 +162,7 @@ export async function createStaffUser(params: CreateStaffParams): Promise<Create
     user_id: userId,
     username,
     activation_code: reg.activation_code,
+    email_sent: emailSent,
     temp_password: tempPassword,
     staffUser,
   }
