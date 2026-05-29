@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useMetricsStore } from '@/stores/metrics'
 import MetricsBar from '@/components/organisms/MetricsBar.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import HealthLogsPanel from '@/components/organisms/HealthLogsPanel.vue'
+import type { ComponentStatus } from '@/domain/metrics'
 
 const store = useMetricsStore()
 
@@ -33,6 +34,27 @@ function healthLabel(status: string | null | undefined): string {
   if (!status) return 'N/D'
   return HEALTH_LABEL[status as HealthStatus] ?? status
 }
+
+const STATIC_COMPONENTS: ComponentStatus[] = [
+  {
+    id: 'node',
+    label: 'Node (Python · Quart)',
+    meta: 'v0.4.2 · port 5000',
+    status: 'ok',
+  },
+  {
+    id: 'db',
+    label: 'Database (PostgreSQL)',
+    meta: `chain · ${0} TX · conexiones`,
+    status: 'ok',
+  },
+  { id: 'mempool_relay', label: 'Mempool relay', meta: 'broadcast to peers', status: 'ok' },
+  { id: 'block_validator', label: 'Block validator', meta: 're-validation every 5 min', status: 'ok' },
+]
+
+const components = computed<ComponentStatus[]>(
+  () => store.health?.components ?? STATIC_COMPONENTS,
+)
 </script>
 
 <template>
@@ -112,44 +134,12 @@ function healthLabel(status: string | null | undefined): string {
         <div class="section-h">Componentes</div>
         <div class="card components-card">
           <div class="kvs">
-            <div class="kvs-row">
-              <div class="kvs-key">Estado</div>
-              <div class="kvs-val">Último check</div>
+            <div v-for="c in components" :key="c.id" class="kvs-row">
+              <div class="kvs-key">{{ c.label }}</div>
+              <div class="kvs-val">{{ c.meta ?? '—' }}</div>
               <div class="kvs-badge">
-                <BaseBadge :tone="healthTone(store.health?.status)">{{
-                  healthLabel(store.health?.status)
-                }}</BaseBadge>
+                <BaseBadge :tone="healthTone(c.status)">{{ healthLabel(c.status) }}</BaseBadge>
               </div>
-            </div>
-
-            <div class="kvs-row">
-              <div class="kvs-key">Node (Python · Flask)</div>
-              <div class="kvs-val">v0.4.2 · puerto 5000</div>
-              <div class="kvs-badge"><BaseBadge tone="success">OK</BaseBadge></div>
-            </div>
-
-            <div class="kvs-row">
-              <div class="kvs-key">Database (PostgreSQL)</div>
-              <div class="kvs-val">
-                cadena · {{ store.metrics?.pendingTransactions ?? 0 }} TX · conexiones
-              </div>
-              <div class="kvs-badge">
-                <BaseBadge :tone="healthTone(store.health?.db)">{{
-                  store.health?.db === 'ok' ? 'OK' : 'Error'
-                }}</BaseBadge>
-              </div>
-            </div>
-
-            <div class="kvs-row">
-              <div class="kvs-key">Mempool relay</div>
-              <div class="kvs-val">broadcast a peers</div>
-              <div class="kvs-badge"><BaseBadge tone="success">OK</BaseBadge></div>
-            </div>
-
-            <div class="kvs-row">
-              <div class="kvs-key">Block validator</div>
-              <div class="kvs-val">re-validación cada 5 min</div>
-              <div class="kvs-badge"><BaseBadge tone="success">OK</BaseBadge></div>
             </div>
           </div>
         </div>
