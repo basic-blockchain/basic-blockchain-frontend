@@ -1,214 +1,179 @@
-// usePermissions.ts — permission catalog, role presets, and shared types
+/**
+ * usePermissions — permission catalog mirroring domain/permissions.py ROLE_PERMISSIONS.
+ *
+ * Keys are UPPER_SNAKE_CASE strings matching the backend Permission enum values.
+ * Categories are a frontend UX grouping only — the backend has no concept of them.
+ */
 
 export type PermKey = string
-
-export interface PermCategoryEntry {
-  key: PermKey
-  label: string
-  desc: string
-}
+export type StaffRole = 'ADMIN' | 'OPERATOR' | 'VIEWER'
 
 export interface PermCategory {
   id: string
   label: string
   desc: string
   color: string
-  perms: [PermKey, string, string][]
+  perms: [PermKey, string, string][] // [key, label, description]
 }
-
-export type StaffRole = 'ADMIN' | 'OPERATOR' | 'VIEWER'
 
 export interface StaffUser {
-  id: string
-  name: string
-  email: string
-  role: StaffRole
-  country: string
-  perms: PermKey[]
-  custom: boolean
-  last: string
+  user_id: string
+  display_name: string
+  email: string | null
+  country: string | null
+  /** All roles assigned to this user. */
+  roles: string[]
+  /** Primary staff role — highest privilege role. */
+  primaryRole: StaffRole
+  /** Effective permissions computed from role baseline + user overrides. */
+  effectivePerms: string[]
+  /** User-specific grants that deviate from the role preset. */
+  overrides: string[]
+  /** True when effectivePerms differs from the role baseline. */
+  isCustom: boolean
+  lastActive: string | null
 }
+
+// ── Permission categories (UX grouping) ───────────────────────────────────────
 
 export const PERM_CATEGORIES: PermCategory[] = [
   {
-    id: 'mint',
-    label: 'Acuñación · Mint',
-    desc: 'Crear y destruir tokens nativos.',
+    id: 'tokens',
+    label: 'Tokens',
+    desc: 'Acuñar, transferir y consultar historial de tokens.',
     color: '#7c3aed',
     perms: [
-      ['mint.tokens', 'Mint', 'Crear tokens nativos en una wallet'],
-      ['mint.burn', 'Burn', 'Destruir tokens existentes'],
-      ['mint.cusd', 'Mint stablecoin (cUSD)', 'Acuñar la moneda estable nativa'],
+      ['MINT',           'Mint',              'Acuñar nuevos tokens nativos (modifica supply)'],
+      ['TRANSFER',       'Transferir',        'Enviar tokens entre wallets'],
+      ['VIEW_TRANSFERS', 'Ver transferencias', 'Consultar historial financiero completo'],
     ],
   },
   {
-    id: 'tx',
-    label: 'Transacciones',
-    desc: 'Aprobar, rechazar o cancelar operaciones en curso.',
-    color: '#0891b2',
-    perms: [
-      ['tx.approve', 'Aprobar transacciones', 'Liberar TX retenidas por reglas AML'],
-      ['tx.reject', 'Rechazar transacciones', 'Bloquear TX antes de incluirse en bloque'],
-      ['tx.cancel', 'Cancelar pendientes', 'Sacar TX del mempool antes de minar'],
-    ],
-  },
-  {
-    id: 'wallet',
+    id: 'wallets',
     label: 'Wallets',
-    desc: 'Acciones sobre wallets de usuarios.',
+    desc: 'Crear, consultar y gestionar wallets de usuarios.',
     color: '#1f7a3a',
     perms: [
-      ['wallet.freeze', 'Congelar wallets', 'Pausar operativa de cualquier wallet'],
-      ['wallet.unfreeze', 'Descongelar wallets', 'Reactivar wallets congeladas'],
-      ['wallet.create_for_user', 'Crear wallet para usuario', 'Generar par de llaves a nombre de otro'],
+      ['CREATE_WALLET',   'Crear wallet',          'Generar par de llaves para una cuenta'],
+      ['VIEW_WALLETS',    'Ver todas las wallets',  'Listado cross-user de wallets (admin)'],
+      ['VIEW_OWN_WALLET', 'Ver wallet propia',      'Solo accede a las wallets del propio usuario'],
+      ['FREEZE_WALLET',   'Congelar wallet',        'Pausar operativa de cualquier wallet'],
+      ['UNFREEZE_WALLET', 'Descongelar wallet',     'Reactivar wallets congeladas'],
     ],
   },
   {
-    id: 'user',
+    id: 'users',
     label: 'Usuarios',
-    desc: 'Gestión de cuentas de usuarios finales.',
+    desc: 'Gestión completa de cuentas de usuarios finales.',
     color: '#c2410c',
     perms: [
-      ['user.create', 'Crear usuarios', 'Onboarding manual desde admin'],
-      ['user.edit', 'Editar datos', 'Cambiar email, nombre, KYC'],
-      ['user.delete', 'Soft-delete', 'Inactivar cuenta + congelar wallets'],
-      ['user.ban', 'Banear / desbanear', 'Bloquear acceso a la plataforma'],
-      ['user.assign_perm', 'Asignar permisos', 'Modificar permisos de otros usuarios'],
+      ['CREATE_USER',  'Crear usuarios',   'Onboarding manual de nuevas cuentas'],
+      ['VIEW_USERS',   'Ver usuarios',     'Listar y consultar datos de cualquier usuario'],
+      ['UPDATE_USER',  'Editar datos',     'Cambiar display name, email, KYC'],
+      ['BAN_USER',     'Banear',           'Bloquear acceso a la plataforma'],
+      ['UNBAN_USER',   'Desbanear',        'Restaurar acceso de un usuario baneado'],
+      ['DELETE_USER',  'Eliminar (soft)',  'Inactivar cuenta + congelar wallets asociadas'],
+      ['RESTORE_USER', 'Restaurar',        'Reactivar cuenta eliminada por soft-delete'],
+    ],
+  },
+  {
+    id: 'roles',
+    label: 'Roles y Permisos',
+    desc: 'Asignar roles y gestionar permisos de staff.',
+    color: '#5b21b6',
+    perms: [
+      ['ASSIGN_ROLE',        'Asignar roles',      'Otorgar o revocar roles ADMIN/OPERATOR/VIEWER'],
+      ['MANAGE_PERMISSIONS', 'Gestionar permisos', 'Conceder o revocar permisos directos por usuario'],
     ],
   },
   {
     id: 'treasury',
     label: 'Tesorería',
-    desc: 'Movimiento de fondos corporativos.',
+    desc: 'Movimiento de fondos corporativos con firma dual.',
     color: '#ad2820',
     perms: [
-      ['treasury.move', 'Mover entre wallets', 'Cold ↔ Hot ↔ Fee'],
-      ['treasury.distribute', 'Emitir a usuarios', 'Crear distribución masiva'],
-      ['treasury.approve_dual', 'Firmar 2ª aprobación', 'Segunda firma en aprobación dual'],
+      ['CREATE_TREASURY_WALLET',        'Crear wallet treasury',      'Inicializar wallet Cold/Hot/Fee corporativa'],
+      ['INITIATE_TREASURY_DISTRIBUTION','Iniciar distribución',       'Crear operación de distribución masiva'],
+      ['APPROVE_TREASURY_DISTRIBUTION', 'Aprobar distribución',       '2ª firma en operación de distribución'],
+      ['VIEW_TREASURY_DISTRIBUTIONS',   'Ver distribuciones',         'Consultar historial de distribuciones'],
+      ['APPROVE_TREASURY_MINT_OP',      'Aprobar mint (firma dual)', '2ª firma que habilita acuñación (supply-mutating)'],
+      ['VIEW_TREASURY_MINT_OPS',        'Ver operaciones de mint',    'Consultar historial de operaciones de mint'],
     ],
   },
   {
-    id: 'compliance',
-    label: 'Compliance',
-    desc: 'Revisión KYC, AML y disputas.',
-    color: '#0e7490',
+    id: 'market',
+    label: 'Mercado',
+    desc: 'Monedas y tasas de cambio de la plataforma.',
+    color: '#0891b2',
     perms: [
-      ['compliance.review', 'Revisar casos', 'Aprobar/rechazar KYC y AML'],
-      ['compliance.dispute', 'Resolver disputas P2P', 'Decidir en disputas escaladas'],
-      ['compliance.export', 'Exportar reportes', 'Generar SAR/STR firmados'],
+      ['CREATE_CURRENCY',       'Crear moneda',     'Registrar nueva moneda en la plataforma'],
+      ['MANAGE_EXCHANGE_RATES', 'Gestionar tasas',  'Configurar y sincronizar tasas de cambio'],
     ],
   },
   {
     id: 'platform',
     label: 'Plataforma',
-    desc: 'Configuración global y auditoría.',
-    color: '#5b21b6',
+    desc: 'Auditoría, KYC y configuración global.',
+    color: '#0e7490',
     perms: [
-      ['platform.settings', 'Editar ajustes', 'Cambios de configuración global'],
-      ['platform.audit_view', 'Ver auditoría', 'Acceder al log de auditoría'],
-      ['platform.audit_export', 'Exportar firmado', 'Descargar log con firma HMAC'],
-      ['platform.mine', 'Minar bloques', 'Disparar PoW manualmente'],
+      ['VIEW_AUDIT_LOG', 'Ver auditoría', 'Acceder al log completo de acciones auditadas'],
+      ['REVIEW_KYC',     'Revisar KYC',  'Aprobar o rechazar solicitudes de verificación KYC'],
     ],
   },
 ]
 
-export const ROLE_PRESETS: Record<StaffRole, PermKey[]> = {
+// ── Role baselines — mirror of ROLE_PERMISSIONS in domain/permissions.py ──────
+// Keep in sync with the backend. Deliberate omissions from ADMIN baseline:
+//   MINT, VIEW_TRANSFERS, APPROVE_TREASURY_MINT_OP (require explicit per-admin grant).
+
+export const ROLE_PRESETS: Record<StaffRole, string[]> = {
   ADMIN: [
-    'mint.tokens', 'mint.burn', 'mint.cusd',
-    'tx.approve', 'tx.reject', 'tx.cancel',
-    'wallet.freeze', 'wallet.unfreeze', 'wallet.create_for_user',
-    'user.create', 'user.edit', 'user.delete', 'user.ban', 'user.assign_perm',
-    'treasury.move', 'treasury.distribute', 'treasury.approve_dual',
-    'compliance.review', 'compliance.dispute', 'compliance.export',
-    'platform.settings', 'platform.audit_view', 'platform.audit_export', 'platform.mine',
+    'CREATE_USER', 'VIEW_USERS', 'UPDATE_USER', 'BAN_USER', 'UNBAN_USER',
+    'DELETE_USER', 'RESTORE_USER', 'ASSIGN_ROLE', 'MANAGE_PERMISSIONS', 'VIEW_AUDIT_LOG',
+    'VIEW_WALLETS', 'FREEZE_WALLET', 'UNFREEZE_WALLET', 'CREATE_WALLET', 'TRANSFER',
+    'CREATE_CURRENCY', 'CREATE_TREASURY_WALLET', 'MANAGE_EXCHANGE_RATES',
+    'REVIEW_KYC',
+    'INITIATE_TREASURY_DISTRIBUTION', 'APPROVE_TREASURY_DISTRIBUTION',
+    'VIEW_TREASURY_DISTRIBUTIONS', 'VIEW_TREASURY_MINT_OPS',
   ],
   OPERATOR: [
-    'tx.approve', 'tx.reject',
-    'wallet.freeze', 'wallet.unfreeze',
-    'user.edit', 'user.ban',
-    'compliance.review', 'compliance.dispute',
-    'platform.audit_view',
+    'CREATE_WALLET', 'TRANSFER', 'VIEW_WALLETS', 'VIEW_TRANSFERS',
+    'VIEW_TREASURY_DISTRIBUTIONS', 'VIEW_TREASURY_MINT_OPS',
   ],
-  VIEWER: [],
+  VIEWER: [
+    'CREATE_WALLET', 'TRANSFER', 'VIEW_OWN_WALLET',
+  ],
 }
 
-export function isCustomSet(user: StaffUser): boolean {
-  const preset = new Set(ROLE_PRESETS[user.role])
-  if (user.perms.length !== preset.size) return true
-  return user.perms.some((p) => !preset.has(p))
+export const ALL_PERM_KEYS: string[] = PERM_CATEGORIES.flatMap((c) => c.perms.map(([k]) => k))
+export const TOTAL_PERMS = ALL_PERM_KEYS.length
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Resolve the highest-privilege staff role from a user's roles array. */
+export function primaryRole(roles: string[]): StaffRole {
+  if (roles.includes('ADMIN')) return 'ADMIN'
+  if (roles.includes('OPERATOR')) return 'OPERATOR'
+  return 'VIEWER'
 }
 
-export const STAFF_USERS: StaffUser[] = [
-  {
-    id: 'usr_admin_01',
-    name: 'María Acosta',
-    email: 'admin@dropi.co',
-    role: 'ADMIN',
-    country: '🇦🇷',
-    perms: [...ROLE_PRESETS.ADMIN],
-    custom: false,
-    last: 'hace 2 d',
-  },
-  {
-    id: 'usr_admin_02',
-    name: 'Sergio Romero',
-    email: 'sergio@dropi.co',
-    role: 'ADMIN',
-    country: '🇦🇷',
-    perms: [...ROLE_PRESETS.ADMIN],
-    custom: false,
-    last: 'hace 1 sem',
-  },
-  {
-    id: 'usr_admin_03',
-    name: 'Daniela Kim',
-    email: 'daniela@dropi.co',
-    role: 'ADMIN',
-    country: '🇲🇽',
-    perms: ROLE_PRESETS.ADMIN.filter((p) => p !== 'user.delete'),
-    custom: true,
-    last: 'hace 3 d',
-  },
-  {
-    id: 'usr_op_01',
-    name: 'Pablo Iturri',
-    email: 'pablo@dropi.co',
-    role: 'OPERATOR',
-    country: '🇦🇷',
-    perms: [...ROLE_PRESETS.OPERATOR],
-    custom: false,
-    last: 'hace 4 h',
-  },
-  {
-    id: 'usr_op_02',
-    name: 'Renata Vega',
-    email: 'renata@dropi.co',
-    role: 'OPERATOR',
-    country: '🇨🇴',
-    perms: [...ROLE_PRESETS.OPERATOR, 'compliance.export'],
-    custom: true,
-    last: 'hace 1 d',
-  },
-  {
-    id: 'usr_op_03',
-    name: 'Tomás Acosta',
-    email: 'tomas@dropi.co',
-    role: 'OPERATOR',
-    country: '🇨🇴',
-    perms: [...ROLE_PRESETS.OPERATOR],
-    custom: false,
-    last: 'hace 12 h',
-  },
-  {
-    id: 'usr_view_01',
-    name: 'Lucía González',
-    email: 'lucia@gmail.com',
-    role: 'VIEWER',
-    country: '🇨🇱',
-    perms: [],
-    custom: false,
-    last: '—',
-  },
-]
+/**
+ * Compute effective permissions: role baseline + user-specific overrides.
+ * Overrides are additive — they extend the preset, not replace it.
+ */
+export function computeEffectivePerms(roles: string[], overrides: string[]): string[] {
+  const set = new Set<string>()
+  for (const r of roles) {
+    for (const p of ROLE_PRESETS[r as StaffRole] ?? []) set.add(p)
+  }
+  for (const p of overrides) set.add(p)
+  return [...set].sort()
+}
 
-export const TOTAL_PERMS = PERM_CATEGORIES.reduce((s, c) => s + c.perms.length, 0)
+/** True when the effective permission set differs from the role's baseline. */
+export function isCustomSet(roles: string[], effectivePerms: string[]): boolean {
+  const role = primaryRole(roles)
+  const baseline = new Set(ROLE_PRESETS[role])
+  if (effectivePerms.length !== baseline.size) return true
+  return effectivePerms.some((p) => !baseline.has(p))
+}
