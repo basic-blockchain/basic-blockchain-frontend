@@ -4,13 +4,10 @@ import { listAuditLog } from '@/api/admin'
 import type { AuditEntry } from '@/api/admin'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
-import BaseButton from '@/components/atoms/BaseButton.vue'
-
 const STORAGE_KEY = 'healthLogs_state_v1'
 
 const entries = ref<AuditEntry[]>([])
 const loading = ref(false)
-const paused = ref(false)
 const search = ref('')
 const severityFilter = ref<string | null>(null)
 const showModal = ref(false)
@@ -61,7 +58,6 @@ onMounted(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const st = JSON.parse(raw)
-      paused.value = !!st.paused
       search.value = st.search || ''
       severityFilter.value = st.severity || null
     }
@@ -69,7 +65,7 @@ onMounted(() => {
 
   fetchLogs()
   timer = window.setInterval(() => {
-    if (!paused.value) fetchLogs()
+    fetchLogs()
   }, 3000)
 
   // compute sticky top var
@@ -84,11 +80,11 @@ onUnmounted(() => {
   window.removeEventListener('scroll', updateStickyTop)
 })
 
-watch([paused, search, severityFilter], () => {
+watch([search, severityFilter], () => {
   // persist small state
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ paused: paused.value, search: search.value, severity: severityFilter.value })
+    JSON.stringify({ search: search.value, severity: severityFilter.value })
   )
 })
 
@@ -161,11 +157,10 @@ function shortTime(iso?: string) {
             <option value="warning">Warning</option>
             <option value="critical">Critical</option>
           </select>
-          <BaseButton size="sm" @click="paused = !paused">{{
-            paused ? 'Reanudar' : 'Pausar'
-          }}</BaseButton>
-          <button class="icon-btn" title="Opciones">⚙️</button>
-          <span class="dot live" title="En vivo"></span>
+          <span class="live-pill" title="En vivo">
+            <span class="dot live"></span>
+            <span>En vivo</span>
+          </span>
         </div>
       </div>
     </template>
@@ -216,40 +211,44 @@ function shortTime(iso?: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px; /* ensure header has spacing and visual separation */
-  border-bottom: 1px solid var(--border); /* restore header separation */
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
 }
 .logs-h .live-controls {
   display: flex;
   align-items: center;
-  gap: 6px; /* tighten gap */
-  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .logs-h > span {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text);
   display: inline-block;
   line-height: 1;
 }
-.icon-btn {
-  background: transparent;
-  border: none;
-  padding: 6px;
-  cursor: pointer;
-  font-size: 14px;
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--bg-muted);
   color: var(--text-2);
-}
-.icon-btn:hover {
-  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .dot.live {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--success);
-  box-shadow: 0 0 0 6px var(--success-soft);
+  box-shadow: 0 0 0 4px var(--success-soft);
+  flex: 0 0 auto;
 }
 .logs-body {
   padding: 0 12px 12px 12px;
@@ -305,18 +304,24 @@ function shortTime(iso?: string) {
 }
 
 .severity-select {
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
 }
 .logs-search {
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.06); /* lower contrast */
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   background: var(--surface);
   color: var(--text-2);
-  min-width: 140px;
+  min-width: 150px;
+  font-size: 12px;
+}
+.logs-search::placeholder {
+  color: var(--text-3);
 }
 .detail-btn {
   margin-top: 6px;
