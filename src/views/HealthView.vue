@@ -253,4 +253,54 @@ function healthLabel(status: string | null | undefined): string {
     grid-template-columns: 1fr;
   }
 }
+
+/* Two column layout for Health view */
+.two-col-row {
+  display: grid;
+  grid-template-columns: 1.2fr 420px;
+  gap: 18px;
+  align-items: start;
+}
+.components-card {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  min-height: 360px;
+}
+.comp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.comp-name {
+  font-weight: 600;
+}
+.comp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.comp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 6px;
+  border-radius: 6px;
+}
+.comp-title {
+  font-weight: 600;
+}
+.muted {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .two-col-row {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
