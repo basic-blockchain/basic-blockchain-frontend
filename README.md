@@ -1,20 +1,24 @@
 # basic-blockchain-frontend
 
-![version](https://img.shields.io/badge/version-v0.8.0-blue)
+![version](https://img.shields.io/badge/version-v0.10.0-blue)
 ![framework](https://img.shields.io/badge/Vue-3.5-42b883)
 ![tooling](https://img.shields.io/badge/Vite-6-646cff)
 ![types](https://img.shields.io/badge/TypeScript-5-3178c6)
 ![tests](https://img.shields.io/badge/tests-CI-brightgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D20-green)
 
-**Latest stable release:** v0.8.0
+**Latest stable release:** v0.10.0
 
 Real-time dashboard for the
 [basic-blockchain-simulator](https://github.com/basic-blockchain/basic-blockchain-simulator)
 backend. Lets you mine blocks, submit and watch pending transactions, browse
 the full confirmed-transaction history, validate the chain, register and
 resolve peer nodes, manage wallets with signed transfers, authenticate users
-with JWT, and operate admin workflows (users + wallets) from a single Vue 3 SPA.
+with JWT, and operate admin workflows (users + wallets + audit log) from a single
+Vue 3 SPA. v0.10.0 adds a fully redesigned Health view with a live audit-logs
+panel (auto-refresh every 3 s, search, severity filter, sticky sidebar), a
+`AuditEntryDetailModal` shared by the Health and Audit views, and a dynamic
+Components panel driven by the backend `GET /health` response.
 
 ---
 
@@ -70,7 +74,8 @@ linked from the [Documentation Index](docs/index.md).
 | `/mempool`       | `MempoolView`      | Pending transactions + confirmed history (loaded from `GET /api/v1/transactions`)  |
 | `/nodes`         | `NodesView`        | Register peer node URLs, list registered peers, run consensus resolve              |
 | `/validation`    | `ValidationView`   | Trigger and review chain-validity checks with persisted history                    |
-| `/health`        | `HealthView`       | Backend status, DB connectivity, current chain height                              |
+| `/health`        | `HealthView`       | Node health redesign: KPI bigstats, dynamic Components panel (status badges per service), live audit-log sidebar (`HealthLogsPanel`) with auto-refresh, search, severity filter, and `AuditEntryDetailModal` on row click |
+| `/admin/audit`   | `AdminAuditView`   | Full audit log table with search, category filter, KPI row, and `AuditEntryDetailModal` on row click (ADMIN)                                                              |
 
 The dashboard talks to the backend via the v1 API (`/api/v1/...`) and
 keeps state warm with the WebSocket endpoint (`/api/v1/ws`). All requests
