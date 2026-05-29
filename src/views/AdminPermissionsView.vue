@@ -1,37 +1,57 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
-import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import UserChip from '@/components/atoms/UserChip.vue'
 import PermissionAssignDrawer from '@/components/drawers/PermissionAssignDrawer.vue'
 import CreateAdminUserFlow from '@/components/flows/CreateAdminUserFlow.vue'
+import { loadStaffUsers } from '@/api/permissions'
 import {
-  STAFF_USERS, PERM_CATEGORIES, ROLE_PRESETS, TOTAL_PERMS,
-  type StaffUser, type StaffRole,
+  PERM_CATEGORIES, TOTAL_PERMS,
+  primaryRole, computeEffectivePerms, isCustomSet,
+  type StaffUser,
 } from '@/composables/usePermissions'
 
 type FilterTab = 'all' | 'admin' | 'operator' | 'viewer'
 
 const filterTab = ref<FilterTab>('all')
 const search = ref('')
+const users = ref<StaffUser[]>([])
+const loading = ref(false)
+const error = ref('')
 
-const users = ref<StaffUser[]>(STAFF_USERS.map((u) => ({ ...u, perms: [...u.perms] })))
+async function fetchUsers() {
+  loading.value = true
+  error.value = ''
+  try {
+    users.value = await loadStaffUsers()
+  } catch (e) {
+    error.value = 'No se pudieron cargar los usuarios. Verifica la conexión al servidor.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchUsers)
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
   return users.value.filter((u) => {
-    if (filterTab.value !== 'all' && u.role.toLowerCase() !== filterTab.value) return false
-    if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false
+    if (filterTab.value !== 'all' && u.primaryRole.toLowerCase() !== filterTab.value) return false
+    if (q) {
+      const name = u.display_name.toLowerCase()
+      const email = (u.email ?? '').toLowerCase()
+      if (!name.includes(q) && !email.includes(q)) return false
+    }
     return true
   })
 })
 
 const counts = computed(() => ({
   all: users.value.length,
-  admin: users.value.filter((u) => u.role === 'ADMIN').length,
-  operator: users.value.filter((u) => u.role === 'OPERATOR').length,
-  viewer: users.value.filter((u) => u.role === 'VIEWER').length,
-  custom: users.value.filter((u) => u.custom).length,
+  admin: users.value.filter((u) => u.primaryRole === 'ADMIN').length,
+  operator: users.value.filter((u) => u.primaryRole === 'OPERATOR').length,
+  viewer: users.value.filter((u) => u.primaryRole === 'VIEWER').length,
+  custom: users.value.filter((u) => u.isCustom).length,
 }))
 
 const tabs: { key: FilterTab; label: string }[] = [
@@ -41,7 +61,7 @@ const tabs: { key: FilterTab; label: string }[] = [
   { key: 'viewer', label: 'Viewers' },
 ]
 
-// Drawer
+// ── Drawer ────────────────────────────────────────────────────────────────────
 const drawerOpen = ref(false)
 const selectedUser = ref<StaffUser | null>(null)
 
@@ -50,32 +70,44 @@ function openAssign(user: StaffUser) {
   drawerOpen.value = true
 }
 
-function onSaved(payload: { userId: string; perms: string[] }) {
-  const u = users.value.find((u) => u.id === payload.userId)
+function onSaved(payload: { userId: string; effectivePerms: string[]; overrides: string[] }) {
+  const u = users.value.find((u) => u.user_id === payload.userId)
   if (!u) return
-  u.perms = payload.perms
-  const preset = new Set(ROLE_PRESETS[u.role])
-  u.custom = payload.perms.length !== preset.size || payload.perms.some((p) => !preset.has(p))
-  u.last = 'hace un momento'
+  u.effectivePerms = payload.effectivePerms
+  u.overrides = payload.overrides
+  u.isCustom = isCustomSet(u.roles, payload.effectivePerms)
+  u.lastActive = new Date().toISOString()
 }
 
-// Create user flow
+// ── Create user flow ──────────────────────────────────────────────────────────
 const createOpen = ref(false)
 
 function onUserCreated(user: StaffUser) {
   users.value.unshift(user)
 }
 
-// Role badge styling
-function roleBg(role: StaffRole): string {
+// ── Role badge styling ────────────────────────────────────────────────────────
+function roleBg(role: string): string {
   if (role === 'ADMIN') return '#ede9fe'
   if (role === 'OPERATOR') return '#cffafe'
   return 'var(--surface-2)'
 }
-function roleColor(role: StaffRole): string {
+function roleColor(role: string): string {
   if (role === 'ADMIN') return '#5b21b6'
   if (role === 'OPERATOR') return '#155e75'
   return 'var(--text-2)'
+}
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return '—'
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'ahora mismo'
+  if (mins < 60) return `hace ${mins} min`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `hace ${hrs} h`
+  const days = Math.floor(hrs / 24)
+  return `hace ${days} d`
 }
 </script>
 
@@ -120,9 +152,9 @@ function roleColor(role: StaffRole): string {
         <div class="stat-desc">operativa diaria</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Cambios 7d</div>
-        <div class="stat-value">12</div>
-        <div class="stat-desc">todos auditados</div>
+        <div class="stat-label">Viewers</div>
+        <div class="stat-value" style="color: var(--text-3)">{{ counts.viewer }}</div>
+        <div class="stat-desc">solo wallet propia</div>
       </div>
     </div>
 
@@ -148,14 +180,27 @@ function roleColor(role: StaffRole): string {
           placeholder="Buscar por nombre o email…"
         />
       </div>
-      <span class="chip-filter">
-        Con personalización · {{ counts.custom }}
+      <span v-if="counts.custom > 0" class="chip-filter">
+        {{ counts.custom }} con personalización
         <i class="pi pi-chevron-down" style="font-size: 10px; margin-left: 4px" />
       </span>
     </div>
 
+    <!-- Loading -->
+    <div v-if="loading" class="state-block">
+      <i class="pi pi-spin pi-spinner state-icon" />
+      <span>Cargando usuarios…</span>
+    </div>
+
+    <!-- Error -->
+    <div v-else-if="error" class="state-block state-block--error">
+      <i class="pi pi-exclamation-triangle state-icon" />
+      <span>{{ error }}</span>
+      <BaseButton size="sm" @click="fetchUsers">Reintentar</BaseButton>
+    </div>
+
     <!-- Table -->
-    <div class="table-wrap">
+    <div v-else class="table-wrap">
       <table class="perm-table">
         <thead>
           <tr>
@@ -163,42 +208,44 @@ function roleColor(role: StaffRole): string {
             <th>Rol</th>
             <th>Permisos activos</th>
             <th>Set</th>
-            <th>Último cambio</th>
+            <th>Última actividad</th>
             <th />
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="u in filtered"
-            :key="u.id"
+            :key="u.user_id"
             class="perm-row"
             @click="openAssign(u)"
           >
             <td>
-              <UserChip :name="u.name" :role="u.email" size="md" />
+              <UserChip :name="u.display_name" :role="u.email ?? undefined" size="md" />
             </td>
             <td>
               <span
                 class="role-badge"
-                :style="{ background: roleBg(u.role), color: roleColor(u.role) }"
-              >{{ u.role }}</span>
+                :style="{ background: roleBg(u.primaryRole), color: roleColor(u.primaryRole) }"
+              >{{ u.primaryRole }}</span>
             </td>
             <td>
               <div class="perms-cell">
-                <span class="perm-count">{{ u.perms.length }} permisos</span>
+                <span class="perm-count">{{ u.effectivePerms.length }} permisos</span>
                 <span
-                  v-for="p in u.perms.slice(0, 2)"
+                  v-for="p in u.effectivePerms.slice(0, 2)"
                   :key="p"
                   class="perm-pill"
                 >{{ p }}</span>
-                <span v-if="u.perms.length > 2" class="perm-more">+{{ u.perms.length - 2 }}</span>
+                <span v-if="u.effectivePerms.length > 2" class="perm-more">
+                  +{{ u.effectivePerms.length - 2 }}
+                </span>
               </div>
             </td>
             <td>
-              <span v-if="u.custom" class="set-badge set-badge--custom">Personalizado</span>
-              <span v-else class="set-badge set-badge--preset">Preset {{ u.role }}</span>
+              <span v-if="u.isCustom" class="set-badge set-badge--custom">Personalizado</span>
+              <span v-else class="set-badge set-badge--preset">Preset {{ u.primaryRole }}</span>
             </td>
-            <td class="cell-muted">{{ u.last }}</td>
+            <td class="cell-muted">{{ relativeTime(u.lastActive) }}</td>
             <td class="cell-action" @click.stop>
               <BaseButton
                 size="sm"
@@ -211,14 +258,14 @@ function roleColor(role: StaffRole): string {
               </BaseButton>
             </td>
           </tr>
-          <tr v-if="filtered.length === 0">
+          <tr v-if="filtered.length === 0 && !loading">
             <td colspan="6" class="empty-row">Sin resultados</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Drawers and flows -->
+    <!-- Drawer -->
     <PermissionAssignDrawer
       v-if="selectedUser"
       :open="drawerOpen"
@@ -227,6 +274,7 @@ function roleColor(role: StaffRole): string {
       @saved="onSaved"
     />
 
+    <!-- Create user flow -->
     <CreateAdminUserFlow
       v-if="createOpen"
       @close="createOpen = false"
@@ -241,7 +289,6 @@ function roleColor(role: StaffRole): string {
   max-width: 1100px;
 }
 
-/* Header */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -267,7 +314,6 @@ function roleColor(role: StaffRole): string {
   flex-shrink: 0;
 }
 
-/* Stat cards */
 .stat-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -299,7 +345,6 @@ function roleColor(role: StaffRole): string {
   color: var(--text-3);
 }
 
-/* Toolbar */
 .toolbar {
   display: flex;
   align-items: center;
@@ -329,15 +374,8 @@ function roleColor(role: StaffRole): string {
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
-.tab:hover {
-  background: var(--hover);
-  color: var(--text);
-}
-.tab--active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
+.tab:hover { background: var(--hover); color: var(--text); }
+.tab--active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 .tab-count {
   font-size: 11px;
   font-weight: 600;
@@ -346,9 +384,8 @@ function roleColor(role: StaffRole): string {
   border-radius: 10px;
   padding: 1px 5px;
 }
-.tab--active .tab-count {
-  background: var(--surface-3, var(--hover));
-}
+.tab--active .tab-count { background: var(--hover); }
+
 .search-wrap {
   display: flex;
   align-items: center;
@@ -362,11 +399,7 @@ function roleColor(role: StaffRole): string {
   border-radius: var(--radius);
   padding: 0 10px;
 }
-.search-icon {
-  font-size: 12px;
-  color: var(--text-3);
-  flex-shrink: 0;
-}
+.search-icon { font-size: 12px; color: var(--text-3); flex-shrink: 0; }
 .search-input {
   border: 0;
   background: transparent;
@@ -375,9 +408,8 @@ function roleColor(role: StaffRole): string {
   flex: 1;
   outline: none;
 }
-.search-input::placeholder {
-  color: var(--text-3);
-}
+.search-input::placeholder { color: var(--text-3); }
+
 .chip-filter {
   display: inline-flex;
   align-items: center;
@@ -388,9 +420,24 @@ function roleColor(role: StaffRole): string {
   font-size: 12px;
   color: var(--text-2);
   background: var(--surface);
-  cursor: default;
   white-space: nowrap;
 }
+
+/* State blocks */
+.state-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.state-block--error { color: var(--danger); }
+.state-icon { font-size: 16px; }
 
 /* Table */
 .table-wrap {
@@ -417,17 +464,14 @@ function roleColor(role: StaffRole): string {
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out);
 }
-.perm-row:hover {
-  background: var(--hover);
-}
+.perm-row:hover { background: var(--hover); }
 .perm-row td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
-.perm-row:last-child td {
-  border-bottom: 0;
-}
+.perm-row:last-child td { border-bottom: 0; }
+
 .role-badge {
   display: inline-block;
   padding: 2px 7px;
@@ -456,10 +500,8 @@ function roleColor(role: StaffRole): string {
   border-radius: var(--radius-pill);
   padding: 2px 6px;
 }
-.perm-more {
-  font-size: 11px;
-  color: var(--text-3);
-}
+.perm-more { font-size: 11px; color: var(--text-3); }
+
 .set-badge {
   display: inline-block;
   padding: 2px 7px;
@@ -468,23 +510,11 @@ function roleColor(role: StaffRole): string {
   font-weight: 500;
   border: 0;
 }
-.set-badge--custom {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-.set-badge--preset {
-  background: var(--surface-2);
-  color: var(--text-2);
-}
-.cell-muted {
-  color: var(--text-3);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.cell-action {
-  width: 40px;
-  text-align: right;
-}
+.set-badge--custom { background: var(--warning-soft); color: var(--warning); }
+.set-badge--preset { background: var(--surface-2); color: var(--text-2); }
+
+.cell-muted { color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.cell-action { width: 40px; text-align: right; }
 .empty-row {
   padding: 32px 14px;
   text-align: center;
