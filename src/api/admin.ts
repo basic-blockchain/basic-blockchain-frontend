@@ -67,6 +67,17 @@ export async function revokePermission(userId: string, permission: string): Prom
   await client.post(`/admin/users/${userId}/permissions`, { action: 'revoke', permission })
 }
 
+export interface TempPasswordResponse {
+  user_id: string
+  temp_password: string
+  must_change_password: boolean
+}
+
+export async function issueTempPassword(userId: string): Promise<TempPasswordResponse> {
+  const { data } = await client.post<TempPasswordResponse>(`/admin/users/${userId}/temp-password`)
+  return data
+}
+
 // ── User management (enriched) ─────────────────────────────────────────────
 
 export interface UserAdminRecord {
