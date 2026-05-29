@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { listAuditLog } from '@/api/admin'
 import type { AuditEntry } from '@/api/admin'
 import BaseCard from '@/components/atoms/BaseCard.vue'
@@ -26,13 +26,34 @@ async function fetchLogs() {
     if (search.value) params.q = search.value
     if (severityFilter.value) params.severity = severityFilter.value
     const res = await listAuditLog(params)
-    entries.value = res.entries || []
+    // ensure entries is always an array
+    entries.value = res.entries || res || []
   } catch (err) {
     // silent
   } finally {
     loading.value = false
   }
 }
+
+// computed fallback filtering so search works even if server doesn't support q param
+const filteredEntries = computed(() => {
+  const q = (search.value || '').trim().toLowerCase()
+  const sev = (severityFilter.value || '').toLowerCase()
+  let list = entries.value || []
+  if (sev) list = list.filter((e) => ((e.severity || '') as string).toLowerCase() === sev)
+  if (!q) return list
+  return list.filter((e) => {
+    const action = (e.action || '').toString().toLowerCase()
+    const actor = (e.actor_id || '').toString().toLowerCase()
+    let details = ''
+    try {
+      details = JSON.stringify(e.details).toLowerCase()
+    } catch {
+      details = String(e.details || '').toLowerCase()
+    }
+    return action.includes(q) || actor.includes(q) || details.includes(q)
+  })
+})
 
 onMounted(() => {
   // restore persisted state
@@ -152,7 +173,7 @@ function shortTime(iso?: string) {
     <div class="logs-body">
       <div v-if="entries.length === 0" class="logs-empty">No hay eventos recientes</div>
       <div class="logs-list">
-        <div v-for="e in entries" :key="e.id" class="log-row">
+        <div v-for="e in filteredEntries" :key="e.id" class="log-row">
           <div class="col-sev">
             <BaseBadge :tone="toneForSeverity(e.severity)">{{
               (e.severity ?? 'info').toUpperCase()
@@ -166,7 +187,7 @@ function shortTime(iso?: string) {
 
           <div class="col-details">
             <div class="detail-text">{{ JSON.stringify(e.details) }}</div>
-            <button class="detail-btn" @click.prevent="openDetail(e)">Ver</button>
+            <button class="detail-btn" @click.prevent="openDetail(e)">View</button>
           </div>
         </div>
       </div>
@@ -202,7 +223,8 @@ function shortTime(iso?: string) {
 .logs-h .live-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px; /* tighten gap */
+  align-items: center;
 }
 .logs-h > span {
   font-weight: 600;
@@ -291,15 +313,19 @@ function shortTime(iso?: string) {
 .logs-search {
   padding: 6px 8px;
   border-radius: 6px;
-  border: 1px solid var(--border);
-  min-width: 160px;
+  border: 1px solid rgba(0, 0, 0, 0.06); /* lower contrast */
+  background: var(--surface);
+  color: var(--text-2);
+  min-width: 140px;
 }
 .detail-btn {
   margin-top: 6px;
   font-size: 12px;
-  background: transparent;
-  border: none;
-  color: var(--primary);
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text);
   cursor: pointer;
 }
 
