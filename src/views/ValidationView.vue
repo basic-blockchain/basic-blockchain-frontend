@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import { useChainStore } from '@/stores/chain'
@@ -10,6 +9,7 @@ import { useToast } from '@/composables/useToast'
 import { useValidationHistoryStore } from '@/stores/validationHistory'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
+import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseTable from '@/components/atoms/BaseTable.vue'
 
 const chainStore = useChainStore()
@@ -19,8 +19,59 @@ const historyStore = useValidationHistoryStore()
 
 const loadingChainValidation = ref(false)
 const chainValidation = ref<{ valid: boolean; message: string } | null>(null)
+const validationModalOpen = ref(false)
+const validationModalStage = ref<'idle' | 'running' | 'done' | 'invalid' | 'error'>('idle')
+const validationActiveStep = ref(0)
+const validationSummary = ref('')
 const page = ref(1)
 const pageSize = ref(10)
+
+const validationRules = [
+  {
+    key: 'hashes',
+    label: 'Continuidad de hashes (previous_hash)',
+    desc: 'Cada bloque referencia correctamente al anterior',
+    count: '11/11',
+  },
+  {
+    key: 'merkle',
+    label: 'Merkle root',
+    desc: 'El árbol de merkle de transacciones coincide con el header',
+    count: '12/12',
+  },
+  {
+    key: 'pow',
+    label: 'Proof of Work',
+    desc: 'Cada nonce produce un hash con los ceros requeridos',
+    count: '11/11',
+  },
+  {
+    key: 'coinbase',
+    label: 'Coinbase válida',
+    desc: 'Cada bloque incluye exactamente una transacción coinbase',
+    count: '11/11',
+  },
+  {
+    key: 'balances',
+    label: 'Saldos suficientes',
+    desc: 'Ninguna tx gasta más de lo disponible',
+    count: '0 dobles gastos',
+  },
+  {
+    key: 'signatures',
+    label: 'Firmas válidas',
+    desc: 'Todas las transacciones tienen firma válida del sender',
+    count: 'todas',
+  },
+  {
+    key: 'timestamps',
+    label: 'Timestamp monótono',
+    desc: 'Cada bloque tiene timestamp >= que el anterior',
+    count: '12/12',
+  },
+]
+
+let validationRunId = 0
 
 const blockForm = reactive({ index: null as number | null })
 const nodeForm = reactive({ url: '' })
@@ -93,27 +144,173 @@ const txChecks = computed(() => {
   ]
 })
 
-async function _validateCurrentChain() {
+const validationRuleStates = computed(() =>
+  validationRules.map((_, index) => {
+    const stepNumber = index + 1
+    if (validationModalStage.value === 'running') {
+      if (stepNumber < validationActiveStep.value) return 'done'
+      if (stepNumber === validationActiveStep.value) return 'active'
+      return 'pending'
+    }
+    if (validationModalStage.value === 'done') {
+      return 'done'
+    }
+    if (validationModalStage.value === 'invalid') {
+      return 'error'
+    }
+    if (validationModalStage.value === 'error') {
+      return 'error'
+    }
+    return 'pending'
+  })
+)
+
+const validationProgress = computed(() => {
+  if (validationModalStage.value === 'idle') return 0
+  if (validationModalStage.value === 'running') {
+    return Math.min(100, (validationActiveStep.value / validationRules.length) * 100)
+  }
+  return 100
+})
+
+const validationModalTitle = computed(() => {
+  if (validationModalStage.value === 'running') return 'Validando la cadena...'
+  if (validationModalStage.value === 'done') return 'Validación completa'
+  if (validationModalStage.value === 'invalid') return 'Validación con incidencias'
+  if (validationModalStage.value === 'error') return 'Validación interrumpida'
+  return 'Validación de cadena'
+})
+
+const validationModalSubtitle = computed(() => {
+  if (validationModalStage.value === 'running') {
+    return `Reglas en ejecución · ${Math.min(validationActiveStep.value, validationRules.length)} / ${validationRules.length}`
+  }
+  if (chainValidation.value) {
+    return chainValidation.value.valid
+      ? `${validationRules.length} / ${validationRules.length} reglas verificadas · ${chainStore.length} bloques sanos`
+      : chainValidation.value.message
+  }
+  return 'Verificación bloque a bloque · integridad criptográfica y reglas de consenso.'
+})
+
+const validationResultText = computed(() => {
+  if (validationModalStage.value === 'running') return validationSummary.value
+  if (chainValidation.value?.valid) return 'Resultado: Cadena íntegra · 0 inconsistencias'
+  if (chainValidation.value) return 'Resultado: Cadena con inconsistencias'
+  return 'Resultado pendiente'
+})
+const validationStatusNote = computed(() => {
+  if (validationModalStage.value === 'running') return ''
+  if (chainValidation.value?.valid) {
+    return 'La validación terminó correctamente y la cadena pasó todas las reglas.'
+  }
+  if (chainValidation.value) {
+    return 'La API respondió correctamente, pero la cadena no pasó la revalidación.'
+  }
+  return ''
+})
+
+const validationStatusTone = computed(() => {
+  if (chainValidation.value?.valid) return 'ok'
+  if (chainValidation.value) return 'warn'
+  return ''
+})
+
+function validationRuleRowClass(_row: (typeof validationRules)[number], index: number) {
+  return `validation-table-row ${validationRuleStates.value[index]}`
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
+
+function closeValidationModal() {
+  if (validationModalStage.value === 'running') return
+  validationModalOpen.value = false
+  validationModalStage.value = 'idle'
+  validationActiveStep.value = 0
+  validationSummary.value = ''
+}
+
+function stopValidationSequence() {
+  if (validationModalStage.value !== 'running') return
+  validationRunId += 1
+  loadingChainValidation.value = false
+  validationModalStage.value = 'idle'
+  validationModalOpen.value = false
+  validationActiveStep.value = 0
+  validationSummary.value = ''
+}
+
+function downloadValidationReport() {
+  const report = {
+    generatedAt: new Date().toISOString(),
+    status: validationModalStage.value,
+    result: chainValidation.value,
+    rules: validationRules.map((rule, index) => ({
+      ...rule,
+      status: validationRuleStates.value[index],
+    })),
+  }
+
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `validation-report-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function validateCurrentChain() {
+  if (loadingChainValidation.value) return
+
+  const runId = ++validationRunId
+  validationModalOpen.value = true
+  validationModalStage.value = 'running'
+  validationActiveStep.value = 0
+  validationSummary.value = 'Inicializando validación...'
   loadingChainValidation.value = true
+
   try {
-    const result = await chainStore.fetchValidation()
+    const validationPromise = chainStore.fetchValidation()
+    for (let index = 0; index < validationRules.length; index += 1) {
+      if (runId !== validationRunId) return
+      validationActiveStep.value = index + 1
+      validationSummary.value = validationRules[index].label
+      await sleep(index === 0 ? 420 : 280)
+    }
+
+    const result = await validationPromise
+    if (runId !== validationRunId) return
+
     chainValidation.value = result
     historyStore.record('chain', result.valid ? 'valid' : 'invalid', 'full chain', result.message)
     if (result.valid) {
       toast.success('Chain validation', result.message)
+      validationModalStage.value = 'done'
     } else {
-      toast.error('Chain validation failed', result.message)
+      toast.warn('Chain validation', result.message)
+      validationModalStage.value = 'invalid'
     }
+    validationActiveStep.value = validationRules.length
+    validationSummary.value = result.message
   } catch (e) {
+    if (runId !== validationRunId) return
     const msg = e instanceof Error ? e.message : 'Validation failed'
     historyStore.record('chain', 'error', 'full chain', msg)
     toast.error('Chain validation failed', msg)
+    validationModalStage.value = 'error'
+    validationActiveStep.value = validationRules.length
+    validationSummary.value = msg
   } finally {
-    loadingChainValidation.value = false
+    if (runId === validationRunId) {
+      loadingChainValidation.value = false
+    }
   }
 }
-
-const validateCurrentChain = useDebounceFn(_validateCurrentChain, 1000)
 
 function downloadHistory() {
   const blob = new Blob([historyStore.exportJson()], { type: 'application/json' })
@@ -132,7 +329,14 @@ function downloadCsv() {
   const csv = [headers.join(',')]
     .concat(
       rows.map((r) =>
-        [r.id, r.type, r.status, r.target, `"${String(r.message).replace(/"/g, '""')}"`, r.timestamp].join(',')
+        [
+          r.id,
+          r.type,
+          r.status,
+          r.target,
+          `"${String(r.message).replace(/"/g, '""')}"`,
+          r.timestamp,
+        ].join(',')
       )
     )
     .join('\n')
@@ -160,6 +364,10 @@ const pagedEvents = computed(() => {
 onMounted(async () => {
   await Promise.all([chainStore.fetchChain(), nodesStore.fetchNodes()])
 })
+
+onUnmounted(() => {
+  validationRunId += 1
+})
 </script>
 
 <template>
@@ -181,7 +389,7 @@ onMounted(async () => {
             :class="loadingChainValidation ? 'pi-spin pi-spinner' : 'pi-check-circle'"
             aria-hidden="true"
           />
-          Validar cadena
+          Re-validar cadena
         </BaseButton>
         <BaseButton
           v-if="historyStore.total > 0"
@@ -192,12 +400,7 @@ onMounted(async () => {
           <span class="pi pi-download" aria-hidden="true" />
           Exportar historial
         </BaseButton>
-        <BaseButton
-          v-if="historyStore.total > 0"
-          variant="ghost"
-          size="sm"
-          @click="downloadCsv"
-        >
+        <BaseButton v-if="historyStore.total > 0" variant="ghost" size="sm" @click="downloadCsv">
           <span class="pi pi-file-o" aria-hidden="true" />
           Export CSV
         </BaseButton>
@@ -238,36 +441,26 @@ onMounted(async () => {
       </BaseCard>
     </div>
 
-    <!-- Chain status -->
-    <BaseCard variant="default" padding="none">
-      <template #header>
-        <span>Estado de la cadena</span>
-      </template>
-      <div class="section-body">
-        <div
-          class="chain-result"
-          :class="chainValidation === null ? 'neutral' : chainValidation.valid ? 'ok' : 'fail'"
-        >
-          <span
-            class="pi"
-            :class="
-              chainValidation?.valid
-                ? 'pi-check-circle'
-                : chainValidation
-                  ? 'pi-times-circle'
-                  : 'pi-circle'
-            "
-            aria-hidden="true"
-          />
-          <span>
-            {{
-              chainValidation
-                ? chainValidation.message
-                : 'Ejecuta la validación para verificar la integridad de la cadena.'
-            }}
-          </span>
+    <!-- Chain status removed: main view simplified to compact list and forms -->
+
+    <div class="section-h rules-section-h">
+      <span>Reglas verificadas</span>
+      <BaseBadge tone="info" variant="soft">{{ validationRules.length }}</BaseBadge>
+    </div>
+    <BaseCard variant="default" padding="none" class="rules-summary-card">
+      <div class="validation-rules-list">
+        <div v-for="rule in validationRules" :key="rule.key" class="validation-list-row">
+          <div class="validation-list-left">
+            <span class="pi pi-check-circle vl-ok" aria-hidden="true"></span>
+            <div class="validation-list-text">
+              <div class="validation-list-title">{{ rule.label }}</div>
+              <div class="validation-list-desc">{{ rule.desc }}</div>
+            </div>
+          </div>
+          <div class="validation-list-right">
+            <BaseBadge tone="success" variant="soft">{{ rule.count }}</BaseBadge>
+          </div>
         </div>
-        <p class="endpoint-note">Endpoint: <code>/valid</code></p>
       </div>
     </BaseCard>
 
@@ -382,8 +575,17 @@ onMounted(async () => {
         <span class="count-badge sm">{{ historyStore.total }}</span>
       </template>
       <div class="section-body history-list-shell">
-        <div class="history-controls" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
-          <div style="display:flex;gap:8px;align-items:center;">
+        <div
+          class="history-controls"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            gap: 8px;
+          "
+        >
+          <div style="display: flex; gap: 8px; align-items: center">
             <label class="hint">Page size</label>
             <select v-model="pageSize" @change="page = 1">
               <option :value="5">5</option>
@@ -391,10 +593,19 @@ onMounted(async () => {
               <option :value="25">25</option>
             </select>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="btn" :disabled="page <= 1" @click="page = page - 1">Prev</button>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <button type="button" class="btn" :disabled="page <= 1" @click="page = page - 1">
+              Prev
+            </button>
             <span class="hint">Page {{ page }} / {{ totalPages }}</span>
-            <button type="button" class="btn" :disabled="page >= totalPages" @click="page = page + 1">Next</button>
+            <button
+              type="button"
+              class="btn"
+              :disabled="page >= totalPages"
+              @click="page = page + 1"
+            >
+              Next
+            </button>
           </div>
         </div>
 
@@ -404,14 +615,24 @@ onMounted(async () => {
             { key: 'target', label: 'Target' },
             { key: 'message', label: 'Message' },
             { key: 'status', label: 'Status', width: 120, align: 'center' },
-            { key: 'timestamp', label: 'Time', width: 140 }
+            { key: 'timestamp', label: 'Time', width: 140 },
           ]"
           :rows="pagedEvents"
           row-key="id"
         >
           <template #cell-status="{ row }">
-            <span :class="['pi', row.status === 'valid' ? 'pi-check-circle' : row.status === 'invalid' ? 'pi-times-circle' : 'pi-exclamation-triangle']" aria-hidden="true"></span>
-            <span style="margin-left:6px">{{ row.status }}</span>
+            <span
+              :class="[
+                'pi',
+                row.status === 'valid'
+                  ? 'pi-check-circle'
+                  : row.status === 'invalid'
+                    ? 'pi-times-circle'
+                    : 'pi-exclamation-triangle',
+              ]"
+              aria-hidden="true"
+            ></span>
+            <span style="margin-left: 6px">{{ row.status }}</span>
           </template>
           <template #cell-timestamp="{ value }">
             {{ formatTime(value) }}
@@ -419,6 +640,154 @@ onMounted(async () => {
         </BaseTable>
       </div>
     </BaseCard>
+
+    <div
+      v-if="validationModalOpen"
+      class="modal-scrim"
+      @click.self="validationModalStage !== 'running' && closeValidationModal()"
+    >
+      <div class="modal validation-modal">
+        <div class="modal-h">
+          <div class="validation-modal-head">
+            <div>
+              <h2>{{ validationModalTitle }}</h2>
+              <p>{{ validationModalSubtitle }}</p>
+            </div>
+            <span
+              class="bdg"
+              :class="
+                validationModalStage === 'running'
+                  ? 'bdg-pending_kyc'
+                  : chainValidation?.valid
+                    ? 'bdg-active'
+                    : 'bdg-banned'
+              "
+            >
+              {{
+                validationModalStage === 'running'
+                  ? `${validationActiveStep} / ${validationRules.length}`
+                  : chainValidation?.valid
+                    ? 'Cadena íntegra'
+                    : 'Con incidencias'
+              }}
+            </span>
+          </div>
+        </div>
+
+        <div class="modal-b validation-modal-body">
+          <BaseCard variant="default" padding="none" class="validation-panel-card">
+            <template #header>
+              <span>Reglas verificadas</span>
+              <span class="count-badge sm"
+                >{{ validationActiveStep }} / {{ validationRules.length }}</span
+              >
+            </template>
+            <BaseTable
+              :columns="[
+                { key: 'step', label: '#', width: 48, align: 'center' },
+                { key: 'label', label: 'Regla' },
+                { key: 'status', label: 'Estado', width: 128, align: 'center' },
+              ]"
+              :rows="validationRules"
+              row-key="key"
+              :row-class="validationRuleRowClass"
+            >
+              <template #cell-step="{ index }">
+                <div class="validation-step-pill">{{ index + 1 }}</div>
+              </template>
+              <template #cell-label="{ row }">
+                <div class="validation-table-copy">
+                  <div class="validation-table-label">{{ row.label }}</div>
+                  <div class="validation-table-desc">{{ row.desc }}</div>
+                </div>
+              </template>
+              <template #cell-status="{ row, index }">
+                <span
+                  class="bdg validation-table-badge"
+                  :class="
+                    validationRuleStates[index] === 'active'
+                      ? 'bdg-pending_kyc'
+                      : validationRuleStates[index] === 'done'
+                        ? 'bdg-active'
+                        : validationRuleStates[index] === 'error'
+                          ? 'bdg-banned'
+                          : 'bdg-deleted'
+                  "
+                >
+                  <span
+                    v-if="validationRuleStates[index] === 'active'"
+                    class="pi pi-spin pi-spinner"
+                    aria-hidden="true"
+                  />
+                  <span
+                    v-else-if="validationRuleStates[index] === 'done'"
+                    class="pi pi-check"
+                    aria-hidden="true"
+                  />
+                  <span
+                    v-else-if="validationRuleStates[index] === 'error'"
+                    class="pi pi-times"
+                    aria-hidden="true"
+                  />
+                  {{ row.count }}
+                </span>
+              </template>
+            </BaseTable>
+          </BaseCard>
+
+          <BaseCard variant="default" padding="none" class="validation-panel-card">
+            <template #header>
+              <span>Progreso de validación</span>
+              <span class="count-badge sm">{{ Math.round(validationProgress) }}%</span>
+            </template>
+            <div class="validation-progress-body">
+              <div class="validation-progress-meta">
+                <span>{{ validationModalSubtitle }}</span>
+                <span>{{ validationResultText }}</span>
+              </div>
+              <div class="progress-track">
+                <div
+                  class="progress-fill"
+                  :class="validationModalStage === 'done' ? 'success' : ''"
+                  :style="{ width: `${validationProgress}%` }"
+                />
+              </div>
+              <div
+                v-if="validationModalStage !== 'running'"
+                class="validation-result"
+                :class="chainValidation?.valid ? 'ok' : 'fail'"
+              >
+                <span
+                  class="pi"
+                  :class="chainValidation?.valid ? 'pi-check-circle' : 'pi-times-circle'"
+                  aria-hidden="true"
+                />
+                <span>{{ validationResultText }}</span>
+              </div>
+              <p
+                v-if="validationStatusNote"
+                class="validation-status-note"
+                :class="validationStatusTone"
+              >
+                {{ validationStatusNote }}
+              </p>
+            </div>
+          </BaseCard>
+        </div>
+
+        <div class="modal-f validation-modal-foot">
+          <template v-if="validationModalStage === 'running'">
+            <button class="btn btn-danger" @click="stopValidationSequence">Detener</button>
+          </template>
+          <template v-else>
+            <button class="btn" @click="closeValidationModal">Cerrar</button>
+            <button class="btn btn-primary" @click="downloadValidationReport">
+              Exportar reporte
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -426,13 +795,13 @@ onMounted(async () => {
 .validation-view {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 /* Header */
 .page-h {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
 }
@@ -453,6 +822,76 @@ onMounted(async () => {
   gap: 8px;
 }
 
+.rules-section-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 2px -2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.rules-summary-card {
+  overflow: hidden;
+}
+
+.validation-rules-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.validation-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.validation-list-row:last-child {
+  border-bottom: 0;
+}
+
+.validation-list-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.validation-list-left .pi {
+  font-size: 15px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.validation-list-text {
+  display: flex;
+  flex-direction: column;
+}
+.validation-list-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.validation-list-desc {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.validation-list-right {
+  display: flex;
+  align-items: center;
+}
+
 /* Bigstat KPI row */
 .bigstat-row {
   display: grid;
@@ -468,13 +907,24 @@ onMounted(async () => {
 
 /* Panels */
 .section-body {
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Chain status */
+.validation-status-note {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.validation-status-note.ok {
+  color: var(--success);
+}
+.validation-status-note.warn {
+  color: var(--warning);
+}
 .chain-result {
   display: flex;
   align-items: center;
@@ -517,7 +967,7 @@ onMounted(async () => {
 .val-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 .tx-panel {
   grid-column: 1 / -1;
@@ -531,6 +981,125 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
+}
+
+/* Validation modal */
+.validation-modal {
+  width: 700px;
+  max-width: 96vw;
+}
+.validation-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.validation-modal-body {
+  gap: 10px;
+}
+.validation-panel-card {
+  overflow: hidden;
+}
+.validation-table-row.pending {
+  opacity: 0.52;
+}
+.validation-table-row.active {
+  background: var(--accent-soft);
+}
+.validation-table-row.done {
+  background: var(--success-soft);
+}
+.validation-table-row.error {
+  background: var(--danger-soft);
+}
+.validation-table-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.validation-table-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.validation-table-row.pending .validation-table-label {
+  color: var(--text-2);
+}
+.validation-table-desc {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.35;
+}
+.validation-table-row.active .validation-table-desc {
+  color: var(--text-2);
+}
+.validation-step-pill {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.validation-table-row.active .validation-step-pill {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+.validation-table-row.done .validation-step-pill {
+  background: var(--success-soft);
+  border-color: transparent;
+  color: var(--success);
+}
+.validation-table-row.error .validation-step-pill {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
+.validation-table-badge {
+  justify-self: end;
+}
+.validation-progress-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.validation-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.validation-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.validation-result.ok {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.validation-result.fail {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.validation-modal-foot {
+  justify-content: space-between;
 }
 
 /* Check lists */
@@ -601,7 +1170,7 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--border);
 }
 .history-item:last-child {

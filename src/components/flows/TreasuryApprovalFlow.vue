@@ -465,8 +465,10 @@ const confirmations = () => Math.floor((progress.value / 100) * 12)
           <button
             class="btn btn-primary"
             @click="
-              emit('complete')
-              emit('close')
+              (() => {
+                emit('complete')
+                emit('close')
+              })()
             "
           >
             Ver en auditoría
