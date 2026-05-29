@@ -5,6 +5,7 @@ import MetricsBar from '@/components/organisms/MetricsBar.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import HealthLogsPanel from '@/components/organisms/HealthLogsPanel.vue'
 
 const store = useMetricsStore()
 
@@ -19,7 +20,9 @@ const HEALTH_LABEL: Record<HealthStatus, string> = {
   'n/a': 'N/D',
 }
 
-function healthTone(status: string | null | undefined): 'success' | 'warning' | 'danger' | 'neutral' {
+function healthTone(
+  status: string | null | undefined
+): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'ok') return 'success'
   if (status === 'degraded') return 'warning'
   if (status === 'error') return 'danger'
@@ -39,12 +42,7 @@ function healthLabel(status: string | null | undefined): string {
         <h1>Salud del nodo</h1>
         <p>Estado en tiempo real del backend y la base de datos</p>
       </div>
-      <BaseButton
-        variant="ghost"
-        size="sm"
-        :loading="store.loading"
-        @click="store.fetchAll()"
-      >
+      <BaseButton variant="ghost" size="sm" :loading="store.loading" @click="store.fetchAll()">
         Actualizar
       </BaseButton>
     </div>
@@ -55,24 +53,34 @@ function healthLabel(status: string | null | undefined): string {
         <template #header>
           <span>Estado nodo</span>
         </template>
-        <span :class="store.health?.status === 'ok' ? 'vl-ok' : store.health?.status === 'degraded' ? 'vl-warn' : ''">
+        <span
+          :class="
+            store.health?.status === 'ok'
+              ? 'vl-ok'
+              : store.health?.status === 'degraded'
+                ? 'vl-warn'
+                : ''
+          "
+        >
           {{ healthLabel(store.health?.status) }}
         </span>
-        <template #footer>
-          último check ahora
-        </template>
+        <template #footer> último check ahora </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
         <template #header>
           <span>Base de datos</span>
         </template>
-        <span :class="store.health?.db === 'ok' ? 'vl-ok' : store.health?.db === 'error' ? 'vl-err' : ''">
-          {{ store.health?.db === 'ok' ? 'Conectada' : store.health?.db === 'error' ? 'Error' : '—' }}
+        <span
+          :class="
+            store.health?.db === 'ok' ? 'vl-ok' : store.health?.db === 'error' ? 'vl-err' : ''
+          "
+        >
+          {{
+            store.health?.db === 'ok' ? 'Conectada' : store.health?.db === 'error' ? 'Error' : '—'
+          }}
         </span>
-        <template #footer>
-          PostgreSQL
-        </template>
+        <template #footer> PostgreSQL </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -80,9 +88,7 @@ function healthLabel(status: string | null | undefined): string {
           <span>Altura de cadena</span>
         </template>
         {{ store.health?.chainHeight ?? store.metrics?.chainHeight ?? '—' }}
-        <template #footer>
-          bloques confirmados
-        </template>
+        <template #footer> bloques confirmados </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -92,49 +98,60 @@ function healthLabel(status: string | null | undefined): string {
         <template v-if="store.metrics?.avgMineTimeSeconds != null">
           {{ store.metrics.avgMineTimeSeconds.toFixed(2) }}<span class="vl-unit">s</span>
         </template>
-        <template v-else>
-          —
-        </template>
-        <template #footer>
-          tiempo medio por bloque
-        </template>
+        <template v-else> — </template>
+        <template #footer> tiempo medio por bloque </template>
       </BaseCard>
     </div>
 
-    <MetricsBar
-      :metrics="store.metrics"
-      :health="store.health"
-    />
+    <MetricsBar :metrics="store.metrics" :health="store.health" />
 
-    <BaseCard
-      v-if="store.health"
-      variant="default"
-      padding="none"
-    >
-      <template #header>
-        <div class="panel-h">
-          Detalles del nodo
-        </div>
-      </template>
-      <div class="details-grid">
-        <div class="detail-row">
-          <span class="detail-label">Estado</span>
-          <BaseBadge :tone="healthTone(store.health.status)">
-            {{ healthLabel(store.health.status) }}
-          </BaseBadge>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Base de datos</span>
-          <BaseBadge :tone="healthTone(store.health.db)">
-            {{ healthLabel(store.health.db) }}
-          </BaseBadge>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Altura de cadena</span>
-          <span class="detail-val">{{ store.health.chainHeight }}</span>
+    <div class="two-col-row">
+      <div>
+        <div class="section-h">Componentes</div>
+        <div class="card components-card">
+          <div class="comp-row">
+            <div>
+              <div class="comp-name">Estado</div>
+              <div class="comp-sub">Último check</div>
+            </div>
+            <BaseBadge :tone="healthTone(store.health?.status)">{{
+              healthLabel(store.health?.status)
+            }}</BaseBadge>
+          </div>
+
+          <div class="comp-list">
+            <div class="comp-item">
+              <div class="comp-title">Node (Python · Flask)</div>
+              <div class="comp-sub muted">v0.4.2 · puerto 5000</div>
+              <BaseBadge tone="success">OK</BaseBadge>
+            </div>
+            <div class="comp-item">
+              <div class="comp-title">Database (PostgreSQL)</div>
+              <div class="comp-sub muted">
+                cadena · {{ store.metrics?.pendingTransactions ?? 0 }} TX · conexiones
+              </div>
+              <BaseBadge :tone="healthTone(store.health?.db)">{{
+                store.health?.db === 'ok' ? 'OK' : 'Error'
+              }}</BaseBadge>
+            </div>
+            <div class="comp-item">
+              <div class="comp-title">Mempool relay</div>
+              <div class="comp-sub muted">broadcast a peers</div>
+              <BaseBadge tone="success">OK</BaseBadge>
+            </div>
+            <div class="comp-item">
+              <div class="comp-title">Block validator</div>
+              <div class="comp-sub muted">re-validación cada 5 min</div>
+              <BaseBadge tone="success">OK</BaseBadge>
+            </div>
+          </div>
         </div>
       </div>
-    </BaseCard>
+
+      <div>
+        <HealthLogsPanel />
+      </div>
+    </div>
   </div>
 </template>
 
