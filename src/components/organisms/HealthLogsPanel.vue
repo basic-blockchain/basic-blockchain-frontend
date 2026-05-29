@@ -7,6 +7,7 @@ import BaseBadge from '@/components/atoms/BaseBadge.vue'
 
 const entries = ref<AuditEntry[]>([])
 const loading = ref(false)
+const paused = ref(false)
 let timer: number | null = null
 
 async function fetchLogs() {
@@ -23,7 +24,9 @@ async function fetchLogs() {
 
 onMounted(() => {
   fetchLogs()
-  timer = window.setInterval(fetchLogs, 3000)
+  timer = window.setInterval(() => {
+    if (!paused.value) fetchLogs()
+  }, 3000)
 })
 
 onUnmounted(() => {
@@ -52,6 +55,15 @@ function shortTime(iso?: string) {
       <div class="logs-h">
         <span>Logs · últimos eventos</span>
         <div class="live-controls">
+          <button
+            class="icon-btn"
+            @click.prevent="paused = !paused"
+            :title="paused ? 'Reanudar' : 'Pausar'"
+          >
+            <span v-if="!paused">⏸</span>
+            <span v-else>▶</span>
+          </button>
+          <button class="icon-btn" title="Filtrar">⚙️</button>
           <span class="dot live" title="En vivo"></span>
         </div>
       </div>
@@ -87,6 +99,17 @@ function shortTime(iso?: string) {
   align-items: center;
   gap: 8px;
 }
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.icon-btn:hover {
+  color: var(--text);
+}
 .dot.live {
   width: 10px;
   height: 10px;
@@ -98,11 +121,11 @@ function shortTime(iso?: string) {
   padding: 0 12px 12px 12px;
 }
 .logs-list {
-  max-height: 420px;
+  max-height: 520px;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding-top: 8px;
 }
 .log-row {
