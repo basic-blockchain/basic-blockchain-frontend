@@ -292,6 +292,9 @@ export interface AuditEntry {
 
 export interface AuditParams {
   limit?: number
+  offset?: number
+  /** Full-text search across action, actor_id and details (server best-effort; client falls back). */
+  q?: string
   action?: string
   actor_id?: string
   target_id?: string
