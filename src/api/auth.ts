@@ -31,15 +31,15 @@ export async function register(
   username: string,
   displayName: string,
   country?: string,
+  email?: string,
 ): Promise<RegisterResponse> {
   const body: Record<string, string> = {
     username,
     display_name: displayName,
   }
-  // Backend validates this as a 2-letter ISO 3166-1 alpha-2 code and
-  // rejects anything else with VALIDATION_ERROR; only forward the
-  // field when the user actually picked one.
+  // Backend validates country as a 2-letter ISO 3166-1 alpha-2 code.
   if (country) body.country = country
+  if (email) body.email = email
   const { data } = await client.post<RegisterResponse>('/auth/register', body)
   return data
 }
