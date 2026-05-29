@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import {
   approveKycDocument,
   getPendingKycReviews,
@@ -190,18 +190,9 @@ onMounted(load)
         </p>
       </div>
       <div class="page-h-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           <template #leading>
-            <span
-              class="pi pi-refresh"
-              :class="{ 'pi-spin': loading }"
-              aria-hidden="true"
-            />
+            <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
           </template>
           Actualizar
         </BaseButton>
@@ -214,62 +205,37 @@ onMounted(load)
           <span>Pendientes</span>
         </template>
         {{ totalPending }}
-        <template #footer>
-          usuarios en cola
-        </template>
+        <template #footer> usuarios en cola </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Listos para promover</span>
         </template>
         <span :class="{ 'kpi-success': readyToPromote > 0 }">{{ readyToPromote }}</span>
-        <template #footer>
-          todos sus documentos verificados
-        </template>
+        <template #footer> todos sus documentos verificados </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Más antigua</span>
         </template>
         <span class="mono ts-vl">{{ oldestSubmission }}</span>
-        <template #footer>
-          submitted_at FIFO
-        </template>
+        <template #footer> submitted_at FIFO </template>
       </BaseCard>
     </div>
 
-    <BaseCard
-      v-if="loading"
-      class="loading-row"
-    >
-      <span
-        class="pi pi-spin pi-spinner"
-        aria-hidden="true"
-      /> Cargando cola…
+    <BaseCard v-if="loading" class="loading-row">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando cola…
     </BaseCard>
 
-    <BaseCard
-      v-else-if="reviews.length === 0"
-      class="empty-card"
-    >
-      <span
-        class="pi pi-check-circle"
-        aria-hidden="true"
-      />
+    <BaseCard v-else-if="reviews.length === 0" class="empty-card">
+      <span class="pi pi-check-circle" aria-hidden="true" />
       <div>
-        <div class="empty-title">
-          Cola vacía
-        </div>
-        <div class="empty-sub">
-          Ningún usuario tiene una revisión KYC pendiente.
-        </div>
+        <div class="empty-title">Cola vacía</div>
+        <div class="empty-sub">Ningún usuario tiene una revisión KYC pendiente.</div>
       </div>
     </BaseCard>
 
-    <div
-      v-else
-      class="review-list"
-    >
+    <div v-else class="review-list">
       <BaseCard
         v-for="review in reviews"
         :key="review.user_id"
@@ -288,20 +254,11 @@ onMounted(load)
             </div>
           </div>
           <div class="review-meta">
-            <BaseBadge
-              variant="soft"
-              tone="neutral"
-            >
+            <BaseBadge variant="soft" tone="neutral">
               {{ review.kyc_level }}
             </BaseBadge>
-            <span
-              class="pi pi-arrow-right level-arrow"
-              aria-hidden="true"
-            />
-            <BaseBadge
-              variant="soft"
-              tone="info"
-            >
+            <span class="pi pi-arrow-right level-arrow" aria-hidden="true" />
+            <BaseBadge variant="soft" tone="info">
               {{ review.pending_review }}
             </BaseBadge>
           </div>
@@ -323,31 +280,19 @@ onMounted(load)
             <div class="doc-h">
               <div class="doc-label">
                 {{ DOC_LABEL[key] }}
-                <span
-                  v-if="isRequired(review, key)"
-                  class="doc-required-tag"
-                >requerido</span>
+                <span v-if="isRequired(review, key)" class="doc-required-tag">requerido</span>
               </div>
               <BaseBadge :tone="docTone(documentFor(review, key)?.status)">
                 {{ documentFor(review, key)?.status ?? 'missing' }}
               </BaseBadge>
             </div>
-            <div
-              v-if="documentFor(review, key)?.uploaded_at"
-              class="doc-detail mono"
-            >
+            <div v-if="documentFor(review, key)?.uploaded_at" class="doc-detail mono">
               ⬆ {{ documentFor(review, key)?.uploaded_at }}
             </div>
-            <div
-              v-if="documentFor(review, key)?.reviewed_at"
-              class="doc-detail mono"
-            >
+            <div v-if="documentFor(review, key)?.reviewed_at" class="doc-detail mono">
               ✓ {{ documentFor(review, key)?.reviewed_at }}
             </div>
-            <div
-              v-if="documentFor(review, key)?.reject_reason"
-              class="doc-reason"
-            >
+            <div v-if="documentFor(review, key)?.reject_reason" class="doc-reason">
               {{ documentFor(review, key)?.reject_reason }}
             </div>
 
@@ -384,13 +329,7 @@ onMounted(load)
                 rows="2"
               />
               <div class="reject-actions">
-                <BaseButton
-                  size="sm"
-                  variant="ghost"
-                  @click="cancelReject"
-                >
-                  Cancelar
-                </BaseButton>
+                <BaseButton size="sm" variant="ghost" @click="cancelReject"> Cancelar </BaseButton>
                 <BaseButton
                   size="sm"
                   variant="danger"
@@ -410,24 +349,12 @@ onMounted(load)
 
         <footer class="review-f">
           <div class="review-hint">
-            <span
-              v-if="allRequiredVerified(review)"
-              class="hint-ok"
-            >
-              <span
-                class="pi pi-check"
-                aria-hidden="true"
-              /> Todos los documentos requeridos
+            <span v-if="allRequiredVerified(review)" class="hint-ok">
+              <span class="pi pi-check" aria-hidden="true" /> Todos los documentos requeridos
               verificados.
             </span>
-            <span
-              v-else
-              class="hint-warn"
-            >
-              <span
-                class="pi pi-clock"
-                aria-hidden="true"
-              /> Faltan documentos por verificar para
+            <span v-else class="hint-warn">
+              <span class="pi pi-clock" aria-hidden="true" /> Faltan documentos por verificar para
               promover a {{ review.pending_review }}.
             </span>
           </div>

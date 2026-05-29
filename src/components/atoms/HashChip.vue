@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import { formatHash } from '@/domain/block'
 
 const props = withDefaults(
@@ -60,10 +60,7 @@ function onKeydown(e: KeyboardEvent) {
     @keydown="onKeydown"
   >
     <code>{{ display }}</code>
-    <span
-      class="pi pi-copy copy-icon"
-      aria-hidden="true"
-    />
+    <span class="pi pi-copy copy-icon" aria-hidden="true" />
   </span>
 </template>
 

@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { listAuditLog, type AuditEntry } from '@/api/admin'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import PaginatedTable from '@/components/organisms/PaginatedTable.vue'
+import AuditEntryDetailModal from '@/components/organisms/AuditEntryDetailModal.vue'
 
 const toast = useToast()
 const entries = ref<AuditEntry[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const filterAction = ref('')
+const selectedEntry = ref<AuditEntry | null>(null)
 
 async function load() {
   loading.value = true
@@ -169,6 +171,8 @@ onMounted(load)
         :columns="auditColumns"
         :rows="filtered"
         :row-key="(e: AuditEntry) => e.id"
+        class="rows-clickable"
+        @row-click="({ row }) => (selectedEntry = row)"
       >
         <template #cell-created_at="{ row }">
           <span class="mono text-dim ts-cell">{{ row.created_at }}</span>
@@ -195,6 +199,12 @@ onMounted(load)
         <template #empty> Sin entradas de auditoría. </template>
       </PaginatedTable>
     </BaseCard>
+
+    <AuditEntryDetailModal
+      v-if="selectedEntry"
+      :entry="selectedEntry"
+      @close="selectedEntry = null"
+    />
   </div>
 </template>
 
@@ -351,5 +361,12 @@ onMounted(load)
   :deep(.base-tbl__body td:nth-child(4)) {
     display: none;
   }
+}
+
+.rows-clickable :deep(tbody tr) {
+  cursor: pointer;
+}
+.rows-clickable :deep(tbody tr:hover td) {
+  background: var(--hover);
 }
 </style>
