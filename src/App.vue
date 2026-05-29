@@ -156,6 +156,7 @@ const routeLabels: Record<string, string> = {
   movements: 'Movimientos',
   sends: 'Envíos',
   settings: 'Ajustes',
+  permissions: 'Permisos',
 }
 
 const breadcrumbs = computed(() =>
