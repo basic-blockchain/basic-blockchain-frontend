@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 
@@ -93,10 +93,7 @@ function toggleChanged(toggle: (typeof operationToggles.value)[0]) {
 
     <div class="settings-layout">
       <!-- Sidebar nav -->
-      <nav
-        class="settings-nav"
-        aria-label="Secciones de ajustes"
-      >
+      <nav class="settings-nav" aria-label="Secciones de ajustes">
         <BaseButton
           v-for="s in sections"
           :key="s.key"
@@ -114,121 +111,73 @@ function toggleChanged(toggle: (typeof operationToggles.value)[0]) {
       <div class="settings-content">
         <!-- General -->
         <template v-if="activeSection === 'general'">
-          <BaseCard
-            class="settings-card"
-            variant="default"
-            padding="none"
-          >
+          <BaseCard class="settings-card" variant="default" padding="none">
             <div class="panel-h">
               <div>
                 <h3>Información general</h3>
                 <p>Nombre, dominios y entorno operativo.</p>
               </div>
-              <BaseButton
-                variant="primary"
-                size="sm"
-                @click="saveGeneral"
-              >
+              <BaseButton variant="primary" size="sm" @click="saveGeneral">
                 Guardar cambios
               </BaseButton>
             </div>
 
             <div class="panel-body">
               <div class="field">
-                <label
-                  class="field-label"
-                  for="name"
-                >Nombre comercial</label>
-                <input
-                  id="name"
-                  v-model="generalForm.name"
-                  class="field-input"
-                >
+                <label class="field-label" for="name">Nombre comercial</label>
+                <input id="name" v-model="generalForm.name" class="field-input" />
               </div>
               <div class="field-row">
                 <div class="field">
-                  <label
-                    class="field-label"
-                    for="legal-name"
-                  >Razón social</label>
-                  <input
-                    id="legal-name"
-                    v-model="generalForm.legalName"
-                    class="field-input"
-                  >
+                  <label class="field-label" for="legal-name">Razón social</label>
+                  <input id="legal-name" v-model="generalForm.legalName" class="field-input" />
                 </div>
                 <div class="field">
-                  <label
-                    class="field-label"
-                    for="tax-id"
-                  >CUIT / Tax ID</label>
+                  <label class="field-label" for="tax-id">CUIT / Tax ID</label>
                   <input
                     id="tax-id"
                     v-model="generalForm.taxId"
                     class="field-input mono"
                     placeholder="30-XXXXXXXX-3"
-                  >
+                  />
                 </div>
               </div>
               <div class="field-row">
                 <div class="field">
-                  <label
-                    class="field-label"
-                    for="support-email"
-                  >Email de soporte</label>
+                  <label class="field-label" for="support-email">Email de soporte</label>
                   <input
                     id="support-email"
                     v-model="generalForm.supportEmail"
                     class="field-input"
                     placeholder="soporte@cadena.app"
                     type="email"
-                  >
+                  />
                 </div>
                 <div class="field">
-                  <label
-                    class="field-label"
-                    for="domain"
-                  >Dominio</label>
+                  <label class="field-label" for="domain">Dominio</label>
                   <input
                     id="domain"
                     v-model="generalForm.domain"
                     class="field-input"
                     placeholder="app.cadena.app"
-                  >
+                  />
                 </div>
               </div>
               <div class="field">
-                <label
-                  class="field-label"
-                  for="timezone"
-                >Zona horaria</label>
-                <select
-                  id="timezone"
-                  v-model="generalForm.timezone"
-                  class="field-input"
-                >
+                <label class="field-label" for="timezone">Zona horaria</label>
+                <select id="timezone" v-model="generalForm.timezone" class="field-input">
                   <option value="America/Argentina/Buenos_Aires">
                     America/Argentina/Buenos_Aires (ART, UTC-3)
                   </option>
-                  <option value="America/Mexico_City">
-                    America/Mexico_City (CST, UTC-6)
-                  </option>
-                  <option value="America/Bogota">
-                    America/Bogota (COT, UTC-5)
-                  </option>
-                  <option value="UTC">
-                    UTC
-                  </option>
+                  <option value="America/Mexico_City">America/Mexico_City (CST, UTC-6)</option>
+                  <option value="America/Bogota">America/Bogota (COT, UTC-5)</option>
+                  <option value="UTC">UTC</option>
                 </select>
               </div>
             </div>
           </BaseCard>
 
-          <BaseCard
-            class="settings-card"
-            variant="default"
-            padding="none"
-          >
+          <BaseCard class="settings-card" variant="default" padding="none">
             <div class="panel-h">
               <h3>Modo de operación</h3>
             </div>
@@ -246,17 +195,14 @@ function toggleChanged(toggle: (typeof operationToggles.value)[0]) {
                   {{ toggle.desc }}
                 </div>
               </div>
-              <label
-                class="toggle-switch"
-                :for="`toggle-${toggle.key}`"
-              >
+              <label class="toggle-switch" :for="`toggle-${toggle.key}`">
                 <input
                   :id="`toggle-${toggle.key}`"
                   v-model="toggle.value"
                   type="checkbox"
                   class="toggle-input"
                   @change="toggleChanged(toggle)"
-                >
+                />
                 <span class="toggle-track">
                   <span class="toggle-thumb" />
                 </span>
@@ -269,17 +215,12 @@ function toggleChanged(toggle: (typeof operationToggles.value)[0]) {
         <template v-else>
           <BaseCard class="placeholder">
             <div class="placeholder-icon">
-              <span
-                class="pi pi-cog"
-                aria-hidden="true"
-              />
+              <span class="pi pi-cog" aria-hidden="true" />
             </div>
             <p class="placeholder-label">
               {{ sections.find((s) => s.key === activeSection)?.label }}
             </p>
-            <p class="placeholder-sub">
-              Esta sección estará disponible próximamente.
-            </p>
+            <p class="placeholder-sub">Esta sección estará disponible próximamente.</p>
           </BaseCard>
         </template>
       </div>

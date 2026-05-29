@@ -2,6 +2,8 @@ export interface Transaction {
   sender: string
   receiver: string
   amount: number
+  /** Currency code when provided by the simulator payload (e.g. BTC, NATIVE). */
+  currency?: string | null
   /** Wallet IDs are the only identifiers that reliably resolve back to
    * `/admin/wallets`. The pubkey fields are kept for display only. */
   senderWalletId?: string
@@ -36,7 +38,10 @@ export function validateTransaction(tx: Partial<Transaction>): TransactionValida
     errors.push({ field: 'sender', message: `Sender must not exceed ${MAX_FIELD_LEN} characters` })
   if (!tx.receiver?.trim()) errors.push({ field: 'receiver', message: 'Receiver is required' })
   else if (tx.receiver.length > MAX_FIELD_LEN)
-    errors.push({ field: 'receiver', message: `Receiver must not exceed ${MAX_FIELD_LEN} characters` })
+    errors.push({
+      field: 'receiver',
+      message: `Receiver must not exceed ${MAX_FIELD_LEN} characters`,
+    })
   if (tx.amount === undefined || tx.amount <= 0)
     errors.push({ field: 'amount', message: 'Amount must be positive' })
   if (tx.sender?.trim() && tx.receiver?.trim() && tx.sender.trim() === tx.receiver.trim())
