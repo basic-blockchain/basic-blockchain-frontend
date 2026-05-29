@@ -1,19 +1,33 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import {
-  listUsers, listAllWallets, listAuditLog, banUser, unbanUser, softDeleteUser,
-  restoreUser, updateUser, grantRole, revokeRole,
-  type AdminUser, type WalletAdminRecord, type AuditEntry,
+  listUsers,
+  listAllWallets,
+  listAuditLog,
+  banUser,
+  unbanUser,
+  softDeleteUser,
+  restoreUser,
+  updateUser,
+  grantRole,
+  revokeRole,
+  type AdminUser,
+  type WalletAdminRecord,
+  type AuditEntry,
 } from '@/api/admin'
 import { getConfirmed, getPending } from '@/api/mempool'
 import type { Transaction, ConfirmedTransaction } from '@/domain/transaction'
 import UserDrawer, {
-  type DrawerUser, type DrawerAction, type DrawerWallet,
-  type DrawerMovement, type DrawerAuditEvent,
+  type DrawerUser,
+  type DrawerAction,
+  type DrawerWallet,
+  type DrawerMovement,
+  type DrawerAuditEvent,
 } from '@/components/drawers/UserDrawer.vue'
 import WalletDrawer, {
   type DrawerWallet as WalletDrawerData,
-  type DrawerWalletMovement, type DrawerWalletAuditEvent,
+  type DrawerWalletMovement,
+  type DrawerWalletAuditEvent,
   type WalletDrawerAction,
 } from '@/components/drawers/WalletDrawer.vue'
 import { freezeWallet, unfreezeWallet } from '@/api/admin'
@@ -24,11 +38,16 @@ import BaseTable from '@/components/atoms/BaseTable.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseModal from '@/components/atoms/BaseModal.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
+import { useToast } from 'primevue/usetoast'
+import CreateUserFlow from '@/components/flows/CreateUserFlow.vue'
 
 const users = ref<AdminUser[]>([])
 const wallets = ref<WalletAdminRecord[]>([])
 const loading = ref(false)
 const error = ref('')
+
+const toast = useToast()
+const createUserOpen = ref(false)
 
 const editTarget = ref<AdminUser | null>(null)
 const editForm = ref({ display_name: '', email: '' })
@@ -39,7 +58,9 @@ const editOpen = computed({
   },
 })
 
-const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget; userId: string } | null>(null)
+const confirmModal = ref<{ action: UserAction; target: ConfirmUserTarget; userId: string } | null>(
+  null
+)
 
 // Phase 5b — filters, search and pagination state
 type FilterTab = 'all' | 'active' | 'kyc' | 'frozen' | 'banned'
@@ -103,7 +124,9 @@ const pagedUsers = computed<AdminUser[]>(() => {
   return filteredUsers.value.slice(start, start + PAGE_SIZE)
 })
 const pageStartIdx = computed(() => (currentPage.value - 1) * PAGE_SIZE + 1)
-const pageEndIdx = computed(() => Math.min(currentPage.value * PAGE_SIZE, filteredUsers.value.length))
+const pageEndIdx = computed(() =>
+  Math.min(currentPage.value * PAGE_SIZE, filteredUsers.value.length)
+)
 
 const kpis = computed(() => {
   let total = 0
@@ -113,8 +136,15 @@ const kpis = computed(() => {
   let banned = 0
   for (const u of users.value) {
     total += 1
-    if (u.deleted_at) { restricted += 1; continue }
-    if (u.banned) { banned += 1; restricted += 1; continue }
+    if (u.deleted_at) {
+      restricted += 1
+      continue
+    }
+    if (u.banned) {
+      banned += 1
+      restricted += 1
+      continue
+    }
     active += 1
     if (hasPendingKyc(u)) kycPending += 1
     if (hasFrozenWallets(u.user_id)) restricted += 1
@@ -186,8 +216,16 @@ function avatarHue(seed: string): number {
 }
 
 const FLAGS: Record<string, string> = {
-  AR: '🇦🇷', BR: '🇧🇷', CL: '🇨🇱', CO: '🇨🇴', MX: '🇲🇽', PE: '🇵🇪',
-  US: '🇺🇸', UY: '🇺🇾', VE: '🇻🇪', ES: '🇪🇸',
+  AR: '🇦🇷',
+  BR: '🇧🇷',
+  CL: '🇨🇱',
+  CO: '🇨🇴',
+  MX: '🇲🇽',
+  PE: '🇵🇪',
+  US: '🇺🇸',
+  UY: '🇺🇾',
+  VE: '🇻🇪',
+  ES: '🇪🇸',
 }
 function countryFlag(code: string | null): string {
   if (!code) return '🌐'
@@ -258,7 +296,10 @@ function openConfirm(u: AdminUser, action: UserAction) {
 async function handleConfirm(payload: { action: UserAction }) {
   if (!confirmModal.value) return
   const u = users.value.find((x) => x.user_id === confirmModal.value!.userId)
-  if (!u) { confirmModal.value = null; return }
+  if (!u) {
+    confirmModal.value = null
+    return
+  }
   try {
     if (payload.action === 'ban') await banUser(u.user_id)
     else if (payload.action === 'unban') await unbanUser(u.user_id)
@@ -266,7 +307,9 @@ async function handleConfirm(payload: { action: UserAction }) {
     else if (payload.action === 'restore') await restoreUser(u.user_id)
     drawerOpen.value = false
     await load()
-  } catch { /* handled by existing error display */ }
+  } catch {
+    /* handled by existing error display */
+  }
   confirmModal.value = null
 }
 
@@ -282,6 +325,18 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+async function handleUserCreated(payload: { user_id: string; username: string; role: string }) {
+  // Show a short toast and refresh the users list
+  toast.add({
+    severity: 'success',
+    summary: 'Usuario creado',
+    detail: `${payload.username} · ${payload.role}`,
+    life: 3500,
+  })
+  // Refresh list to surface the new user
+  await load()
 }
 
 onMounted(load)
@@ -321,7 +376,9 @@ function openEdit(u: AdminUser) {
   editForm.value = { display_name: u.display_name, email: u.email ?? '' }
 }
 
-function closeEdit() { editTarget.value = null }
+function closeEdit() {
+  editTarget.value = null
+}
 
 async function submitEdit() {
   if (!editTarget.value) return
@@ -363,7 +420,7 @@ function toDrawerMovement(
   userAddrs: Set<string>,
   addrCurrency: Map<string, string>,
   status: 'completed' | 'pending',
-  idx: number,
+  idx: number
 ): DrawerMovement {
   const isOutgoing = userAddrs.has(tx.sender)
   const asset = addrCurrency.get(tx.sender) ?? addrCurrency.get(tx.receiver) ?? '—'
@@ -594,14 +651,14 @@ function onRowClick(payload: { row: AdminUser }) {
         <h1>Usuarios</h1>
         <p>Gestión de cuentas, wallets y movimientos en la plataforma.</p>
       </div>
-      <BaseButton
-        variant="ghost"
-        size="sm"
-        :loading="loading"
-        @click="load"
-      >
-        Actualizar
-      </BaseButton>
+      <div style="display: flex; gap: 8px; align-items: center">
+        <BaseButton variant="primary" size="sm" @click="createUserOpen = true">
+          + Nuevo usuario
+        </BaseButton>
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
+          Actualizar
+        </BaseButton>
+      </div>
     </div>
 
     <!-- KPIs -->
@@ -611,9 +668,7 @@ function onRowClick(payload: { row: AdminUser }) {
           <span>Usuarios totales</span>
         </template>
         {{ kpis.total }}
-        <template #footer>
-          {{ kpis.active }} activos
-        </template>
+        <template #footer> {{ kpis.active }} activos </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -631,9 +686,7 @@ function onRowClick(payload: { row: AdminUser }) {
           <span>Restringidos</span>
         </template>
         <span :class="{ 'vl-warn': kpis.restricted > 0 }">{{ kpis.restricted }}</span>
-        <template #footer>
-          {{ kpis.banned }} baneados · {{ kpis.kycPending }} pend. KYC
-        </template>
+        <template #footer> {{ kpis.banned }} baneados · {{ kpis.kycPending }} pend. KYC </template>
       </BaseCard>
 
       <BaseCard variant="bigstat">
@@ -653,11 +706,7 @@ function onRowClick(payload: { row: AdminUser }) {
     <!-- Toolbar: tabs + search + filters + show-deleted (kept inline) -->
     <div class="toolbar">
       <div class="tabs filter-tabs">
-        <button
-          class="tab"
-          :class="{ active: filterTab === 'all' }"
-          @click="filterTab = 'all'"
-        >
+        <button class="tab" :class="{ active: filterTab === 'all' }" @click="filterTab = 'all'">
           Todos <span class="count-badge sm">{{ countsByTab.all }}</span>
         </button>
         <button
@@ -667,11 +716,7 @@ function onRowClick(payload: { row: AdminUser }) {
         >
           Activos <span class="count-badge sm">{{ countsByTab.active }}</span>
         </button>
-        <button
-          class="tab"
-          :class="{ active: filterTab === 'kyc' }"
-          @click="filterTab = 'kyc'"
-        >
+        <button class="tab" :class="{ active: filterTab === 'kyc' }" @click="filterTab = 'kyc'">
           KYC <span class="count-badge sm">{{ countsByTab.kyc }}</span>
         </button>
         <button
@@ -694,68 +739,34 @@ function onRowClick(payload: { row: AdminUser }) {
           v-model="searchQuery"
           class="filter-input"
           placeholder="Buscar por nombre, email, ID…"
-        >
-        <select
-          v-model="filterKyc"
-          class="filter-select"
-        >
-          <option value="">
-            KYC
-          </option>
-          <option
-            v-for="k in kycOptions"
-            :key="k"
-            :value="k"
-          >
+        />
+        <select v-model="filterKyc" class="filter-select">
+          <option value="">KYC</option>
+          <option v-for="k in kycOptions" :key="k" :value="k">
             {{ k }}
           </option>
         </select>
-        <select
-          v-model="filterCountry"
-          class="filter-select"
-        >
-          <option value="">
-            País
-          </option>
-          <option
-            v-for="c in countryOptions"
-            :key="c"
-            :value="c"
-          >
+        <select v-model="filterCountry" class="filter-select">
+          <option value="">País</option>
+          <option v-for="c in countryOptions" :key="c" :value="c">
             {{ countryFlag(c) }} {{ c }}
           </option>
         </select>
         <label class="show-deleted">
-          <input
-            v-model="showDeleted"
-            type="checkbox"
-          >
+          <input v-model="showDeleted" type="checkbox" />
           <span>Mostrar eliminados</span>
         </label>
       </div>
     </div>
 
-    <div
-      v-if="error"
-      class="inline-alert danger"
-    >
+    <div v-if="error" class="inline-alert danger">
       {{ error }}
     </div>
-    <div
-      v-if="loading"
-      class="loading-row"
-    >
-      <span
-        class="pi pi-spin pi-spinner"
-        aria-hidden="true"
-      /> Cargando…
+    <div v-if="loading" class="loading-row">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
 
-    <BaseCard
-      v-else
-      variant="default"
-      padding="none"
-    >
+    <BaseCard v-else variant="default" padding="none">
       <BaseTable
         :columns="userColumns"
         :rows="pagedUsers"
@@ -777,10 +788,7 @@ function onRowClick(payload: { row: AdminUser }) {
               </div>
               <div class="user-sub">
                 <span class="username">@{{ row.username }}</span>
-                <span
-                  v-if="row.email"
-                  class="email"
-                >· {{ row.email }}</span>
+                <span v-if="row.email" class="email">· {{ row.email }}</span>
               </div>
             </div>
           </div>
@@ -793,16 +801,16 @@ function onRowClick(payload: { row: AdminUser }) {
         </template>
 
         <template #cell-kyc="{ row }">
-          <BaseBadge
-            variant="outline"
-            :tone="kycTone(row.kyc_level)"
-          >
+          <BaseBadge variant="outline" :tone="kycTone(row.kyc_level)">
             {{ row.kyc_level }}
           </BaseBadge>
         </template>
 
         <template #cell-country="{ row }">
-          <span class="country-cell">{{ countryFlag(row.country) }} <span class="muted">{{ row.country ?? '—' }}</span></span>
+          <span class="country-cell"
+            >{{ countryFlag(row.country) }}
+            <span class="muted">{{ row.country ?? '—' }}</span></span
+          >
         </template>
 
         <template #cell-wallets="{ row }">
@@ -821,9 +829,7 @@ function onRowClick(payload: { row: AdminUser }) {
           <span class="muted">{{ fmtDate(row.created_at) }}</span>
         </template>
 
-        <template #empty>
-          No se encontraron usuarios con los filtros actuales.
-        </template>
+        <template #empty> No se encontraron usuarios con los filtros actuales. </template>
       </BaseTable>
 
       <div class="paging">
@@ -831,19 +837,11 @@ function onRowClick(payload: { row: AdminUser }) {
           Mostrando {{ pageStartIdx }}–{{ pageEndIdx }} de {{ filteredUsers.length }}
         </span>
         <div class="paging-controls">
-          <button
-            class="paging-btn"
-            :disabled="currentPage <= 1"
-            @click="currentPage--"
-          >
+          <button class="paging-btn" :disabled="currentPage <= 1" @click="currentPage--">
             <span class="pi pi-chevron-left" />
           </button>
           <span class="paging-pos">Página {{ currentPage }} de {{ totalPages }}</span>
-          <button
-            class="paging-btn"
-            :disabled="currentPage >= totalPages"
-            @click="currentPage++"
-          >
+          <button class="paging-btn" :disabled="currentPage >= totalPages" @click="currentPage++">
             <span class="pi pi-chevron-right" />
           </button>
         </div>
@@ -851,50 +849,31 @@ function onRowClick(payload: { row: AdminUser }) {
     </BaseCard>
 
     <!-- Edit modal -->
-    <BaseModal
-      v-model:open="editOpen"
-      :title="editTarget ? `Editar @${editTarget.username}` : ''"
-    >
+    <BaseModal v-model:open="editOpen" :title="editTarget ? `Editar @${editTarget.username}` : ''">
       <div class="field">
-        <label
-          class="field-label"
-          for="edit-name"
-        >Nombre</label>
+        <label class="field-label" for="edit-name">Nombre</label>
         <input
           id="edit-name"
           v-model="editForm.display_name"
           class="field-input"
           type="text"
           maxlength="255"
-        >
+        />
       </div>
       <div class="field">
-        <label
-          class="field-label"
-          for="edit-email"
-        >Email</label>
+        <label class="field-label" for="edit-email">Email</label>
         <input
           id="edit-email"
           v-model="editForm.email"
           class="field-input"
           type="email"
           maxlength="255"
-        >
+        />
       </div>
 
       <template #footer>
-        <BaseButton
-          variant="ghost"
-          @click="closeEdit"
-        >
-          Cancelar
-        </BaseButton>
-        <BaseButton
-          variant="primary"
-          @click="submitEdit"
-        >
-          Guardar
-        </BaseButton>
+        <BaseButton variant="ghost" @click="closeEdit"> Cancelar </BaseButton>
+        <BaseButton variant="primary" @click="submitEdit"> Guardar </BaseButton>
       </template>
     </BaseModal>
 
@@ -915,6 +894,7 @@ function onRowClick(payload: { row: AdminUser }) {
   </div>
 
   <Teleport to="body">
+    <CreateUserFlow v-model:open="createUserOpen" @created="handleUserCreated" />
     <ConfirmUserModal
       v-if="confirmModal"
       :action="confirmModal.action"
