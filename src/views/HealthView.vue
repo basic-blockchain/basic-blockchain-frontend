@@ -219,6 +219,14 @@ function healthLabel(status: string | null | undefined): string {
   background: var(--surface-2);
 }
 
+/* Section heading alignment to match card padding */
+.section-h {
+  margin: 0 0 8px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
 .details-grid {
   display: flex;
   flex-direction: column;
@@ -277,7 +285,7 @@ function healthLabel(status: string | null | undefined): string {
 
 /* Components card: no fixed min-height, content-driven */
 .components-card {
-  padding: 10px;
+  padding: 8px 10px;
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
@@ -289,22 +297,40 @@ function healthLabel(status: string | null | undefined): string {
   grid-template-columns: 1fr 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
-.kvs-row:last-child { border-bottom: none }
-.kvs-key { font-weight: 600 }
-.kvs-val { color: var(--text-2); font-size: 14px }
-.kvs-badge { justify-self: end }
+.kvs-row:last-child {
+  border-bottom: none;
+}
+.kvs-key {
+  font-weight: 600;
+  padding-left: 4px;
+}
+.kvs-val {
+  color: var(--text-2);
+  font-size: 14px;
+}
+.kvs-badge {
+  justify-self: end;
+  align-self: center;
+}
 
-/* Compact spacing */
-.components-card .kvs-row { padding-left: 18px; padding-right: 18px }
+/* remove extra padding to keep keys aligned with card */
+.components-card .kvs-row {
+  padding-left: 6px;
+  padding-right: 6px;
+}
 
 @media (max-width: 1200px) {
-  .two-col-row { grid-template-columns: 1fr 360px; }
+  .two-col-row {
+    grid-template-columns: 1fr 360px;
+  }
 }
 @media (max-width: 900px) {
-  .two-col-row { grid-template-columns: 1fr; }
+  .two-col-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
