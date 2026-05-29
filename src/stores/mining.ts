@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { mineBlock } from '@/api/mining'
+import type { Block } from '@/domain/block'
+import type { Transaction } from '@/domain/transaction'
 import { useChainStore } from './chain'
 import { useMempoolStore } from './mempool'
 import { useMetricsStore } from './metrics'
@@ -15,6 +17,13 @@ export interface MiningState {
   elapsedSeconds: number
 }
 
+export interface MiningResult {
+  block: Block
+  transactions: Transaction[]
+  elapsedSeconds: number
+  feeTotal: number
+}
+
 export const useMiningStore = defineStore('mining', () => {
   const isRunning = ref(false)
   const progress = ref(0)
@@ -22,6 +31,10 @@ export const useMiningStore = defineStore('mining', () => {
   const startTime = ref<number | null>(null)
   const elapsedSeconds = ref(0)
   const error = ref<string | null>(null)
+  const lastResult = ref<MiningResult | null>(null)
+  const showResult = ref(false)
+  const lastAttempts = ref<number | null>(null)
+  const lastNonce = ref<number | null>(null)
 
   const chainStore = useChainStore()
   const mempoolStore = useMempoolStore()
@@ -61,6 +74,10 @@ export const useMiningStore = defineStore('mining', () => {
     isRunning.value = true
     progress.value = 0
     error.value = null
+    lastResult.value = null
+    showResult.value = false
+    lastAttempts.value = null
+    lastNonce.value = null
     currentBlock.value = (metricsStore.metrics?.chainHeight ?? 0) + 1
 
     startProgressTracking()
@@ -79,11 +96,14 @@ export const useMiningStore = defineStore('mining', () => {
 
       // Completar
       progress.value = 100
-      const detail =
-        transactions.length > 0
-          ? `${transactions.length} transaction(s) included and removed from mempool`
-          : 'Empty block (no pending transactions)'
-      toast.success(`Block #${block.index} mined`, detail)
+      const feeTotal = transactions.reduce((sum, tx) => sum + (Number(tx.fee ?? 0) || 0), 0)
+      lastResult.value = {
+        block,
+        transactions,
+        elapsedSeconds: elapsedSeconds.value,
+        feeTotal,
+      }
+      showResult.value = true
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Mining failed'
       error.value = msg
@@ -99,6 +119,18 @@ export const useMiningStore = defineStore('mining', () => {
     }
   }
 
+  function clearResult() {
+    showResult.value = false
+    lastResult.value = null
+    lastAttempts.value = null
+    lastNonce.value = null
+  }
+
+  function setClientStats(attempts: number, nonce: number) {
+    lastAttempts.value = attempts
+    lastNonce.value = nonce
+  }
+
   return {
     isRunning,
     progress,
@@ -106,6 +138,12 @@ export const useMiningStore = defineStore('mining', () => {
     elapsedSeconds,
     error,
     isVisible,
+    lastResult,
+    showResult,
+    lastAttempts,
+    lastNonce,
     mine,
+    clearResult,
+    setClientStats,
   }
 })

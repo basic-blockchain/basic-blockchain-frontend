@@ -1,7 +1,7 @@
 # Frontend API Reference
 
 Status: Accepted
-Last updated: 2026-05-25 (v0.9.0 — Phase 7 closed)
+Last updated: 2026-05-29 (v0.9.0 — Phase 7 closed)
 Scope: every HTTP / WebSocket endpoint consumed by
 `basic-blockchain-frontend`, mapped to its `src/api/*.ts` module.
 
@@ -93,8 +93,21 @@ this file documents only what the SPA actually calls.
 
 | Method | Path       | Purpose                                | Auth |
 | ------ | ---------- | -------------------------------------- | ---- |
-| GET    | `/health`  | `{status, db, chain_height}`           | —    |
+| GET    | `/health`  | `{status, db, chain_height, components?}` — see ComponentStatus below | —    |
 | GET    | `/metrics` | `{chain_height, pending, avg_mine_s}`  | —    |
+
+#### `ComponentStatus` object
+
+Each item in `components[]` has:
+
+| Field    | Type                                        | Notes                                               |
+| -------- | ------------------------------------------- | --------------------------------------------------- |
+| `id`     | `string`                                    | Stable identifier: `node`, `db`, `mempool_relay`, `block_validator` |
+| `label`  | `string`                                    | Human-readable name (e.g. `"Node (Python · Quart)"`) |
+| `meta`   | `string \| null`                            | Version/port/live counts — optional, informational  |
+| `status` | `"ok" \| "degraded" \| "error" \| "n/a"`   | Same vocabulary as top-level `status`               |
+
+Mapped in `src/api/health.ts → getHealth()` → `src/domain/metrics.ts::ComponentStatus`.
 
 ### 2.9 Admin — users (`src/api/admin.ts`)
 
@@ -145,9 +158,36 @@ this file documents only what the SPA actually calls.
 
 | Method | Path             | Purpose                                                                                       | Auth + role |
 | ------ | ---------------- | --------------------------------------------------------------------------------------------- | ----------- |
-| GET    | `/admin/audit`   | Audit entries (`limit`, `action`, `actor_id`, `target_id`, `severity`, `since=1h\|24h\|7d\|30d`) | ADMIN       |
+| GET    | `/admin/audit`   | Audit entries (`limit`, `offset`, `q`, `action`, `actor_id`, `target_id`, `severity`, `since=1h\|24h\|7d\|30d`) | ADMIN       |
 
 Server returns canonical `severity ∈ {critical, warning, info}` (BR-AD-10).
+
+| Param       | Type      | Default | Notes                                                              |
+| ----------- | --------- | ------- | ------------------------------------------------------------------ |
+| `limit`     | `integer` | 50      | Max entries to return (1–200)                                      |
+| `offset`    | `integer` | 0       | Skip the first N rows — enables cursor-style pagination with `limit` |
+| `q`         | `string`  | —       | Full-text search across `action`, `actor_id`, and `details` (ILIKE in Postgres; substring in memory). Best-effort — falls back to client-side filtering in the frontend |
+| `action`    | `string`  | —       | Exact match on action field                                        |
+| `actor_id`  | `string`  | —       | Exact match on actor_id field                                      |
+| `target_id` | `string`  | —       | Exact match on target_id field                                     |
+| `severity`  | `AuditSeverity` | — | `"critical" \| "warning" \| "info"` — post-filter (disables SQL-level pagination) |
+| `since`     | `AuditSinceWindow` | — | `"1h" \| "24h" \| "7d" \| "30d"` — post-filter (disables SQL-level pagination) |
+
+> **`count` semantics:** when neither `severity` nor `since` is set, `count` is the exact total filtered row count (SQL `COUNT(*)`), suitable for building pagination UI. When either post-filter is active, `count` reflects the in-process result size only.
+
+**`AuditParams` TypeScript interface** (`src/api/admin.ts`):
+```ts
+interface AuditParams {
+  limit?: number
+  offset?: number
+  q?: string
+  action?: string
+  actor_id?: string
+  target_id?: string
+  severity?: AuditSeverity
+  since?: AuditSinceWindow
+}
+```
 
 ### 2.14 Admin — dashboard (Phase 6e)
 

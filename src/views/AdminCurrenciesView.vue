@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { createCurrency, listCurrencies, type CurrencyRecord } from '@/api/admin'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
 import BaseCard from '@/components/atoms/BaseCard.vue'

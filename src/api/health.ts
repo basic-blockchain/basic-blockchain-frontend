@@ -1,13 +1,28 @@
 import client from './client'
-import type { Health, Metrics } from '@/domain/metrics'
+import type { Health, Metrics, ComponentStatus } from '@/domain/metrics'
 
 export async function getHealth(): Promise<Health> {
   const { data } = await client.get<{
     status: 'ok' | 'degraded'
     db: 'ok' | 'error' | 'n/a'
     chain_height: number
+    components?: Array<{
+      id: string
+      label: string
+      meta?: string | null
+      status: 'ok' | 'degraded' | 'error' | 'n/a'
+    }>
   }>('/health')
-  return { status: data.status, db: data.db, chainHeight: data.chain_height }
+  const result: Health = { status: data.status, db: data.db, chainHeight: data.chain_height }
+  if (data.components) {
+    result.components = data.components.map<ComponentStatus>((c) => ({
+      id: c.id,
+      label: c.label,
+      meta: c.meta ?? null,
+      status: c.status,
+    }))
+  }
+  return result
 }
 
 export async function getMetrics(): Promise<Metrics> {

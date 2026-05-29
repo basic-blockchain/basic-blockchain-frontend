@@ -1,7 +1,7 @@
 # Component Catalog
 
 Status: Accepted
-Last updated: 2026-05-25 (Phase 7 closed — Design v2 atoms catalogued)
+Last updated: 2026-05-29 (Phase 7 closed — Design v2 atoms catalogued)
 Scope: All reusable UI components under `src/components/` and `src/views/`.
 
 Components are organised under the **Atomic Design** methodology:
@@ -50,6 +50,8 @@ may call `useXxxStore()`**.
   - MiningChart
   - MiningNotification
   - PaginatedTable
+  - HealthLogsPanel
+  - AuditEntryDetailModal
 - Flows
   - MineBlockFlow
   - TransactionDetailFlow
@@ -539,6 +541,26 @@ interface MetricsBarProps {
 ```vue
 <MetricsBar :metrics="metricsStore.metrics" :health="metricsStore.health" />
 ```
+
+---
+
+### HealthLogsPanel
+
+Self-refreshing audit log panel embedded in the Health view. Polls `GET /admin/audit` every 3 s, applies client-side fallback filtering for search and severity, persists filter state in `localStorage`.
+
+- **Props:** none (calls `listAuditLog` directly)
+- **Emits:** nothing (opens `AuditEntryDetailModal` internally on View button click)
+- **Usage:** `<HealthLogsPanel />` in `HealthView` right column
+
+---
+
+### AuditEntryDetailModal
+
+Full-detail overlay for a single `AuditEntry`. Follows `TransactionDetailFlow` anatomy: hero (action name + severity badge), Evento section (actor, target, timestamp, entry ID with `HashChip`), Detalles section (key-value grid of `details` object), footer with Copy JSON / Close.
+
+- **Props:** `entry: AuditEntry`
+- **Emits:** `close`
+- **Usage:** controlled by `HealthLogsPanel` (View button) and `AdminAuditView` (row click)
 
 ---
 

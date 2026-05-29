@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getConfirmed, getPending } from '@/api/mempool'
 import type { ConfirmedTransaction, Transaction } from '@/domain/transaction'
 import { listAllWallets, listExchangeRates } from '@/api/admin'
-import { useToast } from 'primevue/usetoast'
+import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
@@ -151,11 +151,7 @@ function resolveLabel(walletId: string | undefined, pubkey: string): string {
 }
 
 function resolveCurrency(walletId: string | undefined, pubkey: string): string | null {
-  return (
-    (walletId && walletIdToCurrency.value[walletId]) ||
-    pubkeyToCurrency.value[pubkey] ||
-    null
-  )
+  return (walletId && walletIdToCurrency.value[walletId]) || pubkeyToCurrency.value[pubkey] || null
 }
 
 const router = useRouter()
@@ -243,9 +239,7 @@ function rowFromTx(
     if (Number.isFinite(rate)) amountUsd = t.amount * rate
   }
   const crossCurrency =
-    senderCurrency !== null &&
-    receiverCurrency !== null &&
-    senderCurrency !== receiverCurrency
+    senderCurrency !== null && receiverCurrency !== null && senderCurrency !== receiverCurrency
   return {
     sender: t.sender,
     receiver: t.receiver,
@@ -301,18 +295,9 @@ onMounted(load)
         <p>Historial consolidado · transacciones confirmadas y pendientes en la plataforma.</p>
       </div>
       <div class="page-h-actions">
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          :loading="loading"
-          @click="load"
-        >
+        <BaseButton variant="ghost" size="sm" :loading="loading" @click="load">
           <template #leading>
-            <span
-              class="pi pi-refresh"
-              :class="{ 'pi-spin': loading }"
-              aria-hidden="true"
-            />
+            <span class="pi pi-refresh" :class="{ 'pi-spin': loading }" aria-hidden="true" />
           </template>
           Actualizar
         </BaseButton>
@@ -326,36 +311,28 @@ onMounted(load)
           <span>Operaciones totales</span>
         </template>
         {{ stats.total.toLocaleString('es-AR') }}
-        <template #footer>
-          Confirmadas + pendientes
-        </template>
+        <template #footer> Confirmadas + pendientes </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Confirmadas</span>
         </template>
         <span class="kpi-success">{{ stats.confirmed.toLocaleString('es-AR') }}</span>
-        <template #footer>
-          En bloques minados
-        </template>
+        <template #footer> En bloques minados </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Pendientes</span>
         </template>
         <span :class="{ 'kpi-warning': stats.pending > 0 }">{{ stats.pending }}</span>
-        <template #footer>
-          En mempool
-        </template>
+        <template #footer> En mempool </template>
       </BaseCard>
       <BaseCard variant="bigstat">
         <template #header>
           <span>Mostrando</span>
         </template>
         {{ rows.length }}
-        <template #footer>
-          Con filtros actuales
-        </template>
+        <template #footer> Con filtros actuales </template>
       </BaseCard>
     </div>
 
@@ -377,33 +354,16 @@ onMounted(load)
         </button>
       </div>
       <div class="toolbar-search">
-        <span
-          class="pi pi-search"
-          aria-hidden="true"
-        />
-        <input
-          v-model="searchQuery"
-          placeholder="Buscar por sender, receiver o hash…"
-        >
+        <span class="pi pi-search" aria-hidden="true" />
+        <input v-model="searchQuery" placeholder="Buscar por sender, receiver o hash…" />
       </div>
     </div>
 
     <!-- Table -->
-    <div
-      v-if="loading"
-      class="loading-row"
-    >
-      <span
-        class="pi pi-spin pi-spinner"
-        aria-hidden="true"
-      /> Cargando…
+    <div v-if="loading" class="loading-row">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
     </div>
-    <BaseCard
-      v-else
-      class="table-panel"
-      variant="default"
-      padding="none"
-    >
+    <BaseCard v-else class="table-panel" variant="default" padding="none">
       <PaginatedTable
         :columns="movementColumns"
         :rows="rows"
@@ -426,16 +386,10 @@ onMounted(load)
           </div>
         </template>
         <template #cell-sender="{ row }">
-          <UserChip
-            :name="row.senderLabel"
-            :role="row.senderRole ?? undefined"
-          />
+          <UserChip :name="row.senderLabel" :role="row.senderRole ?? undefined" />
         </template>
         <template #cell-receiver="{ row }">
-          <UserChip
-            :name="row.receiverLabel"
-            :role="row.receiverRole ?? undefined"
-          />
+          <UserChip :name="row.receiverLabel" :role="row.receiverRole ?? undefined" />
         </template>
         <template #cell-amount="{ row }">
           <span class="mono">
@@ -445,11 +399,7 @@ onMounted(load)
         <template #cell-usd="{ row }">
           <span class="mono usd-cell">
             <template v-if="row.amountUsd !== null">{{ fmtUsd(row.amountUsd) }}</template>
-            <span
-              v-else
-              class="usd-missing"
-              title="Sin tasa FX para esta moneda"
-            >—</span>
+            <span v-else class="usd-missing" title="Sin tasa FX para esta moneda">—</span>
           </span>
         </template>
         <template #cell-asset="{ row }">
@@ -464,16 +414,10 @@ onMounted(load)
                   : 'neutral'
             "
           >
-            <span
-              class="asset-dot"
-              :class="`asset-tone-${currencyTone(row.currency)}`"
-            />
+            <span class="asset-dot" :class="`asset-tone-${currencyTone(row.currency)}`" />
             {{ row.currency }}
           </BaseBadge>
-          <span
-            v-else
-            class="usd-missing"
-          >—</span>
+          <span v-else class="usd-missing">—</span>
         </template>
         <template #cell-status="{ row }">
           <BaseBadge :tone="statusTone(row.status)">
@@ -487,9 +431,7 @@ onMounted(load)
             <template v-else>—</template>
           </span>
         </template>
-        <template #empty>
-          Sin movimientos.
-        </template>
+        <template #empty> Sin movimientos. </template>
       </PaginatedTable>
     </BaseCard>
 
@@ -665,11 +607,21 @@ onMounted(load)
   margin-right: 6px;
   vertical-align: middle;
 }
-.asset-tone-green { background: var(--success, #2f9e44); }
-.asset-tone-orange { background: var(--warning, #e8590c); }
-.asset-tone-blue { background: var(--accent, #4263eb); }
-.asset-tone-teal { background: var(--info, #1098ad); }
-.asset-tone-gray { background: var(--border-strong, #adb5bd); }
+.asset-tone-green {
+  background: var(--success, #2f9e44);
+}
+.asset-tone-orange {
+  background: var(--warning, #e8590c);
+}
+.asset-tone-blue {
+  background: var(--accent, #4263eb);
+}
+.asset-tone-teal {
+  background: var(--info, #1098ad);
+}
+.asset-tone-gray {
+  background: var(--border-strong, #adb5bd);
+}
 
 /* Clickable rows */
 :deep(.base-tbl__body tr.mv-row-clickable) {
