@@ -19,6 +19,8 @@ const historyStore = useValidationHistoryStore()
 
 const loadingChainValidation = ref(false)
 const chainValidation = ref<{ valid: boolean; message: string } | null>(null)
+const lastChainApiValid = ref<boolean | null>(null)
+const lastInputIssues = ref<string[]>([])
 const validationModalOpen = ref(false)
 const validationModalStage = ref<'idle' | 'running' | 'done' | 'invalid' | 'error'>('idle')
 const validationActiveStep = ref(0)
@@ -205,6 +207,9 @@ const validationStatusNote = computed(() => {
     return 'La validación terminó correctamente y la cadena pasó todas las reglas.'
   }
   if (chainValidation.value) {
+    if (lastChainApiValid.value && lastInputIssues.value.length > 0) {
+      return 'La cadena es válida, pero hay incidencias en bloque, nodo o transacción.'
+    }
     return 'La API respondió correctamente, pero la cadena no pasó la revalidación.'
   }
   return ''
@@ -224,6 +229,60 @@ function sleep(ms: number) {
   return new Promise<void>((resolve) => {
     window.setTimeout(resolve, ms)
   })
+}
+
+const validationIssueLabels: Record<string, string> = {
+  'Index exists in current chain': 'El índice de bloque no existe en la cadena',
+  'Genesis previous hash must be 0': 'El bloque génesis no cumple previous_hash = 0',
+  'Proof must be a positive integer': 'La prueba del bloque no es un entero positivo',
+  'Timestamp must be parseable': 'El timestamp del bloque no es válido',
+  'URL format is valid': 'La URL del nodo no tiene formato válido',
+  'Node is already registered': 'El nodo no está registrado',
+  'Sender is present': 'Falta el sender de la transacción',
+  'Receiver is present': 'Falta el receiver de la transacción',
+  'Amount is positive': 'El amount de la transacción debe ser positivo',
+  'Sender and receiver differ': 'Sender y receiver deben ser distintos',
+}
+
+function translateIssue(label: string) {
+  return validationIssueLabels[label] ?? label
+}
+
+function collectInputValidationIssues() {
+  const issues: string[] = []
+
+  if (blockForm.index !== null) {
+    if (selectedBlock.value === null) {
+      issues.push(`Bloque #${blockForm.index} no existe`)
+    } else {
+      const blockFailures = blockChecks.value
+        .filter((check) => !check.ok)
+        .map((check) => translateIssue(check.label))
+      if (blockFailures.length > 0) {
+        issues.push(`Bloque: ${blockFailures.join(', ')}`)
+      }
+    }
+  }
+
+  if (nodeForm.url.trim() !== '') {
+    const nodeFailures = nodeChecks.value
+      .filter((check) => !check.ok)
+      .map((check) => translateIssue(check.label))
+    if (nodeFailures.length > 0) {
+      issues.push(`Nodo: ${nodeFailures.join(', ')}`)
+    }
+  }
+
+  if (txHasInput.value) {
+    const txFailures = txChecks.value
+      .filter((check) => !check.ok)
+      .map((check) => translateIssue(check.label))
+    if (txFailures.length > 0) {
+      issues.push(`Transacción: ${txFailures.join(', ')}`)
+    }
+  }
+
+  return issues
 }
 
 function closeValidationModal() {
@@ -268,6 +327,7 @@ async function validateCurrentChain() {
   if (loadingChainValidation.value) return
 
   const runId = ++validationRunId
+  lastInputIssues.value = []
   validationModalOpen.value = true
   validationModalStage.value = 'running'
   validationActiveStep.value = 0
@@ -286,19 +346,32 @@ async function validateCurrentChain() {
     const result = await validationPromise
     if (runId !== validationRunId) return
 
-    chainValidation.value = result
-    historyStore.record('chain', result.valid ? 'valid' : 'invalid', 'full chain', result.message)
-    if (result.valid) {
-      toast.success('Chain validation', result.message)
+    lastChainApiValid.value = result.valid
+    const inputIssues = collectInputValidationIssues()
+    lastInputIssues.value = inputIssues
+
+    const mergedValid = result.valid && inputIssues.length === 0
+    const mergedMessage =
+      inputIssues.length === 0
+        ? result.message
+        : `${result.message} | Entradas con incidencias: ${inputIssues.join(' · ')}`
+
+    chainValidation.value = { valid: mergedValid, message: mergedMessage }
+    historyStore.record('chain', mergedValid ? 'valid' : 'invalid', 'full chain', mergedMessage)
+
+    if (mergedValid) {
+      toast.success('Chain validation', mergedMessage)
       validationModalStage.value = 'done'
     } else {
-      toast.warn('Chain validation', result.message)
+      toast.warn('Chain validation', mergedMessage)
       validationModalStage.value = 'invalid'
     }
     validationActiveStep.value = validationRules.length
-    validationSummary.value = result.message
+    validationSummary.value = mergedMessage
   } catch (e) {
     if (runId !== validationRunId) return
+    lastChainApiValid.value = null
+    lastInputIssues.value = []
     const msg = e instanceof Error ? e.message : 'Validation failed'
     historyStore.record('chain', 'error', 'full chain', msg)
     toast.error('Chain validation failed', msg)
@@ -467,7 +540,7 @@ onUnmounted(() => {
     <!-- Validation grid -->
     <div class="val-grid">
       <!-- Block validation -->
-      <BaseCard variant="default" padding="none">
+      <BaseCard variant="default" padding="none" class="validation-form-card">
         <template #header>
           <span>Validación de bloque</span>
         </template>
@@ -504,7 +577,7 @@ onUnmounted(() => {
       </BaseCard>
 
       <!-- Node validation -->
-      <BaseCard variant="default" padding="none">
+      <BaseCard variant="default" padding="none" class="validation-form-card">
         <template #header>
           <span>Validación de nodo</span>
         </template>
@@ -530,7 +603,7 @@ onUnmounted(() => {
       </BaseCard>
 
       <!-- TX validation -->
-      <BaseCard variant="default" padding="none" class="tx-panel">
+      <BaseCard variant="default" padding="none" class="tx-panel validation-form-card">
         <template #header>
           <span>Validación de transacción</span>
         </template>
@@ -914,6 +987,25 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.validation-form-card :deep(.base-card__header),
+.validation-panel-card :deep(.base-card__header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.validation-form-card :deep(.base-card__header) > span,
+.validation-panel-card :deep(.base-card__header) > span {
+  margin: 0;
 }
 
 /* Chain status */
