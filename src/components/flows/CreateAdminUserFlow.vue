@@ -277,19 +277,29 @@ function roleColor(role: StaffRole): string {
               </div>
             </div>
 
-            <div class="summary-card">
-              <div class="summary-title">Datos para compartir con el usuario</div>
-              <div class="summary-row">
-                <span class="summary-key">Email</span>
-                <span class="summary-val summary-val--mono">{{ form.email }}</span>
+            <!-- email-link: email enviado -->
+            <template v-if="form.notify === 'email-link' && result.email_sent">
+              <div class="email-sent-banner">
+                <i class="pi pi-envelope" />
+                <div>
+                  <div class="email-sent-title">Email de activación enviado</div>
+                  <div class="email-sent-sub">
+                    Se envió un link de activación a <strong>{{ form.email }}</strong>.
+                    El usuario puede establecer su contraseña desde el link en el email.
+                  </div>
+                </div>
               </div>
-              <div class="summary-row">
-                <span class="summary-key">Username</span>
-                <span class="summary-val summary-val--mono">{{ result.username }}</span>
-              </div>
-
-              <!-- email-link: mostrar activation code -->
-              <template v-if="form.notify === 'email-link'">
+              <div class="summary-card">
+                <div class="summary-title">Fallback — si el email no llega</div>
+                <div class="summary-row">
+                  <span class="summary-key">Username</span>
+                  <div class="copy-row">
+                    <span class="summary-val summary-val--mono">{{ result.username }}</span>
+                    <button class="copy-btn" @click="copyToClipboard(result!.username)">
+                      <i :class="copied ? 'pi pi-check' : 'pi pi-copy'" />
+                    </button>
+                  </div>
+                </div>
                 <div class="summary-row">
                   <span class="summary-key">Código de activación</span>
                   <div class="copy-row">
@@ -299,15 +309,27 @@ function roleColor(role: StaffRole): string {
                     </button>
                   </div>
                 </div>
-                <div class="info-note">
+                <div class="info-note" style="margin-top: 8px">
                   <i class="pi pi-info-circle" />
-                  Compartí el username y el código de activación con el usuario para que establezca su contraseña en
+                  Podés compartir el username y código manualmente para activar en
                   <span class="mono">/activate</span>.
                 </div>
-              </template>
+              </div>
+            </template>
 
-              <!-- temp-password: mostrar contraseña -->
-              <template v-else-if="result.temp_password">
+            <!-- temp-password: contraseña temporal -->
+            <template v-else-if="form.notify === 'temp-password' && result.temp_password">
+              <div class="summary-card">
+                <div class="summary-title">Compartir con el usuario</div>
+                <div class="summary-row">
+                  <span class="summary-key">Username</span>
+                  <div class="copy-row">
+                    <span class="summary-val summary-val--mono">{{ result.username }}</span>
+                    <button class="copy-btn" @click="copyToClipboard(result!.username)">
+                      <i :class="copied ? 'pi pi-check' : 'pi pi-copy'" />
+                    </button>
+                  </div>
+                </div>
                 <div class="summary-row">
                   <span class="summary-key">Contraseña temporal</span>
                   <div class="copy-row">
@@ -317,12 +339,15 @@ function roleColor(role: StaffRole): string {
                     </button>
                   </div>
                 </div>
-                <div class="warn-note">
+                <div class="warn-note" style="margin-top: 8px">
                   <i class="pi pi-exclamation-triangle" />
                   Esta contraseña se muestra una sola vez. El usuario deberá cambiarla al primer login.
                 </div>
-              </template>
+              </div>
+            </template>
 
+            <div class="summary-card">
+              <div class="summary-title">Cuenta creada</div>
               <div class="summary-row">
                 <span class="summary-key">Rol</span>
                 <span class="summary-val summary-val--mono" :style="{ color: roleColor(form.role) }">{{ form.role }}</span>
@@ -330,6 +355,10 @@ function roleColor(role: StaffRole): string {
               <div class="summary-row">
                 <span class="summary-key">Permisos asignados</span>
                 <span class="summary-val">{{ form.perms.size }}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-key">Permisos extra</span>
+                <span class="summary-val">{{ result.staffUser.overrides.length }}</span>
               </div>
             </div>
           </template>
@@ -512,6 +541,16 @@ function roleColor(role: StaffRole): string {
 }
 .success-title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin-bottom: 4px; }
 .success-sub { font-size: 13px; color: var(--text-2); }
+
+/* Email sent banner */
+.email-sent-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; background: var(--success-soft);
+  border-radius: var(--radius); color: var(--success);
+}
+.email-sent-banner .pi-envelope { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.email-sent-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.email-sent-sub { font-size: 12px; line-height: 1.5; opacity: 0.9; }
 
 /* Error */
 .error-box {
