@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { listAuditLog } from '@/api/admin'
-import type { AuditEntry } from '@/api/admin'
+import type { AuditEntry, AuditSeverity } from '@/api/admin'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
 import BaseButton from '@/components/atoms/BaseButton.vue'
@@ -19,15 +19,14 @@ let searchTimer: number | null = null
 async function fetchLogs() {
   loading.value = true
   try {
-    // attempt server-side filters; fall back to client-side if API ignores params
-    const params: any = { limit: 60 }
-    if (search.value) params.q = search.value
-    if (severityFilter.value) params.severity = severityFilter.value
-    const res = await listAuditLog(params)
-    // ensure entries is always an array
-    entries.value = res.entries || res || []
-  } catch (err) {
-    // silent
+    const res = await listAuditLog({
+      limit: 60,
+      ...(search.value ? { q: search.value } : {}),
+      ...(severityFilter.value ? { severity: severityFilter.value as AuditSeverity } : {}),
+    })
+    entries.value = res.entries ?? []
+  } catch {
+    // silent — client-side filter still works on stale data
   } finally {
     loading.value = false
   }
