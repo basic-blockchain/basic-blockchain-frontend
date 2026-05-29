@@ -4,6 +4,7 @@ import { listAuditLog } from '@/api/admin'
 import type { AuditEntry } from '@/api/admin'
 import BaseCard from '@/components/atoms/BaseCard.vue'
 import BaseBadge from '@/components/atoms/BaseBadge.vue'
+import BaseButton from '@/components/atoms/BaseButton.vue'
 const STORAGE_KEY = 'healthLogs_state_v1'
 
 const entries = ref<AuditEntry[]>([])
@@ -181,8 +182,8 @@ function shortTime(iso?: string) {
           </div>
 
           <div class="col-details">
-            <div class="detail-text">{{ JSON.stringify(e.details) }}</div>
-            <button class="detail-btn" @click.prevent="openDetail(e)">View</button>
+            <span class="detail-text">{{ JSON.stringify(e.details) }}</span>
+            <button class="detail-btn" @click.stop="openDetail(e)">View</button>
           </div>
         </div>
       </div>
@@ -211,21 +212,21 @@ function shortTime(iso?: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--border);
 }
 .logs-h .live-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 .logs-h > span {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text);
   display: inline-block;
   line-height: 1;
@@ -234,7 +235,7 @@ function shortTime(iso?: string) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: var(--bg-muted);
   color: var(--text-2);
@@ -251,22 +252,22 @@ function shortTime(iso?: string) {
   flex: 0 0 auto;
 }
 .logs-body {
-  padding: 0 12px 12px 12px;
+  padding: 0 10px 10px 10px;
 }
 .logs-list {
   max-height: 520px;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 8px;
+  gap: 4px;
+  padding-top: 6px;
 }
 .log-row {
   display: grid;
   grid-template-columns: auto 1fr minmax(140px, 220px); /* responsive details column */
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
 }
 .col-sev {
@@ -277,34 +278,41 @@ function shortTime(iso?: string) {
 .col-main {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .log-row .action {
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: 650;
+  font-size: 12.5px;
   color: var(--text);
 }
 .log-row .sub {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-2);
 }
 .col-details {
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  justify-self: end;
+}
+.detail-text {
+  font-size: 11.5px;
   color: var(--text-3);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
-  /* allow wrapping and clamp to 2 lines to avoid layout overflow */
   white-space: normal;
   word-break: break-all;
   display: -webkit-box;
-  -webkit-line-clamp: 1; /* compact: 1 line clamp as requested */
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  justify-self: end;
   text-align: right;
+  width: 100%;
 }
 
 .severity-select {
-  padding: 5px 8px;
+  padding: 4px 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -312,23 +320,23 @@ function shortTime(iso?: string) {
   font-size: 12px;
 }
 .logs-search {
-  padding: 5px 10px;
+  padding: 4px 10px;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: var(--surface);
   color: var(--text-2);
-  min-width: 150px;
+  min-width: 138px;
   font-size: 12px;
 }
 .logs-search::placeholder {
   color: var(--text-3);
 }
 .detail-btn {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11.5px;
   background: var(--bg-muted);
   border: 1px solid var(--border);
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
   color: var(--text);
   cursor: pointer;
@@ -379,30 +387,7 @@ function shortTime(iso?: string) {
   margin-top: 12px;
 }
 
-/* make the right column sticky */
-.logs-list {
-  position: relative;
-}
-.base-card > .base-card__body {
-  display: flex;
-  gap: 12px;
-}
-.base-card .logs-body {
-  flex: 1 1 auto;
-}
-.base-card .logs-list {
-  flex: 1 1 auto;
-}
-.base-card {
-}
-.base-card .logs-list {
-  /* nothing */
-}
 
-.logs-right {
-  position: sticky;
-  top: var(--health-logs-top, 20px);
-}
 .logs-empty {
   padding: 16px;
   color: var(--text-2);

@@ -155,7 +155,7 @@ function healthLabel(status: string | null | undefined): string {
         </div>
       </div>
 
-      <div>
+      <div class="logs-right">
         <HealthLogsPanel />
       </div>
     </div>
@@ -176,15 +176,15 @@ function healthLabel(status: string | null | undefined): string {
   gap: 24px;
 }
 .page-h h1 {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   margin: 0 0 2px;
   color: var(--text);
 }
 .page-h p {
   margin: 0;
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-2);
 }
 
@@ -221,9 +221,9 @@ function healthLabel(status: string | null | undefined): string {
 
 /* Section heading alignment to match card padding */
 .section-h {
-  margin: 0 0 8px 6px;
-  font-size: 13px;
-  font-weight: 600;
+  margin: 0 0 6px 6px;
+  font-size: 12.5px;
+  font-weight: 650;
   color: var(--text);
 }
 
@@ -295,21 +295,22 @@ function healthLabel(status: string | null | undefined): string {
 .kvs-row {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--border);
 }
 .kvs-row:last-child {
   border-bottom: none;
 }
 .kvs-key {
-  font-weight: 600;
-  padding-left: 4px;
+  font-weight: 650;
+  padding-left: 2px;
+  font-size: 13px;
 }
 .kvs-val {
   color: var(--text-2);
-  font-size: 14px;
+  font-size: 13px;
 }
 .kvs-badge {
   justify-self: end;
@@ -333,9 +334,9 @@ function healthLabel(status: string | null | undefined): string {
   }
 }
 
-@media (max-width: 900px) {
-  .two-col-row {
-    grid-template-columns: 1fr;
-  }
+.logs-right {
+  position: sticky;
+  top: var(--health-logs-top, 20px);
+  align-self: start;
 }
 </style>
