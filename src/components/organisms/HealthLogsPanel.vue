@@ -73,14 +73,18 @@ function shortTime(iso?: string) {
       <div v-if="entries.length === 0" class="logs-empty">No hay eventos recientes</div>
       <div class="logs-list">
         <div v-for="e in entries" :key="e.id" class="log-row">
-          <div class="left">
-            <BaseBadge :tone="toneForSeverity(e.severity)">{{ e.severity ?? 'info' }}</BaseBadge>
-            <div class="meta">
-              <div class="action">{{ e.action }}</div>
-              <div class="sub">{{ e.actor_id }} · {{ shortTime(e.created_at) }}</div>
-            </div>
+          <div class="col-sev">
+            <BaseBadge :tone="toneForSeverity(e.severity)">{{
+              (e.severity ?? 'info').toUpperCase()
+            }}</BaseBadge>
           </div>
-          <div class="details">{{ JSON.stringify(e.details) }}</div>
+
+          <div class="col-main">
+            <div class="action">{{ e.action }}</div>
+            <div class="sub">{{ e.actor_id }} · {{ shortTime(e.created_at) }}</div>
+          </div>
+
+          <div class="col-details">{{ JSON.stringify(e.details) }}</div>
         </div>
       </div>
     </div>
@@ -129,37 +133,39 @@ function shortTime(iso?: string) {
   padding-top: 8px;
 }
 .log-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr 260px;
   gap: 12px;
-  align-items: flex-start;
-  padding: 10px;
+  align-items: center;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
-.log-row .left {
+.col-sev {
   display: flex;
-  gap: 10px;
   align-items: center;
-  min-width: 220px;
+  justify-content: flex-start;
 }
-.log-row .meta {
+.col-main {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 .log-row .action {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
+  color: var(--text);
 }
 .log-row .sub {
   font-size: 12px;
   color: var(--text-2);
 }
-.log-row .details {
-  flex: 1;
+.col-details {
   font-size: 13px;
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  justify-self: end;
 }
 .logs-empty {
   padding: 16px;
