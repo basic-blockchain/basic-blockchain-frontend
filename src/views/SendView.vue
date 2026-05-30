@@ -12,6 +12,8 @@ import { BlockchainApiError } from '@/api/errors'
 import type { Wallet } from '@/api/wallets'
 import ReceiveFlow from '@/components/flows/ReceiveFlow.vue'
 import type { ReceiveData } from '@/components/flows/ReceiveFlow.vue'
+import QRCodeCanvas from '@/components/atoms/QRCodeCanvas.vue'
+import { useBlockchainWebSocket } from '@/api/websocket'
 
 const route = useRoute()
 const walletStore = useWalletStore()
@@ -285,6 +287,44 @@ function openReceive() {
     receiveFlowData.value = { asset: w.currency, address: w.wallet_id }
   }
 }
+
+// Inline receive panel state
+const receiveCopied = ref(false)
+
+function copyReceiveAddress() {
+  const addr = selectedWallet.value?.wallet_id ?? ''
+  if (!addr) return
+  navigator.clipboard.writeText(addr).catch(() => {})
+  receiveCopied.value = true
+  setTimeout(() => { receiveCopied.value = false }, 1500)
+}
+
+// Real-time incoming transaction detection via WebSocket
+interface IncomingPayment { amount: number; from: string; currency: string; blockIndex: number }
+const incomingPayment = ref<IncomingPayment | null>(null)
+
+const myUsername = computed(() => auth.user?.username ?? '')
+
+const { status: wsStatus } = useBlockchainWebSocket((block) => {
+  // Only detect while Recibir tab is active and a wallet is selected
+  if (activeTab.value !== 'receive' || !selectedWallet.value) return
+  const myWallet = selectedWallet.value
+  const myUser = myUsername.value
+  for (const tx of block.transactions) {
+    if (tx.receiver === myUser && (tx.currency ?? myWallet.currency) === myWallet.currency) {
+      incomingPayment.value = {
+        amount: tx.amount,
+        from: tx.sender,
+        currency: tx.currency ?? myWallet.currency,
+        blockIndex: block.index,
+      }
+      break
+    }
+  }
+})
+
+// Reset incoming notification when switching wallet or tab
+watch([() => fromWalletId.value, activeTab], () => { incomingPayment.value = null })
 
 // ── Solicitar tab state ───────────────────────────────────────────────────────
 
@@ -687,32 +727,149 @@ onMounted(async () => {
     <!-- ── RECIBIR TAB ── -->
     <div v-else-if="activeTab === 'receive'" class="sv-layout">
       <div class="sv-main">
-        <div class="form-card">
+
+        <!-- Payment received notification -->
+        <div v-if="incomingPayment" class="received-banner">
+          <div class="received-icon">
+            <span class="pi pi-check" aria-hidden="true" />
+          </div>
+          <div class="received-info">
+            <strong>+{{ incomingPayment.amount }} {{ incomingPayment.currency }}</strong>
+            <span class="muted">Recibido de <b>{{ incomingPayment.from }}</b> · bloque #{{ incomingPayment.blockIndex }}</span>
+          </div>
+          <button class="btn-close-banner" @click="incomingPayment = null">✕</button>
+        </div>
+
+        <div class="form-card receive-card">
           <div class="form-card-h">
             <h2>Recibir fondos</h2>
-            <p>Compartí tu wallet ID o QR para recibir pagos.</p>
+            <p>Compartí tu dirección o QR para que te envíen fondos.</p>
           </div>
 
+          <!-- Wallet selector -->
           <div class="field">
-            <label class="field-label">Wallet destinataria</label>
+            <label class="field-label">Wallet</label>
             <select v-model="fromWalletId" class="field-select">
               <option value="" disabled>Seleccioná una wallet…</option>
-              <option v-for="w in walletStore.wallets" :key="w.wallet_id" :value="w.wallet_id">
-                {{ w.currency }} · {{ w.wallet_id.slice(0, 20) }}…
+              <option
+                v-for="w in walletStore.wallets"
+                :key="w.wallet_id"
+                :value="w.wallet_id"
+              >
+                {{ w.currency }} · {{ Number(w.balance).toFixed(4) }} · {{ w.wallet_id.slice(0, 16) }}…
               </option>
             </select>
           </div>
 
-          <button
-            class="btn btn-primary btn-submit"
-            :disabled="!fromWalletId"
-            @click="openReceive"
-          >
-            <span class="pi pi-qrcode" aria-hidden="true" />
-            Ver QR y dirección
-          </button>
+          <template v-if="selectedWallet">
+            <!-- QR Code -->
+            <div class="qr-section">
+              <div class="qr-wrapper">
+                <QRCodeCanvas :value="selectedWallet.wallet_id" :size="172" />
+                <div class="qr-brand">◆</div>
+              </div>
+
+              <div class="addr-label">TU DIRECCIÓN {{ selectedWallet.currency }}</div>
+
+              <button class="addr-chip-lg" @click="copyReceiveAddress">
+                <span class="mono addr-text">{{ selectedWallet.wallet_id }}</span>
+                <span
+                  :class="receiveCopied ? 'pi pi-check' : 'pi pi-copy'"
+                  :style="{ color: receiveCopied ? 'var(--success)' : 'var(--accent)' }"
+                  aria-hidden="true"
+                />
+              </button>
+              <p v-if="receiveCopied" class="copy-confirm">
+                <span class="pi pi-check" aria-hidden="true" /> Copiado al portapapeles
+              </p>
+
+              <!-- Action row -->
+              <div class="receive-actions">
+                <button class="btn" @click="copyReceiveAddress">
+                  <span class="pi pi-copy" aria-hidden="true" />
+                  {{ receiveCopied ? 'Copiado' : 'Copiar dirección' }}
+                </button>
+                <button class="btn" @click="openReceive">
+                  <span class="pi pi-external-link" aria-hidden="true" />
+                  Ver en modal
+                </button>
+              </div>
+            </div>
+
+            <!-- Live listener -->
+            <div class="listening-bar" :class="{ 'listening-active': wsStatus === 'OPEN' }">
+              <span
+                :class="wsStatus === 'OPEN' ? 'ws-dot ws-dot-live' : 'ws-dot ws-dot-off'"
+                aria-hidden="true"
+              />
+              <span v-if="wsStatus === 'OPEN'">Escuchando transacciones en tiempo real…</span>
+              <span v-else class="muted">Reconectando al servidor…</span>
+              <span v-if="wsStatus === 'OPEN'" class="muted" style="font-size:10.5px;margin-left:auto">en vivo</span>
+            </div>
+
+            <!-- Warning -->
+            <div class="warn-box warn-box-info">
+              <span class="pi pi-info-circle" aria-hidden="true" />
+              <span>
+                Sólo enviá <strong>{{ selectedWallet.currency }}</strong> a esta dirección en la red
+                <strong>Cadena</strong>. Otros tokens podrían perderse.
+              </span>
+            </div>
+          </template>
+
+          <div v-else class="empty-state sm muted">
+            Seleccioná una wallet para ver su dirección y QR.
+          </div>
         </div>
       </div>
+
+      <!-- Sidebar -->
+      <aside class="sv-sidebar">
+        <!-- Otras wallets -->
+        <div v-if="walletStore.wallets.length > 1" class="sidebar-card">
+          <div class="sidebar-card-h">Otras wallets</div>
+          <div class="contacts-list">
+            <button
+              v-for="w in walletStore.wallets.filter(w => w.wallet_id !== fromWalletId)"
+              :key="w.wallet_id"
+              class="contact-item"
+              @click="fromWalletId = w.wallet_id"
+            >
+              <div class="contact-avatar" style="background: var(--success)">{{ w.currency.charAt(0) }}</div>
+              <div class="contact-info">
+                <span class="contact-id">{{ w.currency }} · {{ Number(w.balance).toFixed(4) }}</span>
+                <span class="muted" style="font-size:11px">{{ w.wallet_id.slice(0, 16) }}…</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Atajos -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-h">Atajos</div>
+          <div class="shortcuts-list">
+            <button class="shortcut-item" @click="activeTab = 'send'">
+              <span class="pi pi-send sh-icon sh-buy" aria-hidden="true" />
+              <span>Enviar fondos</span>
+              <span class="pi pi-chevron-right sh-arrow" aria-hidden="true" />
+            </button>
+            <button class="shortcut-item" @click="activeTab = 'request'">
+              <span class="pi pi-link sh-icon sh-link" aria-hidden="true" />
+              <span>Solicitar pago a alguien</span>
+              <span class="pi pi-chevron-right sh-arrow" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Tip -->
+        <div class="sidebar-card tip-card">
+          <div class="sidebar-card-h">Tip de seguridad</div>
+          <div class="tip-body">
+            <span class="pi pi-info-circle tip-icon" aria-hidden="true" />
+            <p>Verificá que quien te envía esté usando la red correcta. Fondos enviados a la red equivocada no son recuperables.</p>
+          </div>
+        </div>
+      </aside>
     </div>
 
     <!-- ── SOLICITAR TAB ── -->
@@ -1220,6 +1377,77 @@ onMounted(async () => {
 }
 .tip-icon { color: var(--text-3); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 .tip-body p { margin: 0; }
+
+/* ── Receive tab ── */
+.receive-card { align-items: center; }
+
+.received-banner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  border-radius: var(--radius-lg); margin-bottom: 4px;
+}
+.received-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--success); color: #fff;
+  display: grid; place-items: center; font-size: 16px; flex-shrink: 0;
+}
+.received-info { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.btn-close-banner { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 14px; padding: 4px; }
+
+.qr-section { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4px 0; width: 100%; }
+.qr-wrapper {
+  position: relative; padding: 12px;
+  background: #fff; border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,.08); line-height: 0;
+}
+.qr-brand {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, #1a1917, #3a3530); border-radius: 6px;
+  color: #faf9f6; display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  pointer-events: none;
+}
+.addr-label { font-size: 10.5px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.addr-chip-lg {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+  cursor: pointer; transition: border-color 0.12s; width: 100%; max-width: 400px;
+}
+.addr-chip-lg:hover { border-color: var(--accent); }
+.addr-text { flex: 1; font-size: 12px; word-break: break-all; text-align: left; color: var(--text); }
+.copy-confirm { font-size: 12px; color: var(--success); margin: 0; display: flex; align-items: center; gap: 4px; }
+.receive-actions { display: flex; gap: 8px; width: 100%; max-width: 400px; }
+.receive-actions .btn { flex: 1; justify-content: center; }
+
+.listening-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: var(--radius);
+  font-size: 12.5px; width: 100%;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2);
+}
+.listening-active {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border)); color: var(--text);
+}
+.ws-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ws-dot-live { background: var(--success); box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 30%, transparent); animation: pulse-dot 2s infinite; }
+.ws-dot-off { background: var(--text-3); }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.warn-box {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px; border-radius: var(--radius);
+  font-size: 12.5px; line-height: 1.5; width: 100%;
+}
+.warn-box-info {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border)); color: var(--text-2);
+}
+.warn-box .pi { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
 
 /* Utils */
 .mono { font-family: var(--font-mono); }
