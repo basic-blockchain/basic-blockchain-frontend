@@ -98,27 +98,24 @@ const userGroups: NavGroup[] = [
   {
     label: 'Cuenta',
     items: [
-      { to: '/portfolio', label: 'Mi portafolio', icon: 'pi pi-chart-line', requireAuth: true },
-      { to: '/wallet',    label: 'Mis wallets',    icon: 'pi pi-wallet',               requireAuth: true },
-      { to: '/send',      label: 'Enviar / Recibir', icon: 'pi pi-arrows-h',           requireAuth: true },
-      { to: '/p2p',       label: 'Mercado P2P',    icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
-      { to: '/exchange',  label: 'Exchange',        icon: 'pi pi-chart-bar',            requireAuth: true },
+      { to: '/portfolio', label: 'Mi portafolio',    icon: 'pi pi-chart-line',             requireAuth: true },
+      { to: '/wallet',    label: 'Mis wallets',       icon: 'pi pi-wallet',                requireAuth: true },
+      { to: '/send',      label: 'Enviar / Recibir',  icon: 'pi pi-arrows-h',              requireAuth: true },
+      { to: '/p2p',       label: 'Mercado P2P',       icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
+      { to: '/exchange',  label: 'Exchange',           icon: 'pi pi-chart-bar',             requireAuth: true },
     ],
   },
   {
-    label: 'Blockchain',
+    label: 'Cuenta',
     items: [
-      { to: '/chain', label: 'Cadena', icon: 'pi pi-link' },
-      { to: '/mempool', label: 'Mempool', icon: 'pi pi-inbox' },
-      { to: '/nodes', label: 'Nodos', icon: 'pi pi-sitemap' },
-      { to: '/validation', label: 'Validación', icon: 'pi pi-verified' },
-      { to: '/health', label: 'Health', icon: 'pi pi-heart' },
+      { to: '/portfolio', label: 'Verificación', icon: 'pi pi-shield',   requireAuth: true, disabled: true },
+      { to: '/portfolio', label: 'Ajustes',       icon: 'pi pi-cog',    requireAuth: true, disabled: true },
     ],
   },
 ]
 
 const navGroups = computed(() => {
-  const source = auth.hasRole('ADMIN') ? adminGroups : userGroups
+  const source = (auth.hasRole('ADMIN') || auth.hasRole('OPERATOR')) ? adminGroups : userGroups
   return source
     .map((g) => ({
       ...g,
