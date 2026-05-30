@@ -1,113 +1,42 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useWalletStore } from '@/stores/wallet'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import { useAuthStore } from '@/stores/auth'
+import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { defaultLandingFor } from '@/router'
-import {
-  confirmWallet,
-  listCurrencies,
-  previewWallet,
-  type CurrencyRecord,
-  type Wallet,
-} from '@/api/wallets'
-import { isValidMnemonic } from '@/lib/crypto'
+import { listCurrencies, type CurrencyRecord, type Wallet } from '@/api/wallets'
+import { useWalletCreate } from '@/composables/useWalletCreate'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
-import HashChip from '@/components/atoms/HashChip.vue'
-import AmountDisplay from '@/components/atoms/AmountDisplay.vue'
+import QRCodeCanvas from '@/components/atoms/QRCodeCanvas.vue'
 import { useToast } from '@/composables/useToast'
-import { BlockchainApiError } from '@/api/errors'
 import SendConfirmFlow from '@/components/flows/SendConfirmFlow.vue'
 import type { SendData } from '@/components/flows/SendConfirmFlow.vue'
 import ReceiveFlow from '@/components/flows/ReceiveFlow.vue'
 import type { ReceiveData } from '@/components/flows/ReceiveFlow.vue'
-import WithdrawFlow from '@/components/flows/WithdrawFlow.vue'
-import type { WithdrawData } from '@/components/flows/WithdrawFlow.vue'
 import ConvertFlow from '@/components/flows/ConvertFlow.vue'
 import type { ConvertData } from '@/components/flows/ConvertFlow.vue'
 
-const walletStore = useWalletStore()
+const walletStore   = useWalletStore()
 const confirmedStore = useConfirmedTransactionsStore()
-const auth = useAuthStore()
-const router = useRouter()
-const toast = useToast()
+const auth          = useAuthStore()
+const ratesStore    = useExchangeRatesStore()
+const router        = useRouter()
+const route         = useRoute()
+const toast         = useToast()
 
-const pendingMnemonic = ref('')
-const showSeedModal = ref(false)
-const creatingWallet = ref(false)
-const pendingDraftId = ref('')
+const {
+  pendingMnemonic,
+  showSeedModal,
+  creatingWallet,
+  selectedCurrency,
+  handleCreateWallet,
+  onSeedConfirmed,
+  onSeedClosed,
+} = useWalletCreate()
+
 const currencies = ref<CurrencyRecord[]>([])
-const selectedCurrency = ref('NATIVE')
-
-async function handleCreateWallet() {
-  creatingWallet.value = true
-  try {
-    const resp = await previewWallet(selectedCurrency.value)
-    pendingDraftId.value = resp.draft_id
-    pendingMnemonic.value = resp.mnemonic
-    showSeedModal.value = true
-  } catch (e) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error al crear wallet',
-      detail: e instanceof Error ? e.message : 'Error inesperado',
-      life: 4000,
-    })
-  } finally {
-    creatingWallet.value = false
-  }
-}
-
-async function onSeedConfirmed() {
-  try {
-    await confirmWallet(pendingDraftId.value)
-    await walletStore.fetchMine()
-    toast.add({
-      severity: 'success',
-      summary: 'Wallet creada',
-      detail: 'Tu nueva wallet está lista',
-      life: 3000,
-    })
-  } catch (e) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error al confirmar wallet',
-      detail: e instanceof Error ? e.message : 'Error inesperado',
-      life: 4000,
-    })
-  } finally {
-    showSeedModal.value = false
-    pendingMnemonic.value = ''
-    pendingDraftId.value = ''
-  }
-}
-
-function onSeedClosed() {
-  showSeedModal.value = false
-  pendingMnemonic.value = ''
-  pendingDraftId.value = ''
-}
-
-const transferForm = ref({
-  senderWalletId: '',
-  receiverWalletId: '',
-  amount: '',
-  nonce: '',
-  mnemonic: '',
-})
-const transferring = ref(false)
-
-const mnemonicValid = computed(
-  () => !transferForm.value.mnemonic || isValidMnemonic(transferForm.value.mnemonic)
-)
-const selectedSender = computed(() =>
-  walletStore.wallets.find((w) => w.wallet_id === transferForm.value.senderWalletId)
-)
-
-function formatWalletOption(walletId: string, balance: number, currency: string): string {
-  return `${walletId.slice(0, 16)}… (${balance.toFixed(8)} ${currency})`
-}
 
 async function loadCurrencies() {
   try {
@@ -126,157 +55,160 @@ async function loadCurrencies() {
   }
 }
 
-async function submitTransfer() {
-  const { senderWalletId, receiverWalletId, amount, nonce, mnemonic } = transferForm.value
-  if (!senderWalletId || !receiverWalletId || !amount || !nonce || !mnemonic) return
-  if (!isValidMnemonic(mnemonic)) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Frase inválida',
-      detail: 'Verifica tu frase de recuperación',
-      life: 3000,
-    })
-    return
-  }
-  if (Number(amount) <= 0) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Monto inválido',
-      detail: 'El monto debe ser positivo',
-      life: 3000,
-    })
-    return
-  }
-  transferring.value = true
-  try {
-    await walletStore.transfer(
-      mnemonic,
-      senderWalletId,
-      receiverWalletId,
-      Number(amount),
-      Number(nonce)
-    )
-    toast.add({
-      severity: 'success',
-      summary: 'Transferencia enviada',
-      detail: 'Transacción en mempool — mina un bloque para confirmarla',
-      life: 5000,
-    })
-    transferForm.value = {
-      senderWalletId: '',
-      receiverWalletId: '',
-      amount: '',
-      nonce: '',
-      mnemonic: '',
-    }
-  } catch (e) {
-    const detail =
-      e instanceof BlockchainApiError
-        ? e.message
-        : e instanceof Error
-          ? e.message
-          : 'Transferencia fallida'
-    toast.add({ severity: 'error', summary: 'Error en transferencia', detail, life: 5000 })
-  } finally {
-    transferring.value = false
-  }
-}
+// ── Wallet selection (auto-select first on load) ──────────────────────────────
 
-onMounted(async () => {
-  await Promise.all([walletStore.fetchMine(), loadCurrencies(), confirmedStore.fetchConfirmed()])
-  // Defense in depth against BR-WL-11: the router guard already blocks
-  // ADMIN/OPERATOR from reaching this view, but a stale local token
-  // for an account whose role changed server-side will land here and
-  // get 403 from /wallets/me. Surface the failure as a toast and
-  // bounce the user to their role-appropriate landing instead of
-  // leaving the wallet shell rendered with no data.
-  if (walletStore.errorCode === 'FORBIDDEN') {
-    toast.add({
-      severity: 'warn',
-      summary: 'Acceso restringido',
-      detail: 'Tu rol no puede operar la vista de wallets de usuario.',
-      life: 4500,
-    })
-    await router.replace(defaultLandingFor(auth.user?.roles ?? []))
-  }
-})
-
-const sendFlowData = ref<SendData | null>(null)
-const receiveFlowData = ref<ReceiveData | null>(null)
-const withdrawFlowData = ref<WithdrawData | null>(null)
-const convertFlowData = ref<ConvertData | null>(null)
-
-// KPI tiles
-const totalWallets = computed(() => walletStore.wallets.length)
-const totalBalance = computed(() => {
-  const native = walletStore.wallets.filter((w) => w.currency === 'NATIVE')
-  if (native.length === 0) return '—'
-  return native.reduce((sum, w) => sum + Number(w.balance), 0).toFixed(4)
-})
-const currencyCount = computed(() => new Set(walletStore.wallets.map((w) => w.currency)).size)
-const frozenCount = computed(() => walletStore.wallets.filter((w) => w.frozen).length)
-
-// Wallet selection
 const selectedWalletId = ref<string | null>(null)
-const activeWallet = computed(
-  () => walletStore.wallets.find((w) => w.wallet_id === selectedWalletId.value) ?? null
+
+const activeWallet = computed<Wallet | null>(
+  () => walletStore.wallets.find((w) => w.wallet_id === selectedWalletId.value)
+    ?? walletStore.wallets[0]
+    ?? null
 )
 
+const otherWallets = computed(() =>
+  walletStore.wallets.filter((w) => w.wallet_id !== activeWallet.value?.wallet_id)
+)
+
+watch(() => walletStore.wallets, (ws) => {
+  if (ws.length > 0 && !selectedWalletId.value) {
+    selectedWalletId.value = ws[0].wallet_id
+  }
+}, { immediate: true })
+
 function selectWallet(walletId: string) {
-  selectedWalletId.value = selectedWalletId.value === walletId ? null : walletId
+  selectedWalletId.value = walletId
+  receiveCopied.value = false
 }
 
-// Movement history — confirmed txs involving any of the user's wallet IDs
-const ownWalletIds = computed(() => new Set(walletStore.wallets.map((w) => w.wallet_id)))
+// ── Copy receive address ──────────────────────────────────────────────────────
+
+const receiveCopied = ref(false)
+
+function copyAddress() {
+  const addr = activeWallet.value?.wallet_id ?? ''
+  if (!addr) return
+  navigator.clipboard.writeText(addr).catch(() => {})
+  receiveCopied.value = true
+  setTimeout(() => { receiveCopied.value = false }, 1500)
+}
+
+// ── USD values ────────────────────────────────────────────────────────────────
+
+function usdStr(balance: number, currency: string): string {
+  const v = ratesStore.usdValue(balance, currency)
+  if (v === null) return ''
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v)
+}
+
+// ── Movements — enriched labels ───────────────────────────────────────────────
+// sender/receiver in confirmedStore are usernames, not wallet IDs.
+
+const myUsername = computed(() => auth.user?.username ?? '')
+
 const movements = computed(() =>
   confirmedStore.records
-    .filter((r) => ownWalletIds.value.has(r.sender) || ownWalletIds.value.has(r.receiver))
+    .filter((r) => r.sender === myUsername.value || r.receiver === myUsername.value)
     .slice()
     .reverse()
 )
 
-function shortAddr(addr: string, n = 8): string {
-  if (!addr) return '—'
-  return addr.length > n * 2 ? `${addr.slice(0, n)}…${addr.slice(-n)}` : addr
+function movementDirection(sender: string): 'out' | 'in' {
+  return sender === myUsername.value ? 'out' : 'in'
 }
 
-function movementDirection(sender: string): 'out' | 'in' {
-  return ownWalletIds.value.has(sender) ? 'out' : 'in'
+function movementLabel(sender: string, receiver: string): string {
+  return sender === myUsername.value
+    ? `Enviado a ${displayName(receiver)}`
+    : `Recibido de ${displayName(sender)}`
 }
+
+function displayName(username: string): string {
+  if (!username) return '—'
+  // Shorten system/treasury names
+  if (username.startsWith('TREASURY') || username.startsWith('COINBASE')) {
+    return username.slice(0, 14) + (username.length > 14 ? '…' : '')
+  }
+  return username
+}
+
+function relativeTime(ts: string | undefined): string {
+  if (!ts) return '—'
+  const diff = Date.now() - new Date(ts).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'ahora'
+  if (m < 60) return `hace ${m} min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `hace ${h} h`
+  const d = Math.floor(h / 24)
+  if (d === 1) return 'ayer'
+  if (d < 7) return `hace ${d} d`
+  return new Date(ts).toLocaleDateString('es', { day: 'numeric', month: 'short' })
+}
+
+// ── Currency icon color ───────────────────────────────────────────────────────
+
+const CURRENCY_COLORS: Record<string, string> = {
+  BTC:   '#F7931A',
+  ETH:   '#627EEA',
+  USDT:  '#26A17B',
+  USDC:  '#2775CA',
+  SOL:   '#9945FF',
+  cUSD:  '#35D07F',
+  NATIVE:'#6B7280',
+}
+
+function currencyColor(code: string): string {
+  return CURRENCY_COLORS[code] ?? '#6B7280'
+}
+
+// ── Flows ─────────────────────────────────────────────────────────────────────
+
+const sendFlowData    = ref<SendData | null>(null)
+const receiveFlowData = ref<ReceiveData | null>(null)
+const convertFlowData  = ref<ConvertData | null>(null)
 
 function openSend(w?: Wallet) {
   const wallet = w ?? activeWallet.value
+  if (!wallet) return
   sendFlowData.value = {
-    to: wallet?.wallet_id ?? '',
-    handle: wallet ? shortAddr(wallet.wallet_id) : '',
+    to: wallet.wallet_id,
+    handle: wallet.wallet_id.slice(0, 12) + '…',
     amount: '',
-    asset: wallet?.currency ?? 'NATIVE',
+    asset: wallet.currency,
   }
 }
 
 function openReceive(w?: Wallet) {
   const wallet = w ?? activeWallet.value
-  receiveFlowData.value = {
-    asset: wallet?.currency ?? 'NATIVE',
-    address: wallet?.wallet_id ?? '',
-  }
-}
-
-function openWithdraw(w?: Wallet) {
-  const wallet = w ?? activeWallet.value
-  withdrawFlowData.value = {
-    asset: wallet?.currency ?? 'NATIVE',
-    balance: wallet ? Number(wallet.balance).toFixed(8) : '0',
-  }
+  if (!wallet) return
+  receiveFlowData.value = { asset: wallet.currency, address: wallet.wallet_id }
 }
 
 function openConvert(w?: Wallet) {
   const wallet = w ?? activeWallet.value
-  convertFlowData.value = {
-    from: wallet?.currency ?? 'NATIVE',
-    to: undefined,
-  }
+  convertFlowData.value = { from: wallet?.currency }
 }
+
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
+
+onMounted(async () => {
+  await Promise.all([
+    walletStore.fetchMine(),
+    loadCurrencies(),
+    confirmedStore.fetchConfirmed(),
+    ratesStore.fetchRates(),
+  ])
+  if (walletStore.errorCode === 'FORBIDDEN') {
+    toast.add({ severity: 'warn', summary: 'Acceso restringido', detail: 'Tu rol no puede operar la vista de wallets de usuario.', life: 4500 })
+    await router.replace(defaultLandingFor(auth.user?.roles ?? []))
+  }
+  // Pre-select wallet from ?currency= query param (e.g. from PortfolioView)
+  const currencyParam = route.query.currency as string | undefined
+  if (currencyParam) {
+    const match = walletStore.wallets.find((w) => w.currency === currencyParam)
+    if (match) selectedWalletId.value = match.wallet_id
+  }
+})
 </script>
 
 <template>
@@ -288,15 +220,13 @@ function openConvert(w?: Wallet) {
       @close="onSeedClosed"
     />
 
+    <!-- Page header -->
     <div class="page-h">
-      <div>
-        <h1>Mis wallets</h1>
-        <p>Gestiona tus wallets y realiza transferencias</p>
-      </div>
+      <h1>Mis wallets</h1>
       <div class="page-actions">
         <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
-          <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
-            {{ currency.code }} · {{ currency.name }}
+          <option v-for="c in currencies" :key="c.code" :value="c.code">
+            {{ c.code }} · {{ c.name }}
           </option>
         </select>
         <button class="btn btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
@@ -307,258 +237,196 @@ function openConvert(w?: Wallet) {
       </div>
     </div>
 
-    <!-- KPI tiles -->
-    <div class="bigstat-row">
-      <div class="bigstat">
-        <div class="lb">Wallets</div>
-        <div class="vl">
-          {{ totalWallets }}
-        </div>
-        <div class="ds">cuentas activas</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Balance NATIVE</div>
-        <div class="vl">
-          {{ totalBalance }}
-        </div>
-        <div class="ds">saldo nativo total</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Monedas</div>
-        <div class="vl">
-          {{ currencyCount }}
-        </div>
-        <div class="ds">tipos de activo</div>
-      </div>
-      <div class="bigstat">
-        <div class="lb">Congeladas</div>
-        <div class="vl" :class="{ 'vl-danger': frozenCount > 0 }">
-          {{ frozenCount }}
-        </div>
-        <div class="ds">requieren atención</div>
-      </div>
+    <!-- Loading -->
+    <div v-if="walletStore.loading" class="empty-center">
+      <span class="pi pi-spin pi-spinner" aria-hidden="true" style="font-size:24px" />
     </div>
 
-    <!-- Quick actions — use selected wallet if any -->
-    <div class="quick-actions">
-      <button class="btn btn-primary btn-sm" @click="openSend()">
-        <span class="pi pi-send" aria-hidden="true" /> Enviar
-      </button>
-      <button class="btn btn-sm" @click="openReceive()">
-        <span class="pi pi-download" aria-hidden="true" /> Recibir
-      </button>
-      <button class="btn btn-sm" @click="openWithdraw()">
-        <span class="pi pi-external-link" aria-hidden="true" /> Retirar
-      </button>
-      <button class="btn btn-sm" @click="openConvert()">
-        <span class="pi pi-arrows-h" aria-hidden="true" /> Convertir
-      </button>
-      <span v-if="activeWallet" class="selected-hint">
-        Usando: <strong>{{ shortAddr(activeWallet.wallet_id) }}</strong>
-        <button class="btn-clear" @click="selectedWalletId = null">✕</button>
-      </span>
+    <!-- Empty state -->
+    <div v-else-if="walletStore.wallets.length === 0" class="empty-center">
+      <span class="pi pi-wallet" aria-hidden="true" style="font-size:36px;opacity:.3" />
+      <p>Sin wallets todavía. Creá una para empezar.</p>
     </div>
 
-    <!-- Wallet list -->
-    <div v-if="walletStore.loading" class="empty-state">
-      <span class="pi pi-spin pi-spinner" aria-hidden="true" />
-      Cargando wallets…
-    </div>
-    <div v-else-if="walletStore.wallets.length === 0" class="empty-state">
-      <span class="pi pi-wallet empty-icon" aria-hidden="true" />
-      <p>Sin wallets todavía. Crea una para empezar.</p>
-    </div>
-    <section v-else class="panel">
-      <div class="panel-h">
-        <span>Mis wallets</span>
-        <span class="count-badge sm">{{ totalWallets }}</span>
-      </div>
-      <div class="wallet-grid">
-        <div
-          v-for="w in walletStore.wallets"
-          :key="w.wallet_id"
-          class="wallet-card"
-          :class="{ frozen: w.frozen, selected: selectedWalletId === w.wallet_id }"
-          role="button"
-          tabindex="0"
-          @click="selectWallet(w.wallet_id)"
-          @keydown.enter="selectWallet(w.wallet_id)"
-          @keydown.space.prevent="selectWallet(w.wallet_id)"
-        >
-          <div class="wc-top">
-            <HashChip :hash="w.wallet_id" :length="16" label="wallet id" />
-            <span v-if="w.frozen" class="frozen-tag">
+    <!-- 2-column layout -->
+    <div v-else class="wv-layout">
+
+      <!-- ── LEFT: hero + wallet chips + movements ── -->
+      <div class="wv-main">
+
+        <!-- Hero card (active wallet) -->
+        <div v-if="activeWallet" class="hero-card">
+          <div class="hero-tag">
+            <span
+              class="currency-dot"
+              :style="{ background: currencyColor(activeWallet.currency) }"
+            />
+            {{ activeWallet.currency }}
+            <span class="muted" style="font-size:11px">·</span>
+            <span class="muted" style="font-size:11.5px">
+              {{ currencies.find(c => c.code === activeWallet!.currency)?.name ?? activeWallet.currency }}
+            </span>
+            <span v-if="activeWallet.frozen" class="frozen-pill">
               <span class="pi pi-lock" aria-hidden="true" /> Congelada
             </span>
           </div>
-          <div class="wc-balance">
-            <AmountDisplay :amount="w.balance" :precision="8" :unit="w.currency" />
+
+          <div class="hero-balance">{{ Number(activeWallet.balance).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</div>
+          <div class="hero-usd muted">
+            <template v-if="usdStr(Number(activeWallet.balance), activeWallet.currency)">
+              ≈ {{ usdStr(Number(activeWallet.balance), activeWallet.currency) }}
+            </template>
           </div>
-          <div class="wc-key">
-            <HashChip :hash="w.public_key" :length="20" label="public key" />
-          </div>
-          <div class="wc-actions" @click.stop>
-            <button class="btn btn-sm btn-primary" :disabled="w.frozen" @click="openSend(w)">
+
+          <div class="hero-actions">
+            <button class="btn-hero" :disabled="activeWallet.frozen" @click="openSend()">
               <span class="pi pi-send" aria-hidden="true" /> Enviar
             </button>
-            <button class="btn btn-sm" @click="openReceive(w)">
+            <button class="btn-hero-ghost" @click="openReceive()">
               <span class="pi pi-download" aria-hidden="true" /> Recibir
+            </button>
+            <button class="btn-hero-ghost" @click="openConvert()">
+              <span class="pi pi-arrows-h" aria-hidden="true" /> Convertir
             </button>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Transfer panel -->
-    <section v-if="walletStore.wallets.length > 0" class="flow-card">
-      <div class="panel-h">Transferencia directa</div>
-      <form class="transfer-form" @submit.prevent="submitTransfer">
-        <div class="form-row">
-          <div class="field">
-            <label class="field-label" for="sender">Desde wallet</label>
-            <select id="sender" v-model="transferForm.senderWalletId" class="field-select" required>
-              <option value="" disabled>Selecciona wallet…</option>
-              <option
-                v-for="w in walletStore.wallets.filter((w) => !w.frozen)"
-                :key="w.wallet_id"
-                :value="w.wallet_id"
-              >
-                {{ formatWalletOption(w.wallet_id, w.balance, w.currency) }}
-              </option>
-            </select>
-            <span v-if="selectedSender" class="field-hint">
-              <AmountDisplay
-                :amount="selectedSender.balance"
-                :precision="8"
-                :unit="selectedSender.currency"
-              />
-            </span>
-          </div>
-          <div class="field">
-            <label class="field-label" for="receiver">Hacia wallet ID</label>
-            <input
-              id="receiver"
-              v-model="transferForm.receiverWalletId"
-              class="field-input"
-              type="text"
-              placeholder="ID de la wallet destinataria"
-              required
-            />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="field">
-            <label class="field-label" for="amount">Monto</label>
-            <input
-              id="amount"
-              v-model="transferForm.amount"
-              class="field-input"
-              type="number"
-              min="0.00000001"
-              step="any"
-              placeholder="0.00"
-              required
-            />
-          </div>
-          <div class="field">
-            <label class="field-label" for="nonce">Nonce</label>
-            <input
-              id="nonce"
-              v-model="transferForm.nonce"
-              class="field-input"
-              type="number"
-              min="1"
-              step="1"
-              placeholder="1"
-              required
-            />
-            <span class="field-hint">Debe ser mayor al nonce anterior de esta wallet</span>
-          </div>
-        </div>
-        <div class="field">
-          <label class="field-label" for="mnemonic">Frase de recuperación</label>
-          <textarea
-            id="mnemonic"
-            v-model="transferForm.mnemonic"
-            class="field-input mnemonic-input"
-            :class="{ invalid: !mnemonicValid }"
-            placeholder="Frase de 12 palabras BIP-39"
-            rows="2"
-            required
-          />
-          <span v-if="!mnemonicValid" class="field-error">Frase de recuperación inválida</span>
-          <span v-else class="field-hint"
-            >Tu frase nunca sale del navegador — solo se usa para firmar la transacción
-            localmente</span
+        <!-- Wallet chips (switcher) -->
+        <div v-if="walletStore.wallets.length > 1" class="wallet-chips">
+          <button
+            v-for="w in walletStore.wallets"
+            :key="w.wallet_id"
+            class="wallet-chip"
+            :class="{ active: w.wallet_id === activeWallet?.wallet_id, frozen: w.frozen }"
+            @click="selectWallet(w.wallet_id)"
           >
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" type="submit" :disabled="transferring || !mnemonicValid">
-            <span v-if="transferring" class="pi pi-spin pi-spinner" aria-hidden="true" />
-            <span v-else class="pi pi-send" aria-hidden="true" />
-            {{ transferring ? 'Enviando…' : 'Enviar transferencia' }}
+            <span class="chip-dot" :style="{ background: currencyColor(w.currency) }" />
+            <span class="chip-currency">{{ w.currency }}</span>
+            <span class="chip-balance muted">{{ Number(w.balance).toFixed(4) }}</span>
           </button>
         </div>
-      </form>
-      <p class="transfer-note">
-        <span class="pi pi-info-circle" aria-hidden="true" />
-        La transferencia queda en el mempool. Se confirma cuando se mine un bloque. El balance se
-        actualiza tras la minería.
-      </p>
-    </section>
 
-    <!-- Movement history -->
-    <section class="panel">
-      <div class="panel-h">
-        <span>Historial de movimientos</span>
-        <span v-if="movements.length > 0" class="count-badge sm">{{ movements.length }}</span>
-      </div>
-      <div v-if="confirmedStore.loading" class="empty-state sm">
-        <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
-      </div>
-      <div v-else-if="movements.length === 0" class="empty-state sm muted">
-        Sin movimientos confirmados todavía.
-      </div>
-      <table v-else class="tbl">
-        <thead>
-          <tr>
-            <th>Bloque</th>
-            <th>Dirección</th>
-            <th>Contraparte</th>
-            <th class="num">Monto</th>
-            <th>Confirmado</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(rec, i) in movements" :key="i">
-            <td class="mono">#{{ rec.blockIndex ?? '—' }}</td>
-            <td>
-              <span
-                class="dir-badge"
-                :class="movementDirection(rec.sender) === 'out' ? 'dir-out' : 'dir-in'"
+        <!-- Movements panel -->
+        <section class="panel">
+          <div class="panel-h">
+            <span>Movimientos de esta wallet</span>
+            <span v-if="movements.length" class="count-badge sm">{{ movements.length }}</span>
+          </div>
+
+          <div v-if="confirmedStore.loading" class="empty-state sm">
+            <span class="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando…
+          </div>
+          <div v-else-if="movements.length === 0" class="empty-state sm muted">
+            Sin movimientos confirmados todavía.
+          </div>
+
+          <div v-else class="movements-list">
+            <div
+              v-for="(rec, i) in movements"
+              :key="i"
+              class="mv-row"
+            >
+              <div
+                class="mv-icon"
+                :class="movementDirection(rec.sender) === 'out' ? 'mv-out' : 'mv-in'"
               >
-                {{ movementDirection(rec.sender) === 'out' ? '↑ Enviado' : '↓ Recibido' }}
-              </span>
-            </td>
-            <td class="mono xs">
-              {{
-                movementDirection(rec.sender) === 'out'
-                  ? shortAddr(rec.receiver)
-                  : shortAddr(rec.sender)
-              }}
-            </td>
-            <td class="num mono">
-              {{ rec.amount }}
-            </td>
-            <td class="muted xs">
-              {{ rec.blockTimestamp ?? '—' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+                <span
+                  :class="movementDirection(rec.sender) === 'out'
+                    ? 'pi pi-arrow-up-right'
+                    : 'pi pi-arrow-down-left'"
+                  aria-hidden="true"
+                />
+              </div>
+              <div class="mv-info">
+                <span class="mv-label">{{ movementLabel(rec.sender, rec.receiver) }}</span>
+                <span class="mv-time muted">{{ relativeTime(rec.blockTimestamp) }}</span>
+              </div>
+              <div class="mv-amount" :class="movementDirection(rec.sender) === 'out' ? 'mv-neg' : 'mv-pos'">
+                {{ movementDirection(rec.sender) === 'out' ? '−' : '+' }}{{ rec.amount }}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ── RIGHT: receive + other wallets ── -->
+      <aside class="wv-sidebar">
+
+        <!-- Receive panel (inline QR + address) -->
+        <div v-if="activeWallet" class="sidebar-card">
+          <div class="sidebar-card-h">
+            Recibir {{ activeWallet.currency }}
+            <span class="muted" style="font-size:10.5px;font-weight:400">Escaneable · copiable</span>
+          </div>
+          <div class="receive-body">
+            <div class="qr-wrapper-sm">
+              <QRCodeCanvas :value="activeWallet.wallet_id" :size="132" />
+              <div class="qr-brand-sm">◆</div>
+            </div>
+            <div class="addr-label-sm">TU DIRECCIÓN</div>
+            <button class="addr-chip-sm" @click="copyAddress">
+              <span class="mono addr-text-sm">{{ activeWallet.wallet_id }}</span>
+              <span
+                :class="receiveCopied ? 'pi pi-check' : 'pi pi-copy'"
+                :style="{ color: receiveCopied ? 'var(--success)' : 'var(--accent)', fontSize: '12px' }"
+                aria-hidden="true"
+              />
+            </button>
+            <p v-if="receiveCopied" class="copy-ok">
+              <span class="pi pi-check" aria-hidden="true" /> Copiado
+            </p>
+            <div class="receive-btns">
+              <button class="btn btn-sm" style="flex:1;justify-content:center" @click="copyAddress">
+                <span class="pi pi-copy" aria-hidden="true" />
+                {{ receiveCopied ? 'Copiado' : 'Copiar' }}
+              </button>
+              <button class="btn btn-sm" style="flex:1;justify-content:center" @click="openReceive()">
+                <span class="pi pi-qrcode" aria-hidden="true" />
+                Ampliar
+              </button>
+            </div>
+            <div class="receive-warn">
+              <span class="pi pi-info-circle" aria-hidden="true" />
+              <span>Sólo enviá <strong>{{ activeWallet.currency }}</strong> a esta dirección. Otros tokens podrían perderse.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other wallets -->
+        <div v-if="otherWallets.length > 0" class="sidebar-card">
+          <div class="sidebar-card-h">Otras wallets</div>
+          <div class="other-wallets-list">
+            <button
+              v-for="w in otherWallets"
+              :key="w.wallet_id"
+              class="other-wallet-item"
+              :class="{ frozen: w.frozen }"
+              @click="selectWallet(w.wallet_id)"
+            >
+              <div class="ow-icon" :style="{ background: currencyColor(w.currency) }">
+                {{ w.currency.charAt(0) }}
+              </div>
+              <div class="ow-info">
+                <span class="ow-currency">{{ w.currency }}</span>
+                <span class="ow-balance mono muted">{{ Number(w.balance).toFixed(4) }}</span>
+              </div>
+              <div class="ow-usd muted" style="font-size:12px">
+                {{ usdStr(Number(w.balance), w.currency) || '—' }}
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- If only one wallet, suggest creating another -->
+        <div v-else-if="walletStore.wallets.length === 1" class="sidebar-card create-hint">
+          <span class="pi pi-plus-circle" aria-hidden="true" style="font-size:22px;color:var(--text-3)" />
+          <p class="muted">Podés tener wallets en distintas monedas. Creá otra desde el botón "Nueva wallet".</p>
+        </div>
+      </aside>
+    </div>
   </div>
 
+  <!-- Flow modals -->
   <SendConfirmFlow
     v-if="sendFlowData"
     :data="sendFlowData"
@@ -570,12 +438,6 @@ function openConvert(w?: Wallet) {
     :data="receiveFlowData"
     @close="receiveFlowData = null"
     @complete="receiveFlowData = null"
-  />
-  <WithdrawFlow
-    v-if="withdrawFlowData"
-    :data="withdrawFlowData"
-    @close="withdrawFlowData = null"
-    @complete="withdrawFlowData = null"
   />
   <ConvertFlow
     v-if="convertFlowData"
@@ -589,270 +451,30 @@ function openConvert(w?: Wallet) {
 .wallet-view {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  min-height: 0;
 }
 
+/* Header */
 .page-h {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 .page-h h1 {
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.015em;
-  margin: 0 0 2px;
-  color: var(--text);
-}
-.page-h p {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-2);
+  color: var(--text);
 }
 .page-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
-
-/* Bigstat KPI row */
-.bigstat-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.bigstat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-}
-.lb {
-  font-size: 11.5px;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.vl {
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 4px 0;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-.ds {
-  font-size: 11.5px;
-  color: var(--text-3);
-}
-.vl-danger {
-  color: var(--danger);
-}
-
-/* Quick actions bar */
-.quick-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.selected-hint {
-  font-size: 12px;
-  color: var(--text-2);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 4px;
-}
-.selected-hint strong {
-  color: var(--text);
-}
-.btn-clear {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-3);
-  font-size: 11px;
-  padding: 0 2px;
-  line-height: 1;
-}
-.btn-clear:hover {
-  color: var(--text);
-}
-
-/* Wallet grid */
-.wallet-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  padding: 14px;
-}
-.wallet-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-  cursor: pointer;
-  outline: none;
-}
-.wallet-card:hover {
-  border-color: var(--accent);
-}
-.wallet-card:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent);
-}
-.wallet-card.frozen {
-  border-color: var(--warning);
-}
-.wallet-card.selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
-}
-
-.wc-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.frozen-tag {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--warning);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-.wc-balance {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-.wc-key {
-  font-size: 12px;
-  color: var(--text-3);
-}
-.wc-actions {
-  display: flex;
-  gap: 6px;
-  padding-top: 4px;
-  border-top: 1px solid var(--border);
-}
-
-/* Panel header override (global .panel has padding, not overflow:hidden) */
-.panel {
-  overflow: hidden;
-}
-.panel-h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-/* Movement history table */
-.tbl {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.tbl th,
-.tbl td {
-  text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.tbl tr:last-child td {
-  border-bottom: none;
-}
-.tbl th.num,
-.tbl td.num {
-  text-align: right;
-}
-.mono {
-  font-family: var(--font-mono);
-}
-.xs {
-  font-size: 11.5px;
-}
-.muted {
-  color: var(--text-3);
-}
-
-.dir-badge {
-  display: inline-block;
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-.dir-out {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
-}
-.dir-in {
-  background: color-mix(in srgb, var(--success) 12%, transparent);
-  color: var(--success);
-}
-
-/* Empty / loading */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 32px;
-  color: var(--text-2);
-  font-size: 14px;
-}
-.empty-state.sm {
-  padding: 24px;
-  font-size: 13px;
-}
-.empty-icon {
-  font-size: 36px;
-  opacity: 0.3;
-}
-
-/* Transfer form */
-.transfer-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-2);
-}
-.field-input,
 .field-select {
   padding: 7px 10px;
   border: 1px solid var(--border);
@@ -860,60 +482,368 @@ function openConvert(w?: Wallet) {
   background: var(--surface-2);
   color: var(--text);
   font-size: 13px;
-  outline: none;
-  transition: border-color 0.12s;
-  width: 100%;
-  box-sizing: border-box;
   font-family: var(--font-sans);
+  outline: none;
 }
-.field-input:focus,
-.field-select:focus {
+.field-select:focus { border-color: var(--accent); }
+
+/* Layout */
+.wv-layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 20px;
+  align-items: start;
+}
+.wv-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* Hero card */
+.hero-card {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px 20px;
+  color: #fff;
+}
+.hero-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,.75);
+  margin-bottom: 10px;
+}
+.currency-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.frozen-pill {
+  margin-left: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hero-balance {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.hero-usd {
+  font-size: 13px;
+  color: rgba(255,255,255,.45);
+  margin-bottom: 18px;
+  margin-top: 3px;
+}
+.hero-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-hero {
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.14s;
+}
+.btn-hero:hover:not(:disabled) { background: rgba(255,255,255,.28); }
+.btn-hero:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-hero-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.25);
+  color: rgba(255,255,255,.85);
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.14s;
+}
+.btn-hero-ghost:hover { background: rgba(255,255,255,.1); }
+
+/* Wallet chips (switcher) */
+.wallet-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wallet-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12.5px;
+  transition: all 0.12s;
+  color: var(--text-2);
+}
+.wallet-chip:hover { border-color: var(--accent); color: var(--text); }
+.wallet-chip.active {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
 }
-.field-input.invalid {
-  border-color: var(--danger);
+.wallet-chip.frozen { border-color: var(--warning); }
+.chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chip-currency { font-weight: 600; }
+.chip-balance { font-size: 11px; }
+
+/* Movements panel */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
-.mnemonic-input {
-  resize: vertical;
-  font-family: var(--font-mono);
+.panel-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
-.field-hint {
-  font-size: 11.5px;
-  color: var(--text-3);
+.movements-list { display: flex; flex-direction: column; }
+.mv-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
 }
-.field-error {
-  font-size: 11.5px;
+.mv-row:last-child { border-bottom: none; }
+.mv-row:hover { background: var(--surface-2); }
+.mv-icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px; flex-shrink: 0;
+}
+.mv-out {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   color: var(--danger);
 }
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
+.mv-in {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
 }
-.transfer-note {
+.mv-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mv-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mv-time { font-size: 11.5px; }
+.mv-amount {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.mv-pos { color: var(--success); }
+.mv-neg { color: var(--danger); }
+
+/* Sidebar */
+.wv-sidebar { display: flex; flex-direction: column; gap: 14px; }
+.sidebar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.sidebar-card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+/* Receive panel */
+.receive-body {
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.qr-wrapper-sm {
+  position: relative;
+  padding: 10px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  line-height: 0;
+}
+.qr-brand-sm {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px; height: 22px; border-radius: 5px;
+  background: linear-gradient(135deg, #1a1917, #3a3530);
+  color: #faf9f6;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 700;
+  pointer-events: none;
+}
+.addr-label-sm {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.addr-chip-sm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.12s;
+}
+.addr-chip-sm:hover { border-color: var(--accent); }
+.addr-text-sm {
+  flex: 1;
+  font-size: 10.5px;
+  word-break: break-all;
+  text-align: left;
+  color: var(--text);
+}
+.copy-ok {
+  font-size: 11.5px;
+  color: var(--success);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.receive-btns { display: flex; gap: 6px; width: 100%; }
+.receive-warn {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  padding: 0 16px 14px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-3);
   line-height: 1.5;
+  width: 100%;
 }
+.receive-warn .pi { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+
+/* Other wallets */
+.other-wallets-list { display: flex; flex-direction: column; }
+.other-wallet-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+  width: 100%;
+}
+.other-wallet-item:last-child { border-bottom: none; }
+.other-wallet-item:hover { background: var(--surface-2); }
+.other-wallet-item.frozen { opacity: 0.6; }
+.ow-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  color: #fff; font-size: 11px; font-weight: 700;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.ow-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ow-currency { font-size: 13px; font-weight: 600; color: var(--text); }
+.ow-balance { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Create hint */
+.create-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.create-hint p { margin: 0; font-size: 12.5px; }
+
+/* Empty states */
+.empty-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 24px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 28px;
+  color: var(--text-2);
+  font-size: 14px;
+  justify-content: center;
+}
+.empty-state.sm { font-size: 13px; padding: 20px; }
+
+/* Shared */
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--text-3); }
 
 @media (max-width: 900px) {
-  .bigstat-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 640px) {
-  .page-h {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  .bigstat-row {
-    grid-template-columns: 1fr 1fr;
-  }
+  .wv-layout { grid-template-columns: 1fr; }
+  .wv-sidebar { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 }
 </style>

@@ -1,6 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+declare module 'vue-router' {
+  interface RouteMeta {
+    public?: boolean
+    requireRole?: string
+    requireAnyRole?: string[]
+    requireAuth?: boolean
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -28,12 +37,30 @@ const router = createRouter({
 
     // ── Authenticated routes ──────────────────────────────────────────────
     {
+      path: '/portfolio',
+      name: 'portfolio',
+      component: () => import('@/views/PortfolioView.vue'),
+      meta: { requireRole: 'VIEWER' },
+    },
+    {
       path: '/wallet',
       name: 'wallet',
       component: () => import('@/views/WalletView.vue'),
       // BR-WL-11 (simulator side): the personal-wallet view is for
       // end users only. ADMIN and OPERATOR must reach platform data
       // through `/admin/*`, not by impersonating a customer.
+      meta: { requireRole: 'VIEWER' },
+    },
+    {
+      path: '/send',
+      name: 'send',
+      component: () => import('@/views/SendView.vue'),
+      meta: { requireRole: 'VIEWER' },
+    },
+    {
+      path: '/historial',
+      name: 'historial',
+      component: () => import('@/views/HistorialView.vue'),
       meta: { requireRole: 'VIEWER' },
     },
     {
@@ -121,15 +148,20 @@ const router = createRouter({
     },
     { path: '/p2p',      name: 'p2p',      component: () => import('@/views/P2PView.vue'),      meta: { requireAuth: true } },
     { path: '/exchange', name: 'exchange', component: () => import('@/views/ExchangeView.vue'),  meta: { requireAuth: true } },
-    { path: '/chain', name: 'chain', component: () => import('@/views/ChainView.vue') },
-    { path: '/mempool', name: 'mempool', component: () => import('@/views/MempoolView.vue') },
-    { path: '/nodes', name: 'nodes', component: () => import('@/views/NodesView.vue') },
+    // Blockchain explorer routes — ADMIN or OPERATOR only.
+    // VIEWER is redirected to /portfolio by the beforeEach guard.
+    { path: '/chain',      name: 'chain',      component: () => import('@/views/ChainView.vue'),      meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
+    { path: '/mempool',    name: 'mempool',    component: () => import('@/views/MempoolView.vue'),    meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
+    { path: '/nodes',      name: 'nodes',      component: () => import('@/views/NodesView.vue'),      meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
+    { path: '/validation', name: 'validation', component: () => import('@/views/ValidationView.vue'), meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
+    { path: '/health',     name: 'health',     component: () => import('@/views/HealthView.vue'),     meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
+    // Public payment request page — /pay/:id opened by payment link recipients
     {
-      path: '/validation',
-      name: 'validation',
-      component: () => import('@/views/ValidationView.vue'),
+      path: '/pay/:id',
+      name: 'pay',
+      component: () => import('@/views/PayView.vue'),
+      meta: { public: true },
     },
-    { path: '/health', name: 'health', component: () => import('@/views/HealthView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })
@@ -147,7 +179,7 @@ const router = createRouter({
 export function defaultLandingFor(roles: readonly string[]): string {
   if (roles.includes('ADMIN')) return '/admin'
   if (roles.includes('OPERATOR')) return '/admin'
-  if (roles.includes('VIEWER')) return '/wallet'
+  if (roles.includes('VIEWER')) return '/portfolio'
   return '/dashboard'
 }
 
@@ -160,12 +192,15 @@ router.beforeEach((to) => {
     return { name: 'login' }
   }
 
-  // Role check (e.g. /admin requires ADMIN, /wallet requires VIEWER).
-  // Redirecting to the role-appropriate landing keeps the user out of
-  // the bounce loop that the old "always go to /wallet" guard caused
-  // for ADMIN now that /wallet is no longer reachable by them.
-  const requiredRole = to.meta.requireRole as string | undefined
+  // Role check.
+  // requireRole: single string — user must have that exact role.
+  // requireAnyRole: string[] — user must have at least one of the roles.
+  const requiredRole    = to.meta.requireRole    as string | undefined
+  const requiredAnyRole = to.meta.requireAnyRole as string[] | undefined
   if (requiredRole && !auth.hasRole(requiredRole)) {
+    return defaultLandingFor(auth.user?.roles ?? [])
+  }
+  if (requiredAnyRole && !requiredAnyRole.some((r) => auth.hasRole(r))) {
     return defaultLandingFor(auth.user?.roles ?? [])
   }
 

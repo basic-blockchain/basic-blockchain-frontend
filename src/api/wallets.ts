@@ -26,6 +26,7 @@ export interface Wallet {
   created_at: string
   currency: string
   wallet_type: WalletType
+  next_nonce?: number
 }
 
 export interface MyWalletsResponse {
@@ -101,5 +102,62 @@ export async function listCurrencies(
   const { data } = await client.get('/currencies', {
     params: activeOnly ? { active: 'true' } : undefined,
   })
+  return data
+}
+
+export interface ExchangeRate {
+  from_currency: string
+  to_currency: string
+  rate: string
+  updated_at: string
+}
+
+export async function listExchangeRates(params?: {
+  from?: string
+  to?: string
+  limit?: number
+}): Promise<{ rates: ExchangeRate[]; count: number }> {
+  const { data } = await client.get('/exchange-rates', { params })
+  return data
+}
+
+// ── Recipient resolution ──────────────────────────────────────────────────────
+
+export type ResolveMatchType = 'exact' | 'exchange'
+
+export interface ResolveSuccess {
+  wallet_id: string
+  owner_username: string
+  owner_display_name: string
+  currency: string
+  match_type: ResolveMatchType
+  frozen: boolean
+  // present only when match_type === 'exchange'
+  rate?: string
+  rate_from?: string
+  rate_to?: string
+}
+
+export type ResolveErrorCode =
+  | 'USER_NOT_FOUND'
+  | 'WALLET_NOT_FOUND'
+  | 'NO_WALLET'
+  | 'NO_COMPATIBLE_WALLET'
+  | 'MISSING_IDENTIFIER'
+
+export interface ResolveError {
+  error: ResolveErrorCode
+  message: string
+  available_currencies?: string[]
+  owner_username?: string
+  owner_display_name?: string
+}
+
+export async function resolveRecipient(params: {
+  type: string
+  q: string
+  currency?: string
+}): Promise<ResolveSuccess> {
+  const { data } = await client.get<ResolveSuccess>('/wallets/resolve', { params })
   return data
 }
