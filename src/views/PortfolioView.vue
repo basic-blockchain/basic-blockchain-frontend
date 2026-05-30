@@ -352,7 +352,7 @@ onMounted(async () => {
           </p>
           <button
             v-if="canUpgradeKyc"
-            class="btn-sidebar-cta"
+            class="btn btn-primary btn-full"
             disabled
             title="Flujo de verificación próximamente"
           >
@@ -417,7 +417,7 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          <button class="btn-sidebar-cta" @click="router.push('/p2p')">
+          <button class="btn btn-primary btn-full" disabled>
             Comprar ahora
           </button>
         </div>
@@ -769,30 +769,10 @@ onMounted(async () => {
 .kyc-desc strong {
   color: var(--text);
 }
-/* Sidebar primary CTA — dark fill, matches design prototype */
-.btn-sidebar-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.btn-full {
   width: calc(100% - 28px);
   margin: 0 14px 14px;
-  padding: 11px 16px;
-  background: #1a1917;
-  color: #faf9f6;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
-  letter-spacing: -0.01em;
-}
-.btn-sidebar-cta:hover:not(:disabled) {
-  background: #2e2b27;
-}
-.btn-sidebar-cta:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  justify-content: center;
 }
 
 /* ── Shortcuts ── */
