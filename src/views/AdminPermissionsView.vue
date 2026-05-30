@@ -7,7 +7,7 @@ import CreateAdminUserFlow from '@/components/flows/CreateAdminUserFlow.vue'
 import { loadStaffUsers } from '@/api/permissions'
 import {
   PERM_CATEGORIES, TOTAL_PERMS,
-  primaryRole, computeEffectivePerms, isCustomSet,
+  isCustomSet,
   type StaffUser,
 } from '@/composables/usePermissions'
 
@@ -24,7 +24,7 @@ async function fetchUsers() {
   error.value = ''
   try {
     users.value = await loadStaffUsers()
-  } catch (e) {
+  } catch {
     error.value = 'No se pudieron cargar los usuarios. Verifica la conexión al servidor.'
   } finally {
     loading.value = false

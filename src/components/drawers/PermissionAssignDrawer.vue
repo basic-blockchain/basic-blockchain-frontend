@@ -5,7 +5,7 @@ import BaseButton from '@/components/atoms/BaseButton.vue'
 import UserChip from '@/components/atoms/UserChip.vue'
 import { getUserPermissions, grantPermission, revokePermission } from '@/api/permissions'
 import {
-  PERM_CATEGORIES, ROLE_PRESETS, computeEffectivePerms,
+  PERM_CATEGORIES, ROLE_PRESETS,
   type StaffUser, type StaffRole,
 } from '@/composables/usePermissions'
 
