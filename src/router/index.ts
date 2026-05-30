@@ -28,6 +28,12 @@ const router = createRouter({
 
     // ── Authenticated routes ──────────────────────────────────────────────
     {
+      path: '/portfolio',
+      name: 'portfolio',
+      component: () => import('@/views/PortfolioView.vue'),
+      meta: { requireRole: 'VIEWER' },
+    },
+    {
       path: '/wallet',
       name: 'wallet',
       component: () => import('@/views/WalletView.vue'),
@@ -147,7 +153,7 @@ const router = createRouter({
 export function defaultLandingFor(roles: readonly string[]): string {
   if (roles.includes('ADMIN')) return '/admin'
   if (roles.includes('OPERATOR')) return '/admin'
-  if (roles.includes('VIEWER')) return '/wallet'
+  if (roles.includes('VIEWER')) return '/portfolio'
   return '/dashboard'
 }
 

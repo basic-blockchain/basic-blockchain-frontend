@@ -96,12 +96,12 @@ const adminGroups: NavGroup[] = [
 
 const userGroups: NavGroup[] = [
   {
-    label: 'Operaciones',
+    label: 'Cuenta',
     items: [
-      { to: '/dashboard', label: 'Dashboard', icon: 'pi pi-home' },
-      { to: '/wallet', label: 'Wallet', icon: 'pi pi-wallet', requireAuth: true },
-      { to: '/p2p', label: 'P2P', icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
-      { to: '/exchange', label: 'Exchange', icon: 'pi pi-chart-line', requireAuth: true },
+      { to: '/portfolio', label: 'Mi portafolio', icon: 'pi pi-chart-line', requireAuth: true },
+      { to: '/wallet', label: 'Mis wallets', icon: 'pi pi-wallet', requireAuth: true },
+      { to: '/p2p', label: 'Mercado P2P', icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
+      { to: '/exchange', label: 'Exchange', icon: 'pi pi-chart-bar', requireAuth: true },
     ],
   },
   {
@@ -137,12 +137,13 @@ function isActive(to: string): boolean {
 
 const routeLabels: Record<string, string> = {
   dashboard: 'Dashboard',
+  portfolio: 'Mi portafolio',
   chain: 'Cadena',
   mempool: 'Mempool',
   nodes: 'Nodos',
   validation: 'Validación',
   health: 'Health',
-  wallet: 'Wallet',
+  wallet: 'Mis wallets',
   admin: 'Plataforma',
   users: 'Usuarios',
   wallets: 'Wallets',
