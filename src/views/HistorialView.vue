@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import { useAuthStore } from '@/stores/auth'
 import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { useWalletStore } from '@/stores/wallet'
+import { useChainStore } from '@/stores/chain'
+import TransactionDetailFlow from '@/components/flows/TransactionDetailFlow.vue'
+import type { TxDetailData } from '@/components/flows/TransactionDetailFlow.vue'
+import type { ConfirmedTransaction } from '@/domain/transaction'
 
+const router         = useRouter()
 const confirmedStore = useConfirmedTransactionsStore()
 const auth           = useAuthStore()
 const ratesStore     = useExchangeRatesStore()
 const walletStore    = useWalletStore()
+const chainStore     = useChainStore()
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE   = 10
+const currentPage = ref(1)
 
 // ── Period filter ─────────────────────────────────────────────────────────────
 
@@ -117,7 +129,7 @@ function dateKey(ts: string | undefined): string {
 
 const groupedRecords = computed<DateGroup[]>(() => {
   const map = new Map<string, DateGroup>()
-  for (const r of filtered.value) {
+  for (const r of paginatedFiltered.value) {
     const key = dateKey(r.blockTimestamp)
     if (!map.has(key)) {
       map.set(key, { label: dateGroupLabel(r.blockTimestamp), dateKey: key, records: [] })
@@ -126,6 +138,75 @@ const groupedRecords = computed<DateGroup[]>(() => {
   }
   return Array.from(map.values())
 })
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
+
+const paginatedFiltered = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filtered.value.slice(start, start + PAGE_SIZE)
+})
+
+// Reset to page 1 when filters change
+watch([activePeriod, activeDirection, customFrom, customTo], () => { currentPage.value = 1 })
+
+// ── Transaction detail modal ──────────────────────────────────────────────────
+
+const selectedTx = ref<ConfirmedTransaction | null>(null)
+
+function openDetail(tx: ConfirmedTransaction) {
+  selectedTx.value = tx
+}
+
+function closeDetail() {
+  selectedTx.value = null
+}
+
+const selectedTxData = computed<TxDetailData | null>(() => {
+  const tx = selectedTx.value
+  if (!tx) return null
+
+  const currency = tx.currency ?? undefined
+  const amount   = Number(tx.amount)
+  const usdVal   = currency ? ratesStore.usdValue(amount, currency) : null
+  const fxRate   = currency ? ratesStore.rateFor(currency, 'USD') : null
+  const chainHeight = chainStore.blocks.length
+  const confirmations = tx.blockIndex != null && chainHeight > 0
+    ? chainHeight - tx.blockIndex
+    : null
+
+  return {
+    tx: {
+      id:            tx.senderWalletId ? `${tx.senderWalletId.slice(0, 8)}:${tx.blockIndex}` : undefined,
+      sender:        tx.sender,
+      receiver:      tx.receiver,
+      senderLabel:   tx.sender,
+      receiverLabel: tx.receiver,
+      amount:        String(tx.amount),
+      currency,
+      receiverAmount:   tx.receiverAmount != null ? String(tx.receiverAmount) : undefined,
+      receiverCurrency: tx.receiverAmount != null && currency ? currency : undefined,
+      fee:           tx.fee != null ? String(tx.fee) : undefined,
+    },
+    status:       'completed',
+    block:        tx.blockIndex,
+    confirmedAt:  tx.blockTimestamp,
+    confirmations,
+    amountUsd:    usdVal,
+    fxRate,
+  }
+})
+
+function viewInChain() {
+  closeDetail()
+  // Chain view is ADMIN/OPERATOR only; viewers get a soft redirect to portfolio
+  if (auth.hasRole('ADMIN') || auth.hasRole('OPERATOR')) {
+    router.push('/chain')
+  } else {
+    router.push(`/chain`)
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -155,6 +236,7 @@ onMounted(async () => {
     confirmedStore.fetchConfirmed(),
     ratesStore.fetchRates(),
     walletStore.fetchMine(),
+    chainStore.fetchChain(),
   ])
 })
 </script>
@@ -252,6 +334,10 @@ onMounted(async () => {
             v-for="(rec, i) in group.records"
             :key="i"
             class="mv-row"
+            role="button"
+            tabindex="0"
+            @click="openDetail(rec)"
+            @keydown.enter="openDetail(rec)"
           >
             <div
               class="mv-icon"
@@ -281,12 +367,79 @@ onMounted(async () => {
               >
                 {{ direction(rec.sender) === 'out' ? '−' : '+' }}{{ rec.amount }}
               </span>
+              <span class="pi pi-chevron-right mv-chevron muted" aria-hidden="true" />
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="filtered.length > PAGE_SIZE" class="pagination">
+      <span class="page-info muted">
+        {{ (currentPage - 1) * PAGE_SIZE + 1 }}–{{ Math.min(currentPage * PAGE_SIZE, filtered.length) }}
+        de {{ filtered.length }} movimientos
+      </span>
+      <div class="page-controls">
+        <button
+          class="page-btn"
+          :disabled="currentPage === 1"
+          @click="currentPage = 1"
+          aria-label="Primera página"
+        >
+          <span class="pi pi-angle-double-left" aria-hidden="true" />
+        </button>
+        <button
+          class="page-btn"
+          :disabled="currentPage === 1"
+          @click="currentPage--"
+          aria-label="Página anterior"
+        >
+          <span class="pi pi-angle-left" aria-hidden="true" />
+        </button>
+        <button
+          v-for="p in totalPages <= 7
+            ? Array.from({ length: totalPages }, (_, i) => i + 1)
+            : [1, 2, currentPage - 1, currentPage, currentPage + 1, totalPages - 1, totalPages]
+              .filter((n, idx, arr) => n >= 1 && n <= totalPages && arr.indexOf(n) === idx)
+              .sort((a, b) => a - b)"
+          :key="p"
+          class="page-btn"
+          :class="{ 'page-btn-active': p === currentPage }"
+          @click="currentPage = p"
+        >
+          {{ p }}
+        </button>
+        <button
+          class="page-btn"
+          :disabled="currentPage === totalPages"
+          @click="currentPage++"
+          aria-label="Página siguiente"
+        >
+          <span class="pi pi-angle-right" aria-hidden="true" />
+        </button>
+        <button
+          class="page-btn"
+          :disabled="currentPage === totalPages"
+          @click="currentPage = totalPages"
+          aria-label="Última página"
+        >
+          <span class="pi pi-angle-double-right" aria-hidden="true" />
+        </button>
+      </div>
+      <div class="rows-per-page muted" style="font-size:11.5px">
+        {{ PAGE_SIZE }} filas por página
+      </div>
+    </div>
   </div>
+
+  <!-- Transaction detail modal -->
+  <TransactionDetailFlow
+    v-if="selectedTx && selectedTxData"
+    :data="selectedTxData"
+    @close="closeDetail"
+    @view-in-chain="viewInChain"
+  />
 </template>
 
 <style scoped>
@@ -424,9 +577,12 @@ onMounted(async () => {
   padding: 11px 16px;
   border-bottom: 1px solid var(--border);
   transition: background 0.1s;
+  cursor: pointer;
+  outline: none;
 }
 .mv-row:last-child { border-bottom: none; }
 .mv-row:hover { background: var(--surface-2); }
+.mv-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 
 .mv-icon {
   width: 32px; height: 32px; border-radius: 50%;
@@ -459,8 +615,49 @@ onMounted(async () => {
 .mv-meta { font-size: 11.5px; display: flex; align-items: center; gap: 4px; }
 .dot { opacity: 0.4; }
 
-.mv-right { flex-shrink: 0; text-align: right; }
+.mv-right {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .mv-amount { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mv-chevron { font-size: 10px; opacity: 0.4; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+.page-info { font-size: 12.5px; }
+.page-controls { display: flex; gap: 3px; align-items: center; }
+.page-btn {
+  min-width: 32px; height: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
+  transition: all 0.12s;
+}
+.page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
 
 /* States */
 .empty-center {
