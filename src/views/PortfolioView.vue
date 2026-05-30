@@ -10,10 +10,6 @@ import { listCurrencies, type CurrencyRecord } from '@/api/wallets'
 import { useWalletCreate } from '@/composables/useWalletCreate'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
 import SparklineChart from '@/components/atoms/SparklineChart.vue'
-import ReceiveFlow from '@/components/flows/ReceiveFlow.vue'
-import type { ReceiveData } from '@/components/flows/ReceiveFlow.vue'
-import ConvertFlow from '@/components/flows/ConvertFlow.vue'
-import type { ConvertData } from '@/components/flows/ConvertFlow.vue'
 
 const router = useRouter()
 const walletStore = useWalletStore()
@@ -33,8 +29,6 @@ const {
 
 const currencies = ref<CurrencyRecord[]>([])
 
-const receiveFlowData = ref<ReceiveData | null>(null)
-const convertFlowData = ref<ConvertData | null>(null)
 
 // ── Portfolio hero ───────────────────────────────────────────────────────────
 
@@ -121,24 +115,11 @@ function relativeTime(ts: string | undefined): string {
   return `hace ${Math.floor(h / 24)} d`
 }
 
-// ── Quick actions ─────────────────────────────────────────────────────────────
+// ── Quick actions — all navigate to dedicated views ───────────────────────────
 
-function openSend() {
-  router.push('/send')
-}
-
-function openReceive() {
-  const first = walletStore.wallets[0]
-  receiveFlowData.value = {
-    asset: first?.currency ?? 'NATIVE',
-    address: first?.wallet_id ?? '',
-  }
-}
-
-function openConvert() {
-  const first = walletStore.wallets[0]
-  convertFlowData.value = { from: first?.currency }
-}
+function openSend()    { router.push('/send') }
+function openReceive() { router.push({ path: '/send', query: { tab: 'receive' } }) }
+function openConvert() { router.push('/exchange') }
 
 // ── KYC ───────────────────────────────────────────────────────────────────────
 
@@ -371,7 +352,7 @@ onMounted(async () => {
           </p>
           <button
             v-if="canUpgradeKyc"
-            class="btn btn-primary btn-full"
+            class="btn-sidebar-cta"
             disabled
             title="Flujo de verificación próximamente"
           >
@@ -436,7 +417,7 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          <button class="btn btn-primary btn-full" @click="router.push('/p2p')">
+          <button class="btn-sidebar-cta" @click="router.push('/p2p')">
             Comprar ahora
           </button>
         </div>
@@ -444,18 +425,6 @@ onMounted(async () => {
     </div>
   </div>
 
-  <ReceiveFlow
-    v-if="receiveFlowData"
-    :data="receiveFlowData"
-    @close="receiveFlowData = null"
-    @complete="receiveFlowData = null"
-  />
-  <ConvertFlow
-    v-if="convertFlowData"
-    :data="convertFlowData"
-    @close="convertFlowData = null"
-    @complete="convertFlowData = null"
-  />
 </template>
 
 <style scoped>
@@ -800,10 +769,30 @@ onMounted(async () => {
 .kyc-desc strong {
   color: var(--text);
 }
-.btn-full {
+/* Sidebar primary CTA — dark fill, matches design prototype */
+.btn-sidebar-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: calc(100% - 28px);
   margin: 0 14px 14px;
-  justify-content: center;
+  padding: 11px 16px;
+  background: #1a1917;
+  color: #faf9f6;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: -0.01em;
+}
+.btn-sidebar-cta:hover:not(:disabled) {
+  background: #2e2b27;
+}
+.btn-sidebar-cta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── Shortcuts ── */
