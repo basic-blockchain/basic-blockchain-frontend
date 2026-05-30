@@ -772,15 +772,16 @@ watch(step, () => { revealed.value = false; acknowledged.value = false })
   padding: 12px 14px;
 }
 .never-title {
-  font-size: 11.5px; font-weight: 700;
+  font-size: 13px; font-weight: 800;
   color: #e03131; text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   display: flex; align-items: center; gap: 5px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .never-list {
   list-style: none; margin: 0; padding: 0;
-  font-size: 12.5px; color: var(--text-2); line-height: 1.8;
+  font-size: 13.5px; font-weight: 500;
+  color: var(--text); line-height: 1.9;
 }
 
 /* ── Seed step ── */
@@ -935,10 +936,10 @@ watch(step, () => { revealed.value = false; acknowledged.value = false })
 .btn-dark {
   background: #1a1917;
   border-color: #1a1917;
-  color: #faf9f6;
+  color: #faf9f6 !important;
   font-weight: 600;
 }
-.btn-dark:hover:not(:disabled) { background: #2e2b27; border-color: #2e2b27; }
+.btn-dark:hover:not(:disabled) { background: #2e2b27; border-color: #2e2b27; color: #faf9f6 !important; }
 .btn-dark:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Utils */
