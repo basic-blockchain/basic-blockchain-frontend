@@ -103,3 +103,19 @@ export async function listCurrencies(
   })
   return data
 }
+
+export interface ExchangeRate {
+  from_currency: string
+  to_currency: string
+  rate: string
+  updated_at: string
+}
+
+export async function listExchangeRates(params?: {
+  from?: string
+  to?: string
+  limit?: number
+}): Promise<{ rates: ExchangeRate[]; count: number }> {
+  const { data } = await client.get('/exchange-rates', { params })
+  return data
+}
