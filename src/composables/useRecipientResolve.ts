@@ -7,8 +7,7 @@ export type ResolveState =
   | { status: 'idle' }
   | { status: 'resolving' }
   | { status: 'resolved'; result: ResolveSuccess }
-  | { status: 'currency_mismatch'; result: ResolveError & { fallback_wallet_id: string } }
-  | { status: 'error'; code: string; message: string }
+  | { status: 'error'; code: string; message: string; availableCurrencies?: string[] }
 
 const DEBOUNCE_MS = 350
 
@@ -30,7 +29,7 @@ export function useRecipientResolve(
       return
     }
 
-    // on-chain addresses are not validated by this API
+    // On-chain addresses pass through without an API call
     if (type === 'onchain') {
       state.value = {
         status: 'resolved',
@@ -48,58 +47,42 @@ export function useRecipientResolve(
 
     state.value = { status: 'resolving' }
 
-    const params: Record<string, string> = { currency: cur }
-    if (type === 'wallet')  params.wallet_id = value
-    else if (type === 'user')  params.username = value.replace(/^@/, '')
-    else if (type === 'email') params.email = value
+    const params: Record<string, string> = {}
+    if (cur) params.currency = cur
+    if (type === 'wallet')      params.wallet_id = value
+    else if (type === 'user')   params.username  = value.replace(/^@/, '')
+    else if (type === 'email')  params.email     = value
 
     try {
       const result = await resolveRecipient(params)
       state.value = { status: 'resolved', result }
     } catch (err: unknown) {
       const apiErr = (err as { response?: { data?: ResolveError } })?.response?.data
-      if (apiErr?.error === 'NO_WALLET_FOR_CURRENCY' && apiErr.fallback_wallet_id) {
-        state.value = {
-          status: 'currency_mismatch',
-          result: apiErr as ResolveError & { fallback_wallet_id: string },
-        }
-      } else {
-        state.value = {
-          status: 'error',
-          code: apiErr?.error ?? 'UNKNOWN',
-          message: apiErr?.message ?? 'No se pudo resolver el destinatario.',
-        }
+      state.value = {
+        status: 'error',
+        code: apiErr?.error ?? 'UNKNOWN',
+        message: apiErr?.message ?? 'No se pudo resolver el destinatario.',
+        availableCurrencies: apiErr?.available_currencies,
       }
     }
   }
 
   function schedule() {
     if (timer) clearTimeout(timer)
+    state.value = { status: 'idle' }
     timer = setTimeout(resolve, DEBOUNCE_MS)
   }
 
-  watch([recipientType, recipientValue, currency], () => {
-    state.value = { status: 'idle' }
-    schedule()
-  })
+  watch([recipientType, recipientValue, currency], schedule)
 
-  // Expose the resolved wallet_id (used as receiver_wallet_id in the transfer)
   function resolvedWalletId(): string | null {
-    if (state.value.status === 'resolved') return state.value.result.wallet_id
-    if (state.value.status === 'currency_mismatch') return state.value.result.fallback_wallet_id
-    return null
+    return state.value.status === 'resolved' ? state.value.result.wallet_id : null
   }
 
   function resolvedDisplayName(): string {
-    if (state.value.status === 'resolved') {
-      const r = state.value.result
-      return r.owner_display_name || r.owner_username || r.wallet_id
-    }
-    if (state.value.status === 'currency_mismatch') {
-      const r = state.value.result
-      return r.owner_display_name || r.owner_username || ''
-    }
-    return ''
+    if (state.value.status !== 'resolved') return ''
+    const r = state.value.result
+    return r.owner_display_name || r.owner_username || r.wallet_id
   }
 
   return { state, resolvedWalletId, resolvedDisplayName }

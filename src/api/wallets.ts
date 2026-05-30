@@ -123,7 +123,7 @@ export async function listExchangeRates(params?: {
 
 // ── Recipient resolution ──────────────────────────────────────────────────────
 
-export type ResolveMatchType = 'exact' | 'other_currency'
+export type ResolveMatchType = 'exact' | 'exchange'
 
 export interface ResolveSuccess {
   wallet_id: string
@@ -132,31 +132,23 @@ export interface ResolveSuccess {
   currency: string
   match_type: ResolveMatchType
   frozen: boolean
-}
-
-export interface ResolveNoCurrencyError {
-  error: 'NO_WALLET_FOR_CURRENCY'
-  message: string
-  available_currencies: string[]
-  fallback_wallet_id: string
-  fallback_currency: string
-  owner_username: string
-  owner_display_name: string
+  // present only when match_type === 'exchange'
+  rate?: string
+  rate_from?: string
+  rate_to?: string
 }
 
 export type ResolveErrorCode =
   | 'USER_NOT_FOUND'
   | 'WALLET_NOT_FOUND'
   | 'NO_WALLET'
-  | 'NO_WALLET_FOR_CURRENCY'
+  | 'NO_COMPATIBLE_WALLET'
   | 'MISSING_IDENTIFIER'
 
 export interface ResolveError {
   error: ResolveErrorCode
   message: string
   available_currencies?: string[]
-  fallback_wallet_id?: string
-  fallback_currency?: string
   owner_username?: string
   owner_display_name?: string
 }

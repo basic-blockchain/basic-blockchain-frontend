@@ -65,19 +65,26 @@ function recipientHelp(): string {
 const resolveBadge = computed(() => {
   const s = resolveState.value
   if (!recipientValue.value.trim()) return null
-  if (s.status === 'idle' || s.status === 'resolving') return { type: 'loading', text: s.status === 'resolving' ? 'Buscando…' : '…' }
+  if (s.status === 'idle') return null
+  if (s.status === 'resolving') return { type: 'loading' as const, text: 'Buscando…', sub: null }
   if (s.status === 'resolved') {
     const name = resolvedDisplayName()
-    const cur = s.result.currency
-    const mismatch = s.result.match_type === 'other_currency'
-    return { type: 'success', text: name || s.result.wallet_id, sub: mismatch ? `Wallet en ${cur}` : cur }
-  }
-  if (s.status === 'currency_mismatch') {
     const r = s.result
-    const name = r.owner_display_name || r.owner_username || ''
-    return { type: 'warning', text: name, sub: `No tiene wallet en ${senderCurrency.value} — se usará ${r.fallback_currency}` }
+    if (r.match_type === 'exchange') {
+      return {
+        type: 'warning' as const,
+        text: name || r.wallet_id,
+        sub: `Conversión ${r.rate_from} → ${r.rate_to} (tasa: ${Number(r.rate).toFixed(6)})`,
+      }
+    }
+    return { type: 'success' as const, text: name || r.wallet_id, sub: r.currency }
   }
-  if (s.status === 'error') return { type: 'error', text: s.message }
+  if (s.status === 'error') {
+    const extra = s.availableCurrencies?.length
+      ? ` · Disponibles: ${s.availableCurrencies.join(', ')}`
+      : ''
+    return { type: 'error' as const, text: s.message + extra, sub: null }
+  }
   return null
 })
 
@@ -183,7 +190,7 @@ const formError = computed<string | null>(() => {
   if (!touched.value) return null
   if (!fromWalletId.value) return 'Seleccioná una wallet de origen.'
   if (!recipientValue.value.trim()) return 'Ingresá un destinatario.'
-  if (resolveState.value.status === 'resolving') return null // wait
+  if (resolveState.value.status === 'resolving' || resolveState.value.status === 'idle') return null
   if (resolveState.value.status === 'error') return resolveState.value.message
   if (!amountNum.value || amountNum.value <= 0) return 'Ingresá un monto válido.'
   if (overBalance.value) return 'Monto supera el saldo disponible.'
@@ -192,9 +199,8 @@ const formError = computed<string | null>(() => {
 
 const formValid = computed(() => {
   if (!fromWalletId.value || !recipientValue.value.trim()) return false
-  if (resolveState.value.status === 'error') return false
-  if (resolveState.value.status === 'resolving') return false
-  if (resolveState.value.status === 'idle' && recipientValue.value.trim()) return false
+  const rs = resolveState.value.status
+  if (rs === 'error' || rs === 'idle' || rs === 'resolving') return false
   if (!amountNum.value || amountNum.value <= 0) return false
   if (overBalance.value) return false
   return true
