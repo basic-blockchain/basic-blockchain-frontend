@@ -23,7 +23,8 @@ import {
   type RecurringPayment,
   type RecurringFrequency,
 } from '@/api/recurringPayments'
-import { isValidMnemonic } from '@/lib/crypto'
+import client from '@/api/client'
+import { isValidMnemonic, signTransfer } from '@/lib/crypto'
 import { BlockchainApiError } from '@/api/errors'
 import type { Wallet } from '@/api/wallets'
 import ReceiveFlow from '@/components/flows/ReceiveFlow.vue'
@@ -450,6 +451,10 @@ async function reqCancel() {
 
 type EndMode = 'never' | 'count' | 'date'
 
+// Nonce base for pre-signed recurring transactions (must match backend RECURRING_NONCE_BASE)
+const RECURRING_NONCE_BASE = 10_000_000
+const RECURRING_NONCE_STEP = 100
+
 const FREQ_OPTIONS: { key: RecurringFrequency; label: string }[] = [
   { key: 'daily',   label: 'Cada día' },
   { key: 'weekly',  label: 'Cada semana' },
@@ -468,6 +473,8 @@ const schedEndDate   = ref('')
 const schedConcept   = ref('')
 const schedCreating  = ref(false)
 const schedRecord    = ref<RecurringPayment | null>(null)
+const schedMnemonic  = ref('')          // for pre-signing
+const schedPresign   = ref(12)          // how many to pre-sign
 const schedList      = ref<RecurringPayment[]>([])
 const schedListLoading = ref(false)
 
@@ -513,8 +520,13 @@ async function loadScheduled() {
 
 async function schedCreate() {
   if (!schedRecip.value.trim() || !schedAmountNum.value) return
+  if (schedMnemonic.value && !isValidMnemonic(schedMnemonic.value)) {
+    toast.warn('Frase inválida', 'Verificá tu frase BIP-39')
+    return
+  }
   schedCreating.value = true
   try {
+    // 1. Create the schedule record
     const body: Parameters<typeof createRecurringPayment>[0] = {
       recipient_username: schedRecip.value.trim().replace(/^@/, ''),
       amount: schedAmountNum.value,
@@ -527,6 +539,67 @@ async function schedCreate() {
     if (schedConcept.value.trim()) body.concept = schedConcept.value.trim()
 
     schedRecord.value = await createRecurringPayment(body)
+
+    // 2. Pre-sign N transactions if mnemonic was provided
+    if (schedMnemonic.value && schedPresign.value > 0) {
+      const rec = schedRecord.value!
+      // Find sender wallet for this currency
+      const senderWallet = walletStore.wallets.find(
+        (w) => w.currency === rec.currency && !w.frozen
+      )
+      if (senderWallet) {
+        // Compute a unique nonce base for this recurring payment
+        // Use the rec_id hash to avoid collisions between different recurring payments
+        const hashCode = Array.from(rec.rec_id).reduce((acc, c) => acc + c.charCodeAt(0), 0)
+        const nonceBase = RECURRING_NONCE_BASE + (hashCode % 10_000) * RECURRING_NONCE_STEP * 1000
+
+        // Compute scheduled dates
+        const entries = []
+        let nextRun = new Date(rec.next_run_at)
+        for (let i = 0; i < schedPresign.value; i++) {
+          const nonce = nonceBase + i * RECURRING_NONCE_STEP
+          try {
+            const sig = signTransfer(
+              schedMnemonic.value,
+              senderWallet.wallet_id,
+              rec.payee_wallet_id,
+              schedAmountNum.value,
+              nonce,
+            )
+            entries.push({
+              seq: i + 1,
+              scheduled_for: nextRun.toISOString(),
+              nonce,
+              signature: sig,
+            })
+          } catch {
+            break // stop if signing fails
+          }
+          // Advance nextRun by frequency
+          if (schedFreq.value === 'daily') {
+            nextRun = new Date(nextRun.getTime() + 86_400_000)
+          } else if (schedFreq.value === 'weekly') {
+            nextRun = new Date(nextRun.getTime() + 7 * 86_400_000)
+          } else {
+            // monthly
+            const m = nextRun.getMonth() + 1
+            const y = nextRun.getFullYear() + (m === 12 ? 1 : 0)
+            nextRun.setFullYear(y, m % 12, schedDayMonth.value)
+          }
+        }
+
+        if (entries.length > 0) {
+          await client.post(`/recurring-payments/${rec.rec_id}/presign`, { entries })
+          toast.add({
+            severity: 'success',
+            summary: `${entries.length} pagos pre-firmados`,
+            detail: 'Se ejecutarán automáticamente al minarse cada bloque.',
+            life: 5000,
+          })
+        }
+      }
+    }
+
     schedList.value = [schedRecord.value!, ...schedList.value]
     schedStep.value = 3
   } catch (e) {
@@ -534,6 +607,7 @@ async function schedCreate() {
     toast.error('Error al programar', msg ?? 'Verificá el destinatario y que tenga una wallet en esa moneda.')
   } finally {
     schedCreating.value = false
+    schedMnemonic.value = ''
   }
 }
 
@@ -543,6 +617,7 @@ function schedReset() {
   schedRecip.value = ''
   schedAmount.value = ''
   schedConcept.value = ''
+  schedMnemonic.value = ''
 }
 
 // Execute a due recurring payment (user must provide mnemonic)
@@ -1530,9 +1605,38 @@ onMounted(async () => {
               <div class="ss-row"><span>Termina</span><span>{{ schedSummaryEndLabel }}</span></div>
             </div>
 
+            <!-- Pre-sign section -->
+            <div class="presign-box">
+              <div class="presign-header">
+                <span class="pi pi-bolt" aria-hidden="true" style="color:var(--warning)" />
+                <strong>Ejecución automática</strong>
+                <span class="muted" style="font-size:11.5px">opcional</span>
+              </div>
+              <p class="presign-desc">
+                Firmá los próximos
+                <select v-model.number="schedPresign" class="presign-count-select">
+                  <option v-for="n in [1,3,6,12,24]" :key="n" :value="n">{{ n }}</option>
+                </select>
+                pagos ahora con tu frase semilla.
+                El backend los ejecutará automáticamente al minarse cada bloque, sin que tengas que estar conectado.
+              </p>
+              <div class="field">
+                <label class="field-label">Frase BIP-39 <span class="optional">(para pre-firmar)</span></label>
+                <textarea
+                  v-model="schedMnemonic"
+                  class="field-input mnemonic-input"
+                  :class="{ invalid: schedMnemonic && !isValidMnemonic(schedMnemonic) }"
+                  placeholder="Frase de 12 palabras — nunca sale del navegador"
+                  rows="2"
+                />
+                <span v-if="schedMnemonic && !isValidMnemonic(schedMnemonic)" class="field-error">Frase inválida</span>
+                <span v-else class="field-hint">Si no ingresás la frase, podés ejecutar manualmente cuando venza.</span>
+              </div>
+            </div>
+
             <div class="confirm-actions">
               <button class="btn" @click="schedStep = 1">Atrás</button>
-              <button class="btn btn-primary" :disabled="!schedAmountNum || schedCreating" @click="schedCreate">
+              <button class="btn btn-primary" :disabled="!schedAmountNum || schedCreating || (!!schedMnemonic && !isValidMnemonic(schedMnemonic))" @click="schedCreate">
                 <span v-if="schedCreating" class="pi pi-spin pi-spinner" aria-hidden="true" />
                 {{ schedCreating ? 'Activando…' : 'Activar envío recurrente' }}
               </button>
@@ -2073,6 +2177,30 @@ onMounted(async () => {
   font-size: 12.5px; color: var(--text-2);
 }
 .ss-row span:last-child { color: var(--text); font-weight: 500; }
+
+/* Pre-sign section */
+.presign-box {
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 22%, var(--border));
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.presign-header {
+  display: flex; align-items: center; gap: 7px; font-size: 13.5px;
+}
+.presign-desc {
+  margin: 0; font-size: 12.5px; color: var(--text-2); line-height: 1.6;
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+}
+.presign-count-select {
+  padding: 1px 5px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--text);
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
 
 /* ── Receive tab ── */
 .receive-card { align-items: center; }
