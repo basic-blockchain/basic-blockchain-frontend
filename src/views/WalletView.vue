@@ -94,18 +94,16 @@ function selectWallet(walletId: string) {
   selectedWalletId.value = selectedWalletId.value === walletId ? null : walletId
 }
 
-// ── Movement history filtered to selected wallet ──────────────────────────────
+// ── Movement history ──────────────────────────────────────────────────────────
+// sender/receiver in confirmedStore are usernames, not wallet IDs.
 
-const ownWalletIds = computed(() => new Set(walletStore.wallets.map((w) => w.wallet_id)))
+const myUsername = computed(() => auth.user?.username ?? '')
 
 const movements = computed(() => {
-  const records = confirmedStore.records
-    .filter((r) => ownWalletIds.value.has(r.sender) || ownWalletIds.value.has(r.receiver))
+  return confirmedStore.records
+    .filter((r) => r.sender === myUsername.value || r.receiver === myUsername.value)
     .slice()
     .reverse()
-  if (!selectedWalletId.value) return records
-  const id = selectedWalletId.value
-  return records.filter((r) => r.sender === id || r.receiver === id)
 })
 
 function shortAddr(addr: string, n = 8): string {

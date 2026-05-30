@@ -713,12 +713,35 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Tip de seguridad -->
-        <div class="sidebar-card tip-card">
-          <div class="sidebar-card-h">Tip de seguridad</div>
-          <div class="tip-body">
-            <span class="pi pi-info-circle tip-icon" aria-hidden="true" />
-            <p>Verificá siempre el nombre del destinatario · los envíos internos no son reversibles.</p>
+        <!-- Seguridad al enviar -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-h">
+            <span class="pi pi-shield-check" aria-hidden="true" style="color:var(--warning)" />
+            Antes de enviar
+          </div>
+          <div class="sec-checks">
+            <div class="sec-item">
+              <span class="sec-icon sec-ok"><span class="pi pi-user-check" aria-hidden="true" /></span>
+              <span>Verificá el nombre del destinatario en el badge verde</span>
+            </div>
+            <div class="sec-item">
+              <span class="sec-icon sec-ok"><span class="pi pi-calculator" aria-hidden="true" /></span>
+              <span>Revisá el monto y el desglose de comisiones</span>
+            </div>
+            <div class="sec-item">
+              <span class="sec-icon sec-warn"><span class="pi pi-exclamation-circle" aria-hidden="true" /></span>
+              <span>Los envíos confirmados no son reversibles</span>
+            </div>
+          </div>
+          <div class="sec-never">
+            <div class="sec-never-title">
+              <span class="pi pi-times-circle" aria-hidden="true" /> Nunca hagas esto
+            </div>
+            <ul class="sec-never-list">
+              <li>Envíes a una dirección que no reconocés</li>
+              <li>Ignores el badge rojo de error</li>
+              <li>Compartas tu frase semilla para "confirmar"</li>
+            </ul>
           </div>
         </div>
       </aside>
@@ -861,13 +884,36 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Tip -->
-        <div class="sidebar-card tip-card">
-          <div class="sidebar-card-h">Tip de seguridad</div>
-          <div class="tip-body">
-            <span class="pi pi-info-circle tip-icon" aria-hidden="true" />
-            <p>Verificá que quien te envía esté usando la red correcta. Fondos enviados a la red equivocada no son recuperables.</p>
+        <!-- Seguridad al recibir -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-h">
+            <span class="pi pi-shield-check" aria-hidden="true" style="color:var(--warning)" />
+            Al recibir fondos
           </div>
+          <div class="sec-checks">
+            <div class="sec-item">
+              <span class="sec-icon sec-ok"><span class="pi pi-link" aria-hidden="true" /></span>
+              <span>Compartí solo la dirección o el QR, nunca la frase semilla</span>
+            </div>
+            <div class="sec-item">
+              <span class="sec-icon sec-ok"><span class="pi pi-tag" aria-hidden="true" /></span>
+              <span>Verificá que el remitente use la red <strong>Cadena</strong></span>
+            </div>
+          </div>
+          <div class="sec-never">
+            <div class="sec-never-title">
+              <span class="pi pi-times-circle" aria-hidden="true" /> Nunca hagas esto
+            </div>
+            <ul class="sec-never-list">
+              <li>Compartas tu frase semilla para recibir</li>
+              <li>Aceptes tokens de redes distintas a Cadena</li>
+              <li>Confíes en "soporte" que te pida la dirección privada</li>
+            </ul>
+          </div>
+          <button class="btn sec-cta" @click="copyReceiveAddress">
+            <span class="pi pi-copy" aria-hidden="true" />
+            Copiar mi dirección
+          </button>
         </div>
       </aside>
     </div>
@@ -1371,12 +1417,39 @@ onMounted(async () => {
 .sh-cal { color: var(--warning); }
 .sh-arrow { margin-left: auto; font-size: 10px; color: var(--text-3); }
 
-.tip-card .tip-body {
-  display: flex; gap: 10px; padding: 12px 14px;
-  font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+/* Security cards */
+.sec-checks { display: flex; flex-direction: column; gap: 0; }
+.sec-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 14px;
+  font-size: 12.5px; color: var(--text-2); line-height: 1.45;
+  border-bottom: 1px solid var(--border);
 }
-.tip-icon { color: var(--text-3); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-.tip-body p { margin: 0; }
+.sec-item:last-child { border-bottom: none; }
+.sec-icon {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 11px; flex-shrink: 0;
+}
+.sec-ok   { background: color-mix(in srgb, var(--success) 15%, var(--surface)); color: var(--success); }
+.sec-warn { background: color-mix(in srgb, var(--warning) 15%, var(--surface)); color: var(--warning); }
+
+.sec-never {
+  margin: 0 10px 10px;
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 22%, var(--border));
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.sec-never-title {
+  font-size: 11px; font-weight: 700; color: var(--danger);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  display: flex; align-items: center; gap: 5px; margin-bottom: 7px;
+}
+.sec-never-list {
+  margin: 0; padding: 0 0 0 14px;
+  font-size: 11.5px; color: var(--text-2); line-height: 1.7;
+}
+.sec-cta { width: calc(100% - 28px); margin: 0 14px 14px; justify-content: center; }
 
 /* ── Receive tab ── */
 .receive-card { align-items: center; }

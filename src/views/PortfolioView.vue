@@ -89,20 +89,20 @@ const assetRows = computed<AssetRow[]>(() => {
 })
 
 // ── Recent movements ─────────────────────────────────────────────────────────
+// confirmedStore sender/receiver are usernames, not wallet IDs.
 
-const ownWalletIds = computed(() => new Set(walletStore.wallets.map((w) => w.wallet_id)))
+const myUsername = computed(() => auth.user?.username ?? '')
 
 const recentMovements = computed(() =>
   confirmedStore.records
-    .filter((r) => ownWalletIds.value.has(r.sender) || ownWalletIds.value.has(r.receiver))
+    .filter((r) => r.sender === myUsername.value || r.receiver === myUsername.value)
     .slice()
     .reverse()
     .slice(0, 5)
 )
 
 function movementDirection(sender: string): 'out' | 'in' {
-  // sender/receiver in confirmedStore are usernames, not wallet IDs
-  return sender === auth.user?.username ? 'out' : 'in'
+  return sender === myUsername.value ? 'out' : 'in'
 }
 
 function shortAddr(addr: string, n = 8): string {
