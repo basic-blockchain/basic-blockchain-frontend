@@ -6,9 +6,9 @@ import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import { useAuthStore } from '@/stores/auth'
 import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { defaultLandingFor } from '@/router'
-import { listCurrencies, type CurrencyRecord, type Wallet } from '@/api/wallets'
+import type { Wallet } from '@/api/wallets'
 import { useWalletCreate } from '@/composables/useWalletCreate'
-import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
+import WalletCreateFlow from '@/components/flows/WalletCreateFlow.vue'
 import QRCodeCanvas from '@/components/atoms/QRCodeCanvas.vue'
 import { useToast } from '@/composables/useToast'
 import SendConfirmFlow from '@/components/flows/SendConfirmFlow.vue'
@@ -26,33 +26,15 @@ const router        = useRouter()
 const route         = useRoute()
 const toast         = useToast()
 
-const {
-  pendingMnemonic,
-  showSeedModal,
-  creatingWallet,
-  selectedCurrency,
-  handleCreateWallet,
-  onSeedConfirmed,
-  onSeedClosed,
-} = useWalletCreate()
+const { showCreateFlow, handleCreateWallet, onCreateComplete } = useWalletCreate()
 
-const currencies = ref<CurrencyRecord[]>([])
-
-async function loadCurrencies() {
-  try {
-    const resp = await listCurrencies(true)
-    currencies.value = resp.currencies
-    if (!currencies.value.find((c) => c.code === selectedCurrency.value)) {
-      selectedCurrency.value = currencies.value[0]?.code ?? 'NATIVE'
-    }
-  } catch (e) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error al cargar monedas',
-      detail: e instanceof Error ? e.message : 'Error inesperado',
-      life: 4000,
-    })
-  }
+// Local currency name map (currency selector is inside WalletCreateFlow)
+const CURRENCY_NAMES: Record<string, string> = {
+  NATIVE: 'Native', cUSD: 'Cadena USD', BTC: 'Bitcoin',
+  ETH: 'Ethereum', USDT: 'Tether', USDC: 'USD Coin', SOL: 'Solana',
+}
+function currencyName(code: string): string {
+  return CURRENCY_NAMES[code] ?? code
 }
 
 // ── Wallet selection (auto-select first on load) ──────────────────────────────
@@ -194,7 +176,6 @@ function openConvert(w?: Wallet) {
 onMounted(async () => {
   await Promise.all([
     walletStore.fetchMine(),
-    loadCurrencies(),
     confirmedStore.fetchConfirmed(),
     ratesStore.fetchRates(),
   ])
@@ -213,25 +194,18 @@ onMounted(async () => {
 
 <template>
   <div class="wallet-view">
-    <SeedPhraseModal
-      :mnemonic="pendingMnemonic"
-      :visible="showSeedModal"
-      @confirm="onSeedConfirmed"
-      @close="onSeedClosed"
+    <WalletCreateFlow
+      v-if="showCreateFlow"
+      @close="showCreateFlow = false; onCreateComplete()"
+      @complete="onCreateComplete"
     />
 
     <!-- Page header -->
     <div class="page-h">
       <h1>Mis wallets</h1>
       <div class="page-actions">
-        <select v-model="selectedCurrency" class="field-select" :disabled="creatingWallet">
-          <option v-for="c in currencies" :key="c.code" :value="c.code">
-            {{ c.code }} · {{ c.name }}
-          </option>
-        </select>
-        <button class="btn btn-primary" :disabled="creatingWallet" @click="handleCreateWallet">
-          <span v-if="creatingWallet" class="pi pi-spin pi-spinner" aria-hidden="true" />
-          <span v-else class="pi pi-plus" aria-hidden="true" />
+        <button class="btn btn-primary" @click="handleCreateWallet">
+          <span class="pi pi-plus" aria-hidden="true" />
           Nueva wallet
         </button>
       </div>
@@ -264,7 +238,7 @@ onMounted(async () => {
             {{ activeWallet.currency }}
             <span class="muted" style="font-size:11px">·</span>
             <span class="muted" style="font-size:11.5px">
-              {{ currencies.find(c => c.code === activeWallet!.currency)?.name ?? activeWallet.currency }}
+              {{ currencyName(activeWallet.currency) }}
             </span>
             <span v-if="activeWallet.frozen" class="frozen-pill">
               <span class="pi pi-lock" aria-hidden="true" /> Congelada
