@@ -120,3 +120,53 @@ export async function listExchangeRates(params?: {
   const { data } = await client.get('/exchange-rates', { params })
   return data
 }
+
+// ── Recipient resolution ──────────────────────────────────────────────────────
+
+export type ResolveMatchType = 'exact' | 'other_currency'
+
+export interface ResolveSuccess {
+  wallet_id: string
+  owner_username: string
+  owner_display_name: string
+  currency: string
+  match_type: ResolveMatchType
+  frozen: boolean
+}
+
+export interface ResolveNoCurrencyError {
+  error: 'NO_WALLET_FOR_CURRENCY'
+  message: string
+  available_currencies: string[]
+  fallback_wallet_id: string
+  fallback_currency: string
+  owner_username: string
+  owner_display_name: string
+}
+
+export type ResolveErrorCode =
+  | 'USER_NOT_FOUND'
+  | 'WALLET_NOT_FOUND'
+  | 'NO_WALLET'
+  | 'NO_WALLET_FOR_CURRENCY'
+  | 'MISSING_IDENTIFIER'
+
+export interface ResolveError {
+  error: ResolveErrorCode
+  message: string
+  available_currencies?: string[]
+  fallback_wallet_id?: string
+  fallback_currency?: string
+  owner_username?: string
+  owner_display_name?: string
+}
+
+export async function resolveRecipient(params: {
+  username?: string
+  email?: string
+  wallet_id?: string
+  currency?: string
+}): Promise<ResolveSuccess> {
+  const { data } = await client.get<ResolveSuccess>('/wallets/resolve', { params })
+  return data
+}

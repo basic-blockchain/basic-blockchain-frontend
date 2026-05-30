@@ -6,6 +6,7 @@ import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
+import { useRecipientResolve } from '@/composables/useRecipientResolve'
 import { isValidMnemonic } from '@/lib/crypto'
 import { BlockchainApiError } from '@/api/errors'
 import type { Wallet } from '@/api/wallets'
@@ -36,44 +37,49 @@ type RecipientType = typeof RECIPIENT_TYPES[number]['key']
 const recipientType = ref<RecipientType>('wallet')
 const recipientValue = ref('')
 
-const resolvedRecipient = computed(() => {
-  const v = recipientValue.value.trim()
-  if (!v) return null
-  // Show a "resolving" indicator for non-wallet types until backend user search is available
-  if (recipientType.value === 'wallet') {
-    if (v.startsWith('w_') || v.length >= 20) {
-      const isOwn = walletStore.wallets.some((w) => w.wallet_id === v)
-      return {
-        display: v.length > 24 ? v.slice(0, 12) + '…' + v.slice(-8) : v,
-        detail: isOwn ? 'Tu propia wallet' : 'Wallet destinataria',
-        verified: !isOwn,
-      }
-    }
-  }
-  if (recipientType.value === 'user' || recipientType.value === 'email') {
-    return { display: v, detail: 'Resolución próximamente', verified: false }
-  }
-  if (recipientType.value === 'onchain') {
-    return { display: v.slice(0, 12) + '…' + v.slice(-6), detail: 'On-chain', verified: false }
-  }
-  return null
-})
-
-function recipientHelp(): string {
-  switch (recipientType.value) {
-    case 'user': return 'Ingresá el @usuario de la plataforma Cadena.'
-    case 'email': return 'El destinatario recibirá una notificación por email.'
-    case 'wallet': return 'Ingresá el ID completo de la wallet (w_…).'
-    case 'onchain': return 'Dirección de billetera externa en la red seleccionada.'
-  }
-}
-
 // ── Wallet selector ───────────────────────────────────────────────────────────
 
 const fromWalletId = ref('')
 const selectedWallet = computed<Wallet | null>(
   () => walletStore.wallets.find((w) => w.wallet_id === fromWalletId.value) ?? null
 )
+
+// ── Live recipient resolution (must come after selectedWallet) ────────────────
+
+const senderCurrency = computed(() => selectedWallet.value?.currency ?? '')
+const { state: resolveState, resolvedWalletId, resolvedDisplayName } = useRecipientResolve(
+  recipientType,
+  recipientValue,
+  senderCurrency,
+)
+
+function recipientHelp(): string {
+  switch (recipientType.value) {
+    case 'user':    return 'Ingresá el @usuario de la plataforma Cadena.'
+    case 'email':   return 'Ingresá el email registrado del destinatario.'
+    case 'wallet':  return 'Ingresá el ID completo de la wallet (w_…).'
+    case 'onchain': return 'Dirección de billetera externa en la red seleccionada.'
+  }
+}
+
+const resolveBadge = computed(() => {
+  const s = resolveState.value
+  if (!recipientValue.value.trim()) return null
+  if (s.status === 'idle' || s.status === 'resolving') return { type: 'loading', text: s.status === 'resolving' ? 'Buscando…' : '…' }
+  if (s.status === 'resolved') {
+    const name = resolvedDisplayName()
+    const cur = s.result.currency
+    const mismatch = s.result.match_type === 'other_currency'
+    return { type: 'success', text: name || s.result.wallet_id, sub: mismatch ? `Wallet en ${cur}` : cur }
+  }
+  if (s.status === 'currency_mismatch') {
+    const r = s.result
+    const name = r.owner_display_name || r.owner_username || ''
+    return { type: 'warning', text: name, sub: `No tiene wallet en ${senderCurrency.value} — se usará ${r.fallback_currency}` }
+  }
+  if (s.status === 'error') return { type: 'error', text: s.message }
+  return null
+})
 
 function walletOptionLabel(w: Wallet): string {
   const usd = ratesStore.usdValue(w.balance, w.currency)
@@ -177,18 +183,22 @@ const formError = computed<string | null>(() => {
   if (!touched.value) return null
   if (!fromWalletId.value) return 'Seleccioná una wallet de origen.'
   if (!recipientValue.value.trim()) return 'Ingresá un destinatario.'
+  if (resolveState.value.status === 'resolving') return null // wait
+  if (resolveState.value.status === 'error') return resolveState.value.message
   if (!amountNum.value || amountNum.value <= 0) return 'Ingresá un monto válido.'
   if (overBalance.value) return 'Monto supera el saldo disponible.'
   return null
 })
 
-const formValid = computed(
-  () =>
-    !!fromWalletId.value &&
-    !!recipientValue.value.trim() &&
-    amountNum.value > 0 &&
-    !overBalance.value
-)
+const formValid = computed(() => {
+  if (!fromWalletId.value || !recipientValue.value.trim()) return false
+  if (resolveState.value.status === 'error') return false
+  if (resolveState.value.status === 'resolving') return false
+  if (resolveState.value.status === 'idle' && recipientValue.value.trim()) return false
+  if (!amountNum.value || amountNum.value <= 0) return false
+  if (overBalance.value) return false
+  return true
+})
 
 // ── Step 2: Confirm + submit ──────────────────────────────────────────────────
 
@@ -221,12 +231,17 @@ async function submitTransfer() {
     toast.warn('Frase inválida', 'Verifica tu frase de recuperación BIP-39')
     return
   }
+  const targetWalletId = resolvedWalletId()
+  if (!targetWalletId) {
+    toast.error('Destinatario no resuelto', 'Verifica el destinatario antes de enviar.')
+    return
+  }
   submitting.value = true
   try {
     await walletStore.transfer(
       confirmMnemonic.value,
       fromWalletId.value,
-      recipientValue.value.trim(),
+      targetWalletId,
       amountNum.value,
       parseInt(confirmNonce.value, 10),
     )
@@ -377,19 +392,40 @@ onMounted(async () => {
                 <input
                   v-model="recipientValue"
                   class="field-input"
-                  :class="{ invalid: touched && !recipientValue.trim() }"
+                  :class="{
+                    invalid: touched && (!recipientValue.trim() || resolveState.status === 'error'),
+                  }"
                   :placeholder="RECIPIENT_TYPES.find(t => t.key === recipientType)?.placeholder"
                   autocomplete="off"
                 />
-                <span v-if="resolvedRecipient" class="resolved-badge" :class="{ verified: resolvedRecipient.verified }">
-                  <span class="pi pi-check-circle" aria-hidden="true" />
-                  {{ resolvedRecipient.display }}
+                <span
+                  v-if="resolveBadge"
+                  class="resolved-badge"
+                  :class="{
+                    'badge-success':  resolveBadge.type === 'success',
+                    'badge-loading':  resolveBadge.type === 'loading',
+                    'badge-warning':  resolveBadge.type === 'warning',
+                    'badge-error':    resolveBadge.type === 'error',
+                  }"
+                >
+                  <span
+                    :class="{
+                      'pi pi-check-circle': resolveBadge.type === 'success',
+                      'pi pi-spin pi-spinner': resolveBadge.type === 'loading',
+                      'pi pi-exclamation-triangle': resolveBadge.type === 'warning',
+                      'pi pi-times-circle': resolveBadge.type === 'error',
+                    }"
+                    aria-hidden="true"
+                  />
+                  {{ resolveBadge.text }}
                 </span>
               </div>
-              <span v-if="resolvedRecipient" class="field-hint resolved-detail">
-                {{ resolvedRecipient.detail }}
+              <span v-if="resolveBadge?.sub" class="field-hint resolved-detail" :class="{ 'hint-warn': resolveBadge.type === 'warning' }">
+                {{ resolveBadge.sub }}
               </span>
-              <span v-else class="field-hint">{{ recipientHelp() }}</span>
+              <span v-else-if="!resolveBadge || resolveBadge.type === 'loading'" class="field-hint">
+                {{ recipientHelp() }}
+              </span>
             </div>
 
             <!-- Wallet selector -->
@@ -494,7 +530,7 @@ onMounted(async () => {
                 <span class="mono"><strong>{{ totalDebit.toFixed(8) }} {{ selectedWallet.currency }}</strong></span>
               </div>
               <div class="fee-row">
-                <span>{{ resolvedRecipient?.display ?? 'Destinatario' }} recibe</span>
+                <span>{{ resolvedDisplayName() || 'Destinatario' }} recibe</span>
                 <span class="mono">{{ amountNum.toFixed(8) }} {{ selectedWallet.currency }}</span>
               </div>
             </div>
@@ -521,7 +557,13 @@ onMounted(async () => {
             </div>
 
             <div class="confirm-summary">
-              <div class="confirm-row"><span>Para</span><span class="mono">{{ recipientValue }}</span></div>
+              <div class="confirm-row">
+                <span>Para</span>
+                <span class="mono">
+                  {{ resolvedDisplayName() || recipientValue }}
+                  <span v-if="resolvedWalletId() && resolvedWalletId() !== recipientValue" class="muted" style="font-size:11px"> ({{ resolvedWalletId()?.slice(0, 12) }}…)</span>
+                </span>
+              </div>
               <div class="confirm-row"><span>Monto</span><span class="mono">{{ amount }} {{ selectedWallet?.currency }}</span></div>
               <div v-if="usdEquiv" class="confirm-row"><span>Valor USD</span><span>≈ ${{ usdEquiv.toFixed(2) }}</span></div>
               <div class="confirm-row"><span>Comisión</span><span :class="networkFee === 0 ? 'pos' : ''">{{ networkFee === 0 ? 'Gratis' : networkFee.toFixed(6) + ' ' + selectedWallet?.currency }}</span></div>
@@ -920,8 +962,12 @@ onMounted(async () => {
   border: 1px solid var(--border);
   flex-shrink: 0;
 }
-.resolved-badge.verified { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, var(--border)); }
+.badge-success { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, var(--border)); background: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+.badge-loading { color: var(--text-3); }
+.badge-warning { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 30%, var(--border)); background: color-mix(in srgb, var(--warning) 8%, var(--surface)); }
+.badge-error   { color: var(--danger);  border-color: color-mix(in srgb, var(--danger)  30%, var(--border)); background: color-mix(in srgb, var(--danger)  8%, var(--surface)); }
 .resolved-detail { color: var(--text-2); }
+.hint-warn { color: var(--warning); }
 
 /* Amount */
 .amount-display-row {
