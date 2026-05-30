@@ -87,7 +87,7 @@ const adminGroups: NavGroup[] = [
     items: [
       { to: '/admin/compliance', label: 'Compliance', icon: 'pi pi-shield' },
       { to: '/admin/kyc', label: 'KYC', icon: 'pi pi-id-card' },
-      { to: '', label: 'Permisos', icon: 'pi pi-key', disabled: true },
+      { to: '/admin/permissions', label: 'Permisos', icon: 'pi pi-key' },
       { to: '/admin/audit', label: 'Auditoría', icon: 'pi pi-list' },
       { to: '/admin/settings', label: 'Ajustes', icon: 'pi pi-cog' },
     ],
@@ -156,6 +156,7 @@ const routeLabels: Record<string, string> = {
   movements: 'Movimientos',
   sends: 'Envíos',
   settings: 'Ajustes',
+  permissions: 'Permisos',
 }
 
 const breadcrumbs = computed(() =>
