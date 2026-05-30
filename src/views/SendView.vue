@@ -7,6 +7,12 @@ import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useRecipientResolve } from '@/composables/useRecipientResolve'
+import {
+  createPaymentRequest,
+  cancelPaymentRequest,
+  paymentRequestUrl,
+  type PaymentRequest,
+} from '@/api/paymentRequests'
 import { isValidMnemonic } from '@/lib/crypto'
 import { BlockchainApiError } from '@/api/errors'
 import type { Wallet } from '@/api/wallets'
@@ -328,12 +334,11 @@ watch([() => fromWalletId.value, activeTab], () => { incomingPayment.value = nul
 
 // ── Solicitar tab state ───────────────────────────────────────────────────────
 
-const REQ_ASSETS = ['cUSD', 'USDT', 'BTC', 'ETH'] as const
 const REQ_EXPIRES = [
-  { key: '1h',    label: '1 hora' },
-  { key: '24h',   label: '24 horas' },
-  { key: '7d',    label: '7 días' },
-  { key: 'never', label: 'Sin vencimiento' },
+  { key: '1h',    label: '1 hora',          hours: 1 },
+  { key: '24h',   label: '24 horas',        hours: 24 },
+  { key: '7d',    label: '7 días',          hours: 24 * 7 },
+  { key: 'never', label: 'Sin vencimiento', hours: null },
 ] as const
 
 const reqStep = ref<0 | 1>(0)
@@ -343,26 +348,92 @@ const reqRecipient = ref('')
 const reqConcept = ref('')
 const reqExpires = ref<'1h' | '24h' | '7d' | 'never'>('24h')
 const reqCopied = ref(false)
+const reqCreating = ref(false)
+const reqRecord = ref<PaymentRequest | null>(null)
 
 const reqAmountNum = computed(() => parseFloat(reqAmount.value) || 0)
 
-const reqLink = computed(
-  () => 'https://app.cadena.app/pay/req_' + Math.random().toString(36).slice(2, 9).toUpperCase()
+// Assets are driven by the user's actual wallets + fallback list
+const REQ_ASSETS = computed(() => {
+  const available = walletStore.wallets.map((w) => w.currency)
+  const defaults = ['cUSD', 'USDT', 'BTC', 'ETH']
+  const combined = [...new Set([...available, ...defaults])]
+  return combined.slice(0, 6)
+})
+
+// Auto-select asset matching the first available wallet
+watch(() => walletStore.wallets, (ws) => {
+  if (ws.length > 0 && !ws.some((w) => w.currency === reqAsset.value)) {
+    reqAsset.value = ws[0].currency
+  }
+}, { immediate: true })
+
+const reqLink = computed(() =>
+  reqRecord.value ? paymentRequestUrl(reqRecord.value.req_id) : ''
 )
 
-function reqGenerate() { reqStep.value = 1 }
+async function reqGenerate() {
+  if (!reqAmountNum.value) return
+  reqCreating.value = true
+  try {
+    const expiresConfig = REQ_EXPIRES.find((e) => e.key === reqExpires.value)
+    let expires_at: string | undefined
+    if (expiresConfig?.hours) {
+      const exp = new Date(Date.now() + expiresConfig.hours * 3600 * 1000)
+      expires_at = exp.toISOString()
+    }
+    reqRecord.value = await createPaymentRequest({
+      amount: reqAmountNum.value,
+      currency: reqAsset.value,
+      from_username: reqRecipient.value.trim().replace(/^@/, '') || undefined,
+      concept: reqConcept.value.trim() || undefined,
+      expires_at,
+    })
+    reqStep.value = 1
+  } catch (e) {
+    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+    toast.error('Error al generar link', msg ?? 'Verificá que tenés una wallet en esa moneda.')
+  } finally {
+    reqCreating.value = false
+  }
+}
 
 function reqReset() {
   reqStep.value = 0
+  reqRecord.value = null
   reqAmount.value = ''
   reqRecipient.value = ''
   reqConcept.value = ''
 }
 
 async function reqCopyLink() {
+  if (!reqLink.value) return
   await navigator.clipboard.writeText(reqLink.value).catch(() => {})
   reqCopied.value = true
   setTimeout(() => { reqCopied.value = false }, 1400)
+}
+
+function reqShareWhatsApp() {
+  const url = `https://wa.me/?text=${encodeURIComponent('Te solicito pago: ' + reqLink.value)}`
+  window.open(url, '_blank')
+}
+
+function reqShareEmail() {
+  if (!reqRecord.value) return
+  const subject = 'Solicitud de pago'
+  const body = `Te solicito pago de ${reqRecord.value.amount} ${reqRecord.value.currency}.\n\n${reqLink.value}`
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
+async function reqCancel() {
+  if (!reqRecord.value) return
+  try {
+    await cancelPaymentRequest(reqRecord.value.req_id)
+    reqReset()
+    toast.add({ severity: 'info', summary: 'Solicitud cancelada', life: 2500 })
+  } catch {
+    // ignore
+  }
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -922,16 +993,25 @@ onMounted(async () => {
     <div v-else-if="activeTab === 'request'" class="sv-layout">
       <div class="sv-main">
         <div class="form-card">
+
+          <!-- Step 0: form -->
           <template v-if="reqStep === 0">
             <div class="form-card-h">
               <h2>Solicitar pago</h2>
               <p>Generá un link o QR · cualquiera con el link puede pagarte.</p>
             </div>
+
             <div class="amount-display-row">
               <input v-model="reqAmount" class="amount-input" type="number" min="0" step="any" placeholder="0.00" />
               <span class="amount-currency">{{ reqAsset }}</span>
             </div>
-            <div class="amount-usd">{{ reqAsset }} · ≈ ${{ reqAmountNum.toFixed(2) }} USD</div>
+            <div class="amount-usd">
+              {{ reqAsset }}
+              <template v-if="ratesStore.usdValue(reqAmountNum, reqAsset) !== null">
+                · ≈ ${{ ratesStore.usdValue(reqAmountNum, reqAsset)!.toFixed(2) }} USD
+              </template>
+            </div>
+
             <div class="field">
               <label class="field-label">Activo</label>
               <div class="type-chips">
@@ -944,14 +1024,21 @@ onMounted(async () => {
                 >{{ a }}</button>
               </div>
             </div>
+
             <div class="field">
               <label class="field-label">De <span class="optional">(opcional)</span></label>
-              <input v-model="reqRecipient" class="field-input" placeholder="@usuario, email o nombre · si lo dejás vacío, link abierto" />
+              <input
+                v-model="reqRecipient"
+                class="field-input"
+                placeholder="@usuario, email o nombre · si lo dejás vacío, link abierto"
+              />
             </div>
+
             <div class="field">
               <label class="field-label">Concepto <span class="optional">(opcional)</span></label>
               <input v-model="reqConcept" class="field-input" placeholder="Devolución cena, alquiler de marzo…" />
             </div>
+
             <div class="field">
               <label class="field-label">Expira en</label>
               <div class="type-chips">
@@ -964,28 +1051,60 @@ onMounted(async () => {
                 >{{ e.label }}</button>
               </div>
             </div>
+
             <div class="fee-box">
               <div class="fee-row"><span>Comisión</span><span class="pos">Gratis</span></div>
               <div class="fee-row"><span>Tipo</span><span>movimientos internos · instantáneos</span></div>
             </div>
-            <button class="btn btn-primary btn-submit" :disabled="!reqAmountNum" @click="reqGenerate">
-              Generar link
+
+            <button
+              class="btn btn-primary btn-submit"
+              :disabled="!reqAmountNum || reqCreating"
+              @click="reqGenerate"
+            >
+              <span v-if="reqCreating" class="pi pi-spin pi-spinner" aria-hidden="true" />
+              {{ reqCreating ? 'Generando…' : 'Generar link' }}
             </button>
           </template>
 
-          <template v-else>
+          <!-- Step 1: share link + QR -->
+          <template v-else-if="reqRecord">
             <div class="form-card-h">
               <h2>¡Link de pago listo!</h2>
-              <p>Compartilo con quien te tiene que pagar.</p>
+              <p>Compartilo — quien lo abra verá el formulario de pago pre-cargado.</p>
             </div>
-            <div class="confirm-summary">
-              <div class="confirm-row"><span>Monto</span><span class="mono">{{ reqAmount }} {{ reqAsset }}</span></div>
-              <div v-if="reqConcept" class="confirm-row"><span>Concepto</span><span>{{ reqConcept }}</span></div>
-              <div class="confirm-row">
-                <span>Expira</span>
-                <span>{{ reqExpires === 'never' ? 'Sin vencimiento' : 'en ' + reqExpires }}</span>
+
+            <!-- QR -->
+            <div class="qr-section">
+              <div class="qr-wrapper">
+                <QRCodeCanvas :value="reqLink" :size="160" />
+                <div class="qr-brand">◆</div>
               </div>
             </div>
+
+            <!-- Summary -->
+            <div class="confirm-summary">
+              <div class="confirm-row">
+                <span>Monto</span>
+                <span class="mono">{{ reqRecord.amount }} {{ reqRecord.currency }}</span>
+              </div>
+              <div v-if="reqRecord.concept" class="confirm-row">
+                <span>Concepto</span><span>{{ reqRecord.concept }}</span>
+              </div>
+              <div v-if="reqRecord.from_username" class="confirm-row">
+                <span>Para cobrar a</span><span>@{{ reqRecord.from_username }}</span>
+              </div>
+              <div class="confirm-row">
+                <span>Expira</span>
+                <span>{{ reqRecord.expires_at ? new Date(reqRecord.expires_at).toLocaleString('es') : 'Sin vencimiento' }}</span>
+              </div>
+              <div class="confirm-row">
+                <span>ID</span>
+                <span class="mono" style="font-size:11px">{{ reqRecord.req_id }}</span>
+              </div>
+            </div>
+
+            <!-- Link row -->
             <div class="field">
               <label class="field-label">Link de pago</label>
               <div class="link-row">
@@ -996,13 +1115,24 @@ onMounted(async () => {
                 </button>
               </div>
             </div>
+
+            <!-- Share buttons -->
             <div class="share-buttons">
-              <button class="share-btn"><span class="pi pi-copy" aria-hidden="true" /> Copiar link</button>
-              <button class="share-btn"><span class="pi pi-download" aria-hidden="true" /> Descargar QR</button>
-              <button class="share-btn"><span class="pi pi-whatsapp" aria-hidden="true" /> WhatsApp</button>
-              <button class="share-btn"><span class="pi pi-envelope" aria-hidden="true" /> Email</button>
+              <button class="share-btn" @click="reqCopyLink">
+                <span class="pi pi-copy" aria-hidden="true" /> Copiar link
+              </button>
+              <button class="share-btn" @click="reqShareWhatsApp">
+                <span class="pi pi-whatsapp" aria-hidden="true" /> WhatsApp
+              </button>
+              <button class="share-btn" @click="reqShareEmail">
+                <span class="pi pi-envelope" aria-hidden="true" /> Email
+              </button>
+              <button class="share-btn" @click="reqCancel">
+                <span class="pi pi-times" aria-hidden="true" /> Cancelar link
+              </button>
             </div>
-            <div class="confirm-actions">
+
+            <div class="confirm-actions" style="margin-top:8px">
               <button class="btn" @click="reqReset">Nueva solicitud</button>
             </div>
           </template>

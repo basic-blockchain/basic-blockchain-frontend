@@ -149,6 +149,13 @@ const router = createRouter({
     { path: '/nodes',      name: 'nodes',      component: () => import('@/views/NodesView.vue'),      meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
     { path: '/validation', name: 'validation', component: () => import('@/views/ValidationView.vue'), meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
     { path: '/health',     name: 'health',     component: () => import('@/views/HealthView.vue'),     meta: { requireAnyRole: ['ADMIN', 'OPERATOR'] } },
+    // Public payment request page — /pay/:id opened by payment link recipients
+    {
+      path: '/pay/:id',
+      name: 'pay',
+      component: () => import('@/views/PayView.vue'),
+      meta: { public: true },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 })
