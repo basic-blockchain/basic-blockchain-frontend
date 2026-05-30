@@ -154,9 +154,8 @@ export interface ResolveError {
 }
 
 export async function resolveRecipient(params: {
-  username?: string
-  email?: string
-  wallet_id?: string
+  type: string
+  q: string
   currency?: string
 }): Promise<ResolveSuccess> {
   const { data } = await client.get<ResolveSuccess>('/wallets/resolve', { params })

@@ -47,14 +47,17 @@ export function useRecipientResolve(
 
     state.value = { status: 'resolving' }
 
-    const params: Record<string, string> = {}
-    if (cur) params.currency = cur
-    if (type === 'wallet')      params.wallet_id = value
-    else if (type === 'user')   params.username  = value.replace(/^@/, '')
-    else if (type === 'email')  params.email     = value
+    const typeMap: Record<RecipientType, string> = {
+      user: 'username', email: 'email', wallet: 'wallet_id', onchain: 'onchain',
+    }
+    const resolveParams = {
+      type: typeMap[type],
+      q: type === 'user' ? value.replace(/^@/, '') : value,
+      ...(cur ? { currency: cur } : {}),
+    }
 
     try {
-      const result = await resolveRecipient(params)
+      const result = await resolveRecipient(resolveParams)
       state.value = { status: 'resolved', result }
     } catch (err: unknown) {
       const apiErr = (err as { response?: { data?: ResolveError } })?.response?.data
