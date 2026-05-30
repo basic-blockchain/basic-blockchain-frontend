@@ -298,7 +298,7 @@ onMounted(async () => {
         <section class="panel">
           <div class="panel-h">
             <span>Últimos movimientos</span>
-            <router-link to="/wallet" class="panel-link">
+            <router-link to="/historial" class="panel-link">
               Ver historial completo →
             </router-link>
           </div>

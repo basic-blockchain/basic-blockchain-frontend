@@ -58,6 +58,12 @@ const router = createRouter({
       meta: { requireRole: 'VIEWER' },
     },
     {
+      path: '/historial',
+      name: 'historial',
+      component: () => import('@/views/HistorialView.vue'),
+      meta: { requireRole: 'VIEWER' },
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/AdminView.vue'),
