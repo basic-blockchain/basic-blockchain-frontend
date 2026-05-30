@@ -99,9 +99,10 @@ const userGroups: NavGroup[] = [
     label: 'Cuenta',
     items: [
       { to: '/portfolio', label: 'Mi portafolio', icon: 'pi pi-chart-line', requireAuth: true },
-      { to: '/wallet', label: 'Mis wallets', icon: 'pi pi-wallet', requireAuth: true },
-      { to: '/p2p', label: 'Mercado P2P', icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
-      { to: '/exchange', label: 'Exchange', icon: 'pi pi-chart-bar', requireAuth: true },
+      { to: '/wallet',    label: 'Mis wallets',    icon: 'pi pi-wallet',               requireAuth: true },
+      { to: '/send',      label: 'Enviar / Recibir', icon: 'pi pi-arrows-h',           requireAuth: true },
+      { to: '/p2p',       label: 'Mercado P2P',    icon: 'pi pi-arrow-right-arrow-left', requireAuth: true },
+      { to: '/exchange',  label: 'Exchange',        icon: 'pi pi-chart-bar',            requireAuth: true },
     ],
   },
   {
@@ -138,6 +139,7 @@ function isActive(to: string): boolean {
 const routeLabels: Record<string, string> = {
   dashboard: 'Dashboard',
   portfolio: 'Mi portafolio',
+  send: 'Enviar / Recibir',
   chain: 'Cadena',
   mempool: 'Mempool',
   nodes: 'Nodos',

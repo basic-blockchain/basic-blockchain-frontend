@@ -43,6 +43,12 @@ const router = createRouter({
       meta: { requireRole: 'VIEWER' },
     },
     {
+      path: '/send',
+      name: 'send',
+      component: () => import('@/views/SendView.vue'),
+      meta: { requireRole: 'VIEWER' },
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/AdminView.vue'),

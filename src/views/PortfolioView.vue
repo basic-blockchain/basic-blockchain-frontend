@@ -9,8 +9,6 @@ import { listCurrencies, type CurrencyRecord } from '@/api/wallets'
 import { useWalletCreate } from '@/composables/useWalletCreate'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
 import SparklineChart from '@/components/atoms/SparklineChart.vue'
-import SendConfirmFlow from '@/components/flows/SendConfirmFlow.vue'
-import type { SendData } from '@/components/flows/SendConfirmFlow.vue'
 import ReceiveFlow from '@/components/flows/ReceiveFlow.vue'
 import type { ReceiveData } from '@/components/flows/ReceiveFlow.vue'
 import ConvertFlow from '@/components/flows/ConvertFlow.vue'
@@ -34,7 +32,6 @@ const {
 
 const currencies = ref<CurrencyRecord[]>([])
 
-const sendFlowData = ref<SendData | null>(null)
 const receiveFlowData = ref<ReceiveData | null>(null)
 const convertFlowData = ref<ConvertData | null>(null)
 
@@ -125,13 +122,7 @@ function relativeTime(ts: string | undefined): string {
 // ── Quick actions ─────────────────────────────────────────────────────────────
 
 function openSend() {
-  const first = walletStore.wallets[0]
-  sendFlowData.value = {
-    to: '',
-    handle: '',
-    amount: '',
-    asset: first?.currency ?? 'NATIVE',
-  }
+  router.push('/send')
 }
 
 function openReceive() {
@@ -395,7 +386,7 @@ onMounted(async () => {
               <span>Comprar USDT en P2P</span>
               <span class="pi pi-chevron-right sh-arrow" aria-hidden="true" />
             </button>
-            <button class="shortcut-item" disabled title="Próximamente">
+            <button class="shortcut-item" @click="router.push({ path: '/send', query: { tab: 'request' } })">
               <span class="pi pi-link sh-icon sh-link" aria-hidden="true" />
               <span>Solicitar pago a alguien</span>
               <span class="pi pi-chevron-right sh-arrow" aria-hidden="true" />
@@ -451,12 +442,6 @@ onMounted(async () => {
     </div>
   </div>
 
-  <SendConfirmFlow
-    v-if="sendFlowData"
-    :data="sendFlowData"
-    @close="sendFlowData = null"
-    @complete="sendFlowData = null"
-  />
   <ReceiveFlow
     v-if="receiveFlowData"
     :data="receiveFlowData"
