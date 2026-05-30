@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useWalletStore } from '@/stores/wallet'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 import { isValidMnemonic } from '@/lib/crypto'
 import { BlockchainApiError } from '@/api/errors'
 import type { Wallet } from '@/api/wallets'
@@ -15,6 +16,7 @@ const route = useRoute()
 const walletStore = useWalletStore()
 const confirmedStore = useConfirmedTransactionsStore()
 const ratesStore = useExchangeRatesStore()
+const auth = useAuthStore()
 const toast = useToast()
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
@@ -140,34 +142,30 @@ const priorityEta = computed(() =>
 
 // ── Recent contacts (derived from confirmed txs) ──────────────────────────────
 
-const ownWalletIds = computed(() => new Set(walletStore.wallets.map((w) => w.wallet_id)))
 
 const recentContacts = computed(() => {
+  // sender/receiver in confirmedStore are usernames, not wallet IDs.
+  const myUsername = auth.user?.username ?? ''
   const seen = new Set<string>()
   const contacts: { id: string; display: string; count: number }[] = []
   for (const r of confirmedStore.records) {
-    const counterparty = ownWalletIds.value.has(r.sender) ? r.receiver : r.sender
-    if (!counterparty || ownWalletIds.value.has(counterparty)) continue
+    const counterparty = r.sender === myUsername ? r.receiver : r.sender
+    if (!counterparty || counterparty === myUsername) continue
     if (!seen.has(counterparty)) {
       seen.add(counterparty)
-      contacts.push({
-        id: counterparty,
-        display: counterparty.length > 16
-          ? counterparty.slice(0, 8) + '…' + counterparty.slice(-6)
-          : counterparty,
-        count: 1,
-      })
+      contacts.push({ id: counterparty, display: counterparty, count: 1 })
     } else {
       const entry = contacts.find((c) => c.id === counterparty)
       if (entry) entry.count++
     }
-    if (contacts.length >= 4) break
   }
-  return contacts.slice(0, 4)
+  // Sort by frequency, return top 4
+  return contacts.sort((a, b) => b.count - a.count).slice(0, 4)
 })
 
 function selectContact(id: string) {
-  recipientType.value = 'wallet'
+  // Contacts are usernames → use Usuario Cadena type
+  recipientType.value = 'user'
   recipientValue.value = id
 }
 
@@ -198,6 +196,11 @@ const step = ref<0 | 1 | 2>(0) // 0=form 1=confirm 2=success
 const confirmMnemonic = ref('')
 const confirmNonce = ref('1')
 const submitting = ref(false)
+
+// Auto-update nonce when the source wallet changes
+watch(selectedWallet, (w) => {
+  if (w) confirmNonce.value = String(w.next_nonce ?? 1)
+})
 
 const mnemonicValid = computed(
   () => !confirmMnemonic.value || isValidMnemonic(confirmMnemonic.value)

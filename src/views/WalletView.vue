@@ -114,7 +114,8 @@ function shortAddr(addr: string, n = 8): string {
 }
 
 function movementDirection(sender: string): 'out' | 'in' {
-  return ownWalletIds.value.has(sender) ? 'out' : 'in'
+  // sender/receiver in confirmedStore are usernames, not wallet IDs
+  return sender === auth.user?.username ? 'out' : 'in'
 }
 
 // ── Quick actions ─────────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ export interface Wallet {
   created_at: string
   currency: string
   wallet_type: WalletType
+  next_nonce?: number
 }
 
 export interface MyWalletsResponse {

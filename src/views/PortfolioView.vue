@@ -5,6 +5,7 @@ import { useWalletStore } from '@/stores/wallet'
 import { useConfirmedTransactionsStore } from '@/stores/confirmedTransactions'
 import { useExchangeRatesStore } from '@/stores/exchangeRates'
 import { useAuthStore } from '@/stores/auth'
+// sender/receiver in confirmedStore are usernames (not wallet IDs)
 import { listCurrencies, type CurrencyRecord } from '@/api/wallets'
 import { useWalletCreate } from '@/composables/useWalletCreate'
 import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
@@ -100,7 +101,8 @@ const recentMovements = computed(() =>
 )
 
 function movementDirection(sender: string): 'out' | 'in' {
-  return ownWalletIds.value.has(sender) ? 'out' : 'in'
+  // sender/receiver in confirmedStore are usernames, not wallet IDs
+  return sender === auth.user?.username ? 'out' : 'in'
 }
 
 function shortAddr(addr: string, n = 8): string {
