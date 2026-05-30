@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 // sender/receiver in confirmedStore are usernames (not wallet IDs)
 import { listCurrencies, type CurrencyRecord } from '@/api/wallets'
 import { useWalletCreate } from '@/composables/useWalletCreate'
-import SeedPhraseModal from '@/components/molecules/SeedPhraseModal.vue'
+import WalletCreateFlow from '@/components/flows/WalletCreateFlow.vue'
 import SparklineChart from '@/components/atoms/SparklineChart.vue'
 
 const router = useRouter()
@@ -17,15 +17,7 @@ const confirmedStore = useConfirmedTransactionsStore()
 const ratesStore = useExchangeRatesStore()
 const auth = useAuthStore()
 
-const {
-  pendingMnemonic,
-  showSeedModal,
-  creatingWallet,
-  selectedCurrency,
-  handleCreateWallet,
-  onSeedConfirmed,
-  onSeedClosed,
-} = useWalletCreate()
+const { showCreateFlow, handleCreateWallet, onCreateComplete } = useWalletCreate()
 
 const currencies = ref<CurrencyRecord[]>([])
 
@@ -155,11 +147,10 @@ onMounted(async () => {
 
 <template>
   <div class="portfolio-view">
-    <SeedPhraseModal
-      :mnemonic="pendingMnemonic"
-      :visible="showSeedModal"
-      @confirm="onSeedConfirmed"
-      @close="onSeedClosed"
+    <WalletCreateFlow
+      v-if="showCreateFlow"
+      @close="showCreateFlow = false; onCreateComplete()"
+      @complete="onCreateComplete"
     />
 
     <div class="pv-layout">
@@ -184,28 +175,11 @@ onMounted(async () => {
             <button class="btn btn-hero-ghost" @click="openConvert">
               <span class="pi pi-arrows-h" aria-hidden="true" /> Convertir
             </button>
-            <button
-              class="btn btn-hero-ghost"
-              :disabled="creatingWallet"
-              @click="handleCreateWallet"
-            >
-              <span
-                v-if="creatingWallet"
-                class="pi pi-spin pi-spinner"
-                aria-hidden="true"
-              />
-              <span v-else class="pi pi-plus" aria-hidden="true" />
+            <button class="btn btn-hero-ghost" @click="handleCreateWallet">
+              <span class="pi pi-plus" aria-hidden="true" />
               Nueva wallet
             </button>
           </div>
-        </div>
-
-        <!-- Currency selector for new wallet (below hero) -->
-        <div v-if="walletStore.wallets.length === 0" class="no-wallets-hint">
-          <select v-model="selectedCurrency" class="field-select currency-select">
-            <option value="NATIVE">NATIVE (predeterminado)</option>
-          </select>
-          <span class="hint-text">Selecciona el activo y haz clic en "Nueva wallet"</span>
         </div>
 
         <!-- Assets table -->
