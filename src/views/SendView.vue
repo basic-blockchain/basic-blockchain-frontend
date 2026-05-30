@@ -13,6 +13,16 @@ import {
   paymentRequestUrl,
   type PaymentRequest,
 } from '@/api/paymentRequests'
+import {
+  createRecurringPayment,
+  listRecurringPayments,
+  updateRecurringStatus,
+  executeRecurringPayment,
+  freqLabel,
+  isDue,
+  type RecurringPayment,
+  type RecurringFrequency,
+} from '@/api/recurringPayments'
 import { isValidMnemonic } from '@/lib/crypto'
 import { BlockchainApiError } from '@/api/errors'
 import type { Wallet } from '@/api/wallets'
@@ -436,6 +446,169 @@ async function reqCancel() {
   }
 }
 
+// ── Programar tab state ──────────────────────────────────────────────────────
+
+type EndMode = 'never' | 'count' | 'date'
+
+const FREQ_OPTIONS: { key: RecurringFrequency; label: string }[] = [
+  { key: 'daily',   label: 'Cada día' },
+  { key: 'weekly',  label: 'Cada semana' },
+  { key: 'monthly', label: 'Cada mes' },
+]
+
+const schedStep      = ref(0) // 0=list, 1=step-recipient, 2=step-amount, 3=done
+const schedRecip     = ref('')
+const schedAsset     = ref('cUSD')
+const schedAmount    = ref('')
+const schedFreq      = ref<RecurringFrequency>('monthly')
+const schedDayMonth  = ref(1)
+const schedEndMode   = ref<EndMode>('never')
+const schedMaxCount  = ref(12)
+const schedEndDate   = ref('')
+const schedConcept   = ref('')
+const schedCreating  = ref(false)
+const schedRecord    = ref<RecurringPayment | null>(null)
+const schedList      = ref<RecurringPayment[]>([])
+const schedListLoading = ref(false)
+
+const schedAmountNum = computed(() => parseFloat(schedAmount.value) || 0)
+
+const schedNextRun = computed(() => {
+  const now = new Date()
+  if (schedFreq.value === 'monthly') {
+    // next occurrence of schedDayMonth
+    const candidate = new Date(now.getFullYear(), now.getMonth(), schedDayMonth.value, 9, 0)
+    if (candidate <= now) candidate.setMonth(candidate.getMonth() + 1)
+    return candidate
+  }
+  if (schedFreq.value === 'weekly') {
+    const d = new Date(now); d.setDate(now.getDate() + 7); d.setHours(9, 0, 0)
+    return d
+  }
+  const d = new Date(now); d.setDate(now.getDate() + 1); d.setHours(9, 0, 0)
+  return d
+})
+
+const schedSummaryEndLabel = computed(() => {
+  if (schedEndMode.value === 'never') return 'sin fin'
+  if (schedEndMode.value === 'count') return `tras ${schedMaxCount.value} envíos`
+  return schedEndDate.value ? new Date(schedEndDate.value).toLocaleDateString('es') : '—'
+})
+
+const schedAnnualEst = computed(() => {
+  const mult = { daily: 365, weekly: 52, monthly: 12 }[schedFreq.value]
+  return (schedAmountNum.value * mult).toFixed(2)
+})
+
+async function loadScheduled() {
+  schedListLoading.value = true
+  try {
+    schedList.value = await listRecurringPayments()
+  } catch {
+    // ignore
+  } finally {
+    schedListLoading.value = false
+  }
+}
+
+async function schedCreate() {
+  if (!schedRecip.value.trim() || !schedAmountNum.value) return
+  schedCreating.value = true
+  try {
+    const body: Parameters<typeof createRecurringPayment>[0] = {
+      recipient_username: schedRecip.value.trim().replace(/^@/, ''),
+      amount: schedAmountNum.value,
+      currency: schedAsset.value,
+      frequency: schedFreq.value,
+    }
+    if (schedFreq.value === 'monthly') body.day_of_month = schedDayMonth.value
+    if (schedEndMode.value === 'count') body.max_executions = schedMaxCount.value
+    if (schedEndMode.value === 'date' && schedEndDate.value) body.ends_at = new Date(schedEndDate.value).toISOString()
+    if (schedConcept.value.trim()) body.concept = schedConcept.value.trim()
+
+    schedRecord.value = await createRecurringPayment(body)
+    schedList.value = [schedRecord.value!, ...schedList.value]
+    schedStep.value = 3
+  } catch (e) {
+    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+    toast.error('Error al programar', msg ?? 'Verificá el destinatario y que tenga una wallet en esa moneda.')
+  } finally {
+    schedCreating.value = false
+  }
+}
+
+function schedReset() {
+  schedStep.value = 0
+  schedRecord.value = null
+  schedRecip.value = ''
+  schedAmount.value = ''
+  schedConcept.value = ''
+}
+
+// Execute a due recurring payment (user must provide mnemonic)
+const execId        = ref<string | null>(null)
+const execMnemonic  = ref('')
+const execNonce     = ref('1')
+const execSending   = ref(false)
+const execValid     = computed(() => !execMnemonic.value || isValidMnemonic(execMnemonic.value))
+
+function openExec(r: RecurringPayment) {
+  execId.value = r.rec_id
+  execMnemonic.value = ''
+  // Auto-fill nonce from the sender's wallet matching r.currency
+  const sw = walletStore.wallets.find((w) => w.currency === r.currency && !w.frozen)
+  execNonce.value = String(sw?.next_nonce ?? 1)
+}
+
+async function doExec() {
+  const r = schedList.value.find((x) => x.rec_id === execId.value)
+  if (!r) return
+  const senderWallet = walletStore.wallets.find((w) => w.currency === r.currency && !w.frozen)
+  if (!senderWallet) {
+    toast.error('Sin wallet', `No tenés una wallet en ${r.currency}`)
+    return
+  }
+  if (!isValidMnemonic(execMnemonic.value)) {
+    toast.warn('Frase inválida', 'Verifica tu frase BIP-39')
+    return
+  }
+  execSending.value = true
+  try {
+    await walletStore.transfer(
+      execMnemonic.value,
+      senderWallet.wallet_id,
+      r.payee_wallet_id,
+      parseFloat(r.amount),
+      parseInt(execNonce.value, 10),
+    )
+    const updated = await executeRecurringPayment(r.rec_id)
+    schedList.value = schedList.value.map((x) => x.rec_id === r.rec_id ? updated : x)
+    execId.value = null
+    execMnemonic.value = ''
+    toast.add({ severity: 'success', summary: 'Envío ejecutado', detail: `${r.amount} ${r.currency} enviados a @${r.recipient_username}`, life: 4000 })
+  } catch (e) {
+    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? (e instanceof Error ? e.message : 'Error')
+    toast.error('Error al enviar', msg)
+  } finally {
+    execSending.value = false
+  }
+}
+
+async function togglePause(r: RecurringPayment) {
+  try {
+    const newStatus = r.status === 'active' ? 'paused' : 'active'
+    const updated = await updateRecurringStatus(r.rec_id, newStatus)
+    schedList.value = schedList.value.map((x) => x.rec_id === r.rec_id ? updated : x)
+  } catch {/* ignore */}
+}
+
+async function cancelSchedule(r: RecurringPayment) {
+  try {
+    const updated = await updateRecurringStatus(r.rec_id, 'cancelled')
+    schedList.value = schedList.value.map((x) => x.rec_id === r.rec_id ? updated : x)
+  } catch {/* ignore */}
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -447,6 +620,7 @@ onMounted(async () => {
     walletStore.fetchMine(),
     confirmedStore.fetchConfirmed(),
     ratesStore.fetchRates(),
+    loadScheduled(),
   ])
   if (walletStore.wallets.length > 0) {
     fromWalletId.value = walletStore.wallets[0].wallet_id
@@ -1143,11 +1317,254 @@ onMounted(async () => {
     <!-- ── PROGRAMAR TAB ── -->
     <div v-else class="sv-layout">
       <div class="sv-main">
-        <div class="form-card coming-soon">
-          <span class="pi pi-calendar coming-icon" aria-hidden="true" />
-          <h3>Envío recurrente</h3>
-          <p class="muted">Próximamente podrás configurar envíos automáticos periódicos.</p>
-        </div>
+
+        <!-- Step 0: list of schedules + "new" button -->
+        <template v-if="schedStep === 0">
+
+          <!-- Header action -->
+          <div class="sched-header">
+            <div>
+              <h2 style="margin:0 0 4px;font-size:18px;font-weight:600">Envíos recurrentes</h2>
+              <p class="muted" style="margin:0;font-size:13px">Configurá transferencias automáticas periódicas.</p>
+            </div>
+            <button class="btn btn-primary" @click="schedStep = 1">
+              <span class="pi pi-plus" aria-hidden="true" />
+              Nuevo
+            </button>
+          </div>
+
+          <!-- Active schedules list -->
+          <div v-if="schedListLoading" class="empty-state sm"><span class="pi pi-spin pi-spinner" aria-hidden="true" /></div>
+          <div v-else-if="schedList.filter(r => r.status !== 'cancelled').length === 0" class="form-card coming-soon">
+            <span class="pi pi-calendar coming-icon" aria-hidden="true" />
+            <h3>Sin envíos programados</h3>
+            <p class="muted">Creá uno con el botón "Nuevo" para empezar.</p>
+          </div>
+          <div v-else class="sched-list">
+            <div
+              v-for="r in schedList.filter(s => s.status !== 'cancelled')"
+              :key="r.rec_id"
+              class="sched-card"
+              :class="{ 'sched-due': isDue(r), 'sched-paused': r.status === 'paused' }"
+            >
+              <div class="sched-card-top">
+                <div class="sched-info">
+                  <span class="sched-amount mono">{{ r.amount }} {{ r.currency }}</span>
+                  <span class="sched-recip">a @{{ r.recipient_username }} · {{ freqLabel(r.frequency) }}</span>
+                  <span v-if="r.concept" class="muted" style="font-size:11.5px">"{{ r.concept }}"</span>
+                </div>
+                <div class="sched-badges">
+                  <span v-if="isDue(r)" class="badge-due">Vencido</span>
+                  <span v-else-if="r.status === 'paused'" class="badge-paused">Pausado</span>
+                  <span v-else class="badge-active">Activo</span>
+                </div>
+              </div>
+              <div class="sched-meta muted">
+                <span>Próximo: {{ new Date(r.next_run_at).toLocaleDateString('es', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) }}</span>
+                <span>{{ r.executions_done }} ejecutado{{ r.executions_done !== 1 ? 's' : '' }}</span>
+              </div>
+
+              <!-- Due: execute now button -->
+              <template v-if="isDue(r) && execId !== r.rec_id">
+                <button class="btn btn-primary sched-exec-btn" @click="openExec(r)">
+                  <span class="pi pi-play" aria-hidden="true" />
+                  Ejecutar ahora
+                </button>
+              </template>
+
+              <!-- Inline mnemonic prompt -->
+              <div v-if="execId === r.rec_id" class="exec-form">
+                <div class="field">
+                  <label class="field-label">Frase BIP-39 para firmar</label>
+                  <textarea v-model="execMnemonic" class="field-input mnemonic-input"
+                    :class="{ invalid: execMnemonic && !execValid }"
+                    placeholder="12 palabras…" rows="2" />
+                  <span v-if="execMnemonic && !execValid" class="field-error">Frase inválida</span>
+                </div>
+                <div class="field">
+                  <label class="field-label">Nonce</label>
+                  <input v-model="execNonce" class="field-input" type="number" min="1" />
+                </div>
+                <div class="exec-actions">
+                  <button class="btn" @click="execId = null">Cancelar</button>
+                  <button class="btn btn-primary" :disabled="execSending || !execMnemonic || !execValid" @click="doExec">
+                    <span v-if="execSending" class="pi pi-spin pi-spinner" aria-hidden="true" />
+                    {{ execSending ? 'Enviando…' : 'Confirmar' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pause / cancel actions -->
+              <div v-if="r.status !== 'completed'" class="sched-actions">
+                <button class="btn-text" @click="togglePause(r)">
+                  {{ r.status === 'active' ? 'Pausar' : 'Reanudar' }}
+                </button>
+                <button class="btn-text danger" @click="cancelSchedule(r)">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Step 1: recipient -->
+        <template v-else-if="schedStep === 1">
+          <div class="form-card">
+            <!-- Stepper -->
+            <div class="sched-stepper">
+              <div class="step-item step-active">
+                <span class="step-num">1</span><span class="step-label">Destinatario</span>
+              </div>
+              <div class="step-line" />
+              <div class="step-item">
+                <span class="step-num">2</span><span class="step-label">Monto y frecuencia</span>
+              </div>
+              <div class="step-line" />
+              <div class="step-item">
+                <span class="step-num">3</span><span class="step-label">Listo</span>
+              </div>
+            </div>
+
+            <div class="form-card-h">
+              <h2>Programar envío recurrente</h2>
+              <p>A quién le mandás cada vez · una sola configuración.</p>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Destinatario</label>
+              <input
+                v-model="schedRecip"
+                class="field-input"
+                placeholder="@usuario, email o nombre"
+                autofocus
+              />
+            </div>
+
+            <!-- Suggestions from recent contacts -->
+            <div v-if="recentContacts.length > 0" class="sched-suggestions">
+              <p class="suggestions-label">Sugerencias</p>
+              <button
+                v-for="c in recentContacts"
+                :key="c.id"
+                class="suggestion-item"
+                @click="schedRecip = c.id"
+              >
+                <div class="contact-avatar">{{ c.id.charAt(0).toUpperCase() }}</div>
+                <div class="contact-info">
+                  <span class="contact-id">@{{ c.id }}</span>
+                  <span class="muted" style="font-size:11px">{{ c.count }} envío{{ c.count !== 1 ? 's' : '' }} reciente{{ c.count !== 1 ? 's' : '' }}</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="confirm-actions">
+              <button class="btn" @click="schedReset">Cancelar</button>
+              <button class="btn btn-primary" :disabled="!schedRecip.trim()" @click="schedStep = 2">Continuar</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Step 2: amount + frequency -->
+        <template v-else-if="schedStep === 2">
+          <div class="form-card">
+            <!-- Stepper -->
+            <div class="sched-stepper">
+              <div class="step-item step-done"><span class="step-num step-check"><span class="pi pi-check" /></span><span class="step-label">Destinatario</span></div>
+              <div class="step-line step-line-done" />
+              <div class="step-item step-active"><span class="step-num">2</span><span class="step-label">Monto y frecuencia</span></div>
+              <div class="step-line" />
+              <div class="step-item"><span class="step-num">3</span><span class="step-label">Listo</span></div>
+            </div>
+
+            <div class="form-card-h">
+              <h2>Cuánto, cuándo y por cuánto tiempo.</h2>
+            </div>
+
+            <!-- Amount -->
+            <div class="amount-display-row">
+              <input v-model="schedAmount" class="amount-input" type="number" min="0" step="any" placeholder="0.00" />
+              <span class="amount-currency">{{ schedAsset }} · {{ freqLabel(schedFreq) }}</span>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Activo</label>
+              <div class="type-chips">
+                <button v-for="a in REQ_ASSETS" :key="a" class="type-chip" :class="{ active: schedAsset === a }" @click="schedAsset = a">{{ a }}</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Frecuencia</label>
+              <div class="type-chips">
+                <button v-for="f in FREQ_OPTIONS" :key="f.key" class="type-chip" :class="{ active: schedFreq === f.key }" @click="schedFreq = f.key">{{ f.label }}</button>
+              </div>
+            </div>
+
+            <div v-if="schedFreq === 'monthly'" class="field">
+              <label class="field-label">Día del mes</label>
+              <select v-model="schedDayMonth" class="field-select">
+                <option v-for="d in 28" :key="d" :value="d">{{ d }}</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Termina</label>
+              <div class="type-chips">
+                <button class="type-chip" :class="{ active: schedEndMode === 'never' }" @click="schedEndMode = 'never'">Sin fin</button>
+                <button class="type-chip" :class="{ active: schedEndMode === 'count' }" @click="schedEndMode = 'count'">Tras N envíos</button>
+                <button class="type-chip" :class="{ active: schedEndMode === 'date' }" @click="schedEndMode = 'date'">En fecha</button>
+              </div>
+              <input v-if="schedEndMode === 'count'" v-model.number="schedMaxCount" class="field-input" type="number" min="1" placeholder="12" style="margin-top:6px" />
+              <input v-if="schedEndMode === 'date'" v-model="schedEndDate" class="field-input" type="date" style="margin-top:6px" />
+            </div>
+
+            <div class="field">
+              <label class="field-label">Concepto <span class="optional">(opcional)</span></label>
+              <input v-model="schedConcept" class="field-input" placeholder="Alquiler, cuota club…" />
+            </div>
+
+            <!-- Summary card -->
+            <div class="sched-summary">
+              <div class="ss-row"><span>Para</span><span>@{{ schedRecip }}</span></div>
+              <div class="ss-row"><span>Frecuencia</span><span>{{ schedAmountNum || '0' }} {{ schedAsset }} {{ freqLabel(schedFreq) }}</span></div>
+              <div class="ss-row"><span>Próxima ejecución</span><span>{{ schedNextRun.toLocaleString('es', { day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' }) }}</span></div>
+              <div class="ss-row"><span>Estimado total/año</span><span class="mono">{{ schedAnnualEst }} {{ schedAsset }}</span></div>
+              <div class="ss-row"><span>Termina</span><span>{{ schedSummaryEndLabel }}</span></div>
+            </div>
+
+            <div class="confirm-actions">
+              <button class="btn" @click="schedStep = 1">Atrás</button>
+              <button class="btn btn-primary" :disabled="!schedAmountNum || schedCreating" @click="schedCreate">
+                <span v-if="schedCreating" class="pi pi-spin pi-spinner" aria-hidden="true" />
+                {{ schedCreating ? 'Activando…' : 'Activar envío recurrente' }}
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Step 3: success -->
+        <template v-else-if="schedStep === 3 && schedRecord">
+          <div class="form-card" style="align-items:center;text-align:center;padding:32px 24px">
+            <div class="success-circle" style="margin-bottom:16px">
+              <span class="pi pi-check" aria-hidden="true" />
+            </div>
+            <h2 style="margin:0 0 4px">Envío recurrente activo</h2>
+            <p class="muted">{{ schedRecord.amount }} {{ schedRecord.currency }} a @{{ schedRecord.recipient_username }} · {{ freqLabel(schedRecord.frequency) }}</p>
+
+            <div class="sched-summary" style="width:100%;margin-top:16px;text-align:left">
+              <div class="ss-row"><span>Próximo envío</span><span>{{ new Date(schedRecord.next_run_at).toLocaleString('es', { day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' }) }}</span></div>
+              <div class="ss-row"><span>Frecuencia</span><span>{{ freqLabel(schedRecord.frequency) }}</span></div>
+              <div class="ss-row"><span>Termina</span><span>{{ schedSummaryEndLabel }}</span></div>
+            </div>
+
+            <div class="warn-box warn-box-info" style="margin-top:12px;width:100%">
+              <span class="pi pi-info-circle" aria-hidden="true" />
+              <span>Lo ejecutamos cuando llegue la fecha · necesitarás tu frase semilla para firmar cada envío.</span>
+            </div>
+
+            <button class="btn btn-primary" style="margin-top:20px;width:100%;justify-content:center" @click="schedReset">
+              Listo
+            </button>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -1580,6 +1997,82 @@ onMounted(async () => {
   font-size: 11.5px; color: var(--text-2); line-height: 1.7;
 }
 .sec-cta { width: calc(100% - 28px); margin: 0 14px 14px; justify-content: center; }
+
+/* ── Schedule tab ── */
+.sched-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 4px;
+}
+.sched-list { display: flex; flex-direction: column; gap: 10px; }
+.sched-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sched-due  { border-color: var(--warning); }
+.sched-paused { opacity: 0.7; }
+.sched-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.sched-info { display: flex; flex-direction: column; gap: 2px; }
+.sched-amount { font-size: 15px; font-weight: 600; color: var(--text); }
+.sched-recip { font-size: 12.5px; color: var(--text-2); }
+.sched-badges { flex-shrink: 0; }
+.sched-meta { display: flex; gap: 16px; font-size: 11.5px; }
+.badge-due    { font-size:11px;font-weight:600;color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface));padding:2px 7px;border-radius:4px; }
+.badge-active { font-size:11px;font-weight:600;color:var(--success);background:color-mix(in srgb,var(--success) 12%,var(--surface));padding:2px 7px;border-radius:4px; }
+.badge-paused { font-size:11px;font-weight:600;color:var(--text-3);background:var(--surface-2);padding:2px 7px;border-radius:4px; }
+.sched-exec-btn { width: 100%; justify-content: center; }
+.exec-form { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.exec-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.sched-actions { display: flex; gap: 12px; padding-top: 4px; border-top: 1px solid var(--border); }
+.btn-text { background: none; border: none; cursor: pointer; font-size: 12.5px; color: var(--text-3); padding: 0; }
+.btn-text:hover { color: var(--text); }
+.btn-text.danger:hover { color: var(--danger); }
+
+/* Stepper */
+.sched-stepper {
+  display: flex; align-items: center; gap: 0;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.step-item { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--surface-2); border: 1.5px solid var(--border);
+  color: var(--text-3); font-size: 11px; font-weight: 600;
+  display: grid; place-items: center;
+}
+.step-check { background: var(--success); border-color: var(--success); color: #fff; font-size: 10px; }
+.step-active .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step-label { font-size: 12px; color: var(--text-2); }
+.step-active .step-label { font-weight: 600; color: var(--text); }
+.step-done .step-label { color: var(--text-3); }
+.step-line { flex: 1; height: 1.5px; background: var(--border); margin: 0 8px; }
+.step-line-done { background: var(--success); }
+
+/* Suggestions */
+.sched-suggestions { display: flex; flex-direction: column; }
+.suggestions-label { font-size: 10.5px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 6px; }
+.suggestion-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; background: none; border: none;
+  border-bottom: 1px solid var(--border); cursor: pointer; width: 100%; text-align: left;
+  transition: background 0.1s;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: var(--surface-2); }
+
+/* Schedule summary */
+.sched-summary {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ss-row {
+  display: flex; justify-content: space-between;
+  font-size: 12.5px; color: var(--text-2);
+}
+.ss-row span:last-child { color: var(--text); font-weight: 500; }
 
 /* ── Receive tab ── */
 .receive-card { align-items: center; }
